@@ -70,6 +70,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           <button
             onClick={onClose}
             className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors"
+            aria-label="Cerrar carrito"
           >
             <span className="material-symbols-outlined text-on-surface-variant">close</span>
           </button>
@@ -111,15 +112,17 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                       <button
                         onClick={() => updateQty(item.productId, item.quantity - 1)}
                         className="w-11 h-11 rounded-full bg-surface-container flex items-center justify-center active:opacity-60"
+                        aria-label={`Disminuir cantidad de ${item.name}`}
                       >
                         <span className="material-symbols-outlined text-on-surface text-xl leading-none">remove</span>
                       </button>
-                      <span className="font-label font-semibold text-on-surface text-sm w-5 text-center">
+                      <span className="font-label font-semibold text-on-surface text-sm w-5 text-center" aria-live="polite">
                         {item.quantity}
                       </span>
                       <button
                         onClick={() => updateQty(item.productId, item.quantity + 1)}
                         className="w-11 h-11 rounded-full bg-surface-container flex items-center justify-center active:opacity-60"
+                        aria-label={`Aumentar cantidad de ${item.name}`}
                       >
                         <span className="material-symbols-outlined text-on-surface text-xl leading-none">add</span>
                       </button>
@@ -129,6 +132,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                     <button
                       onClick={() => removeItem(item.productId)}
                       className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors shrink-0"
+                      aria-label={`Eliminar ${item.name} del carrito`}
                     >
                       <span className="material-symbols-outlined text-error text-base">delete</span>
                     </button>

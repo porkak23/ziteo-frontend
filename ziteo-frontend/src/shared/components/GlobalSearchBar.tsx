@@ -36,7 +36,7 @@ export default function GlobalSearchBar({ onClose }: GlobalSearchBarProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-surface pt-4 px-4 flex flex-col h-dvh overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-surface pt-4 px-4 flex flex-col h-dvh overflow-hidden max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-4 shrink-0">
         <div className="flex-1 flex items-center bg-surface-container rounded-2xl px-4 py-3 border border-outline-variant">
           <span className="material-symbols-outlined text-on-surface-variant mr-2">search</span>
@@ -46,15 +46,16 @@ export default function GlobalSearchBar({ onClose }: GlobalSearchBarProps) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Buscar proyectos, personas, productos..."
+            aria-label="Buscar en la aplicación"
             className="bg-transparent border-none outline-none flex-1 font-body text-on-surface placeholder:text-on-surface-variant"
           />
           {inputValue && (
-            <button onClick={() => setInputValue('')} className="ml-2 flex items-center justify-center">
+            <button onClick={() => setInputValue('')} className="ml-2 w-11 h-11 flex items-center justify-center rounded-full hover:bg-outline-variant transition-colors" aria-label="Limpiar búsqueda">
               <span className="material-symbols-outlined text-on-surface-variant">close</span>
             </button>
           )}
         </div>
-        <button onClick={onClose} className="font-label font-semibold text-primary">
+        <button onClick={onClose} className="font-label font-semibold text-primary py-2 px-2 rounded">
           Cancelar
         </button>
       </div>
