@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"d:\\\\Ziteo.1\\\\docs\\\\\" 2>/dev/null || find \"d:\\\\Ziteo.1\" -name \"*.md\" -type f 2>/dev/null | head -20)",
+      "Bash(./node_modules/.bin/tailwindcss init:*)",
+      "Bash(npm install:*)",
+      "Bash(node_modules/.bin/tailwindcss.cmd init:*)",
+      "mcp__claude_ai_Supabase__get_project_url",
+      "mcp__claude_ai_Supabase__get_publishable_keys",
+      "Bash(node_modules/.bin/tsc.cmd --noEmit)"
+    ]
+  }
+}

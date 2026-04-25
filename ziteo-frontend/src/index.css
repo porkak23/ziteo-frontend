@@ -1,0 +1,243 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Brand */
+    --color-primary:                   #D94F00;
+    --color-primary-container:         #FF6820;
+    --color-primary-fixed:             #FFE8DC;
+    --color-primary-fixed-dim:         #FFB899;
+    --color-on-primary:                #ffffff;
+    --color-on-primary-fixed:          #3A0E00;
+    --color-on-primary-fixed-variant:  #A83800;
+    --color-inverse-primary:           #FF7A40;
+
+    /* Secondary — industrial grey */
+    --color-secondary:                 #374151;
+    --color-secondary-container:       #E5E7EB;
+    --color-secondary-fixed:           #F3F4F6;
+    --color-secondary-fixed-dim:       #D1D5DB;
+    --color-on-secondary:              #ffffff;
+    --color-on-secondary-container:    #374151;
+    --color-on-secondary-fixed:        #111827;
+    --color-on-secondary-fixed-variant:#4B5563;
+
+    /* Tertiary — dark neutral */
+    --color-tertiary:                  #1F2937;
+    --color-tertiary-container:        #374151;
+    --color-tertiary-fixed:            #F9FAFB;
+    --color-tertiary-fixed-dim:        #E5E7EB;
+    --color-on-tertiary:               #ffffff;
+    --color-on-tertiary-container:     #F9FAFB;
+    --color-on-tertiary-fixed:         #111827;
+    --color-on-tertiary-fixed-variant: #374151;
+
+    /* Surfaces — clean neutral grey */
+    --color-background:                #F5F5F2;
+    --color-surface:                   #FFFFFF;
+    --color-surface-bright:            #FFFFFF;
+    --color-surface-dim:               #E5E5E0;
+    --color-surface-container:         #EFEFE9;
+    --color-surface-container-low:     #F5F5F0;
+    --color-surface-container-high:    #E8E8E2;
+    --color-surface-container-highest: #DDDDD7;
+    --color-surface-container-lowest:  #FFFFFF;
+    --color-surface-variant:           #E9E9E3;
+    --color-surface-tint:              #D94F00;
+
+    /* Text — true near-black for maximum contrast */
+    --color-on-background:             #0D0D0D;
+    --color-on-surface:                #0D0D0D;
+    --color-on-surface-variant:        #6B7280;
+
+    /* States */
+    --color-error:                     #DC2626;
+    --color-error-container:           #FEE2E2;
+    --color-on-error:                  #ffffff;
+    --color-on-error-container:        #7F1D1D;
+
+    /* Outlines */
+    --color-outline:                   #9CA3AF;
+    --color-outline-variant:           #E5E5DF;
+
+    /* Driver UI dark surfaces */
+    --color-driver-bg:                 #0F1923;
+    --color-driver-surface:            #141E2B;
+
+    /* Misc */
+    --color-project-center:            #FFF3EE;
+
+    /* Status tokens */
+    --color-status-pending-bg:   #FEF3C7;
+    --color-status-pending-text: #92400E;
+    --color-status-success-bg:   #D1FAE5;
+    --color-status-success-text: #065F46;
+    --color-status-error-bg:     #FEE2E2;
+    --color-status-error-text:   #991B1B;
+    --color-status-info-bg:      #DBEAFE;
+    --color-status-info-text:    #1E40AF;
+    --color-status-warning-bg:   #FEF9C3;
+    --color-status-warning-text: #713F12;
+    --color-status-purple-bg:    #EDE9FE;
+    --color-status-purple-text:  #5B21B6;
+
+    /* Rating */
+    --color-rating:              #F59E0B;
+  }
+
+  .dark {
+    /* Brand */
+    --color-primary:                   #FF7A40;
+    --color-primary-container:         #7A2900;
+    --color-primary-fixed:             #FFE8DC;
+    --color-primary-fixed-dim:         #FFB899;
+    --color-on-primary:                #1A0800;
+    --color-on-primary-fixed:          #3A0E00;
+    --color-on-primary-fixed-variant:  #A83800;
+    --color-inverse-primary:           #D94F00;
+
+    /* Secondary — lighter grey for dark */
+    --color-secondary:                 #9CA3AF;
+    --color-secondary-container:       #374151;
+    --color-secondary-fixed:           #F3F4F6;
+    --color-secondary-fixed-dim:       #D1D5DB;
+    --color-on-secondary:              #111827;
+    --color-on-secondary-container:    #F3F4F6;
+    --color-on-secondary-fixed:        #111827;
+    --color-on-secondary-fixed-variant:#4B5563;
+
+    /* Tertiary */
+    --color-tertiary:                  #D1D5DB;
+    --color-tertiary-container:        #4B5563;
+    --color-tertiary-fixed:            #F9FAFB;
+    --color-tertiary-fixed-dim:        #E5E7EB;
+    --color-on-tertiary:               #111827;
+    --color-on-tertiary-container:     #F9FAFB;
+    --color-on-tertiary-fixed:         #111827;
+    --color-on-tertiary-fixed-variant: #374151;
+
+    /* Surfaces — true dark */
+    --color-background:                #0A0A0A;
+    --color-surface:                   #161616;
+    --color-surface-bright:            #2A2A2A;
+    --color-surface-dim:               #0A0A0A;
+    --color-surface-container:         #1E1E1E;
+    --color-surface-container-low:     #181818;
+    --color-surface-container-high:    #252525;
+    --color-surface-container-highest: #2E2E2E;
+    --color-surface-container-lowest:  #0D0D0D;
+    --color-surface-variant:           #2D2D2D;
+    --color-surface-tint:              #FF7A40;
+
+    /* Text */
+    --color-on-background:             #F5F5F5;
+    --color-on-surface:                #F5F5F5;
+    --color-on-surface-variant:        #9CA3AF;
+
+    /* States */
+    --color-error:                     #F87171;
+    --color-error-container:           #7F1D1D;
+    --color-on-error:                  #1A0000;
+    --color-on-error-container:        #FEE2E2;
+
+    /* Outlines */
+    --color-outline:                   #4B5563;
+    --color-outline-variant:           #2D2D2D;
+
+    /* Misc */
+    --color-project-center:            #1E1008;
+
+    /* Status tokens */
+    --color-status-pending-bg:   #451A03;
+    --color-status-pending-text: #FCD34D;
+    --color-status-success-bg:   #022C22;
+    --color-status-success-text: #6EE7B7;
+    --color-status-error-bg:     #450A0A;
+    --color-status-error-text:   #FCA5A5;
+    --color-status-info-bg:      #172554;
+    --color-status-info-text:    #93C5FD;
+    --color-status-warning-bg:   #1C1107;
+    --color-status-warning-text: #FDE047;
+    --color-status-purple-bg:    #2E1065;
+    --color-status-purple-text:  #C4B5FD;
+
+    /* Rating */
+    --color-rating:              #FBBF24;
+  }
+
+  body {
+    @apply bg-background text-on-background font-body m-0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@keyframes radarRingScale1 {
+  0%   { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+@keyframes radarRingScale2 {
+  0%   { transform: scale(1); opacity: 0.3; }
+  100% { transform: scale(4); opacity: 0; }
+}
+@keyframes radarRingScale3 {
+  0%   { transform: scale(1); opacity: 0.2; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+@keyframes adShimmer {
+  0%   { transform: translateX(-100%); }
+  60%  { transform: translateX(200%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
