@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuthStore } from '../../auth/store/authStore'
 import { usePendingDeliveries, useMyDeliveries } from '../hooks/useDeliveries'
 import { useDriverEarnings } from '../hooks/useDriverEarnings'
@@ -381,7 +381,7 @@ export function TransportistaScreen() {
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
               serviceMode === 'transporte' ? 'bg-on-primary/20 text-on-primary' : 'bg-surface text-on-surface-variant'
             }`}>
-              {MOCK_TRANSPORT_REQUESTS.length}
+              0
             </span>
           </button>
         </div>
