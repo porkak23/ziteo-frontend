@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react'
+import { memo } from 'react'
 import { useCart } from '../hooks/useCart'
 import type { ProductCard as ProductCardType } from '../types/tiendaTypes'
 
