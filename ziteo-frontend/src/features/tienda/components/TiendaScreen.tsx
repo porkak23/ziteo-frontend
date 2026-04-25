@@ -43,22 +43,6 @@ const CATEGORY_GROUPS = [
     activeBg: 'bg-primary',
     keywords: ['casco', 'guante', 'bota', 'chaleco', 'gafa', 'mascarilla', 'arnés', 'señalización', 'seguridad', 'epp'],
   },
-  {
-    id: 'electrico',
-    label: 'Eléctrico',
-    icon: 'bolt',
-    bg: 'bg-purple-surface dark:bg-purple-surface/20',
-    activeBg: 'bg-primary',
-    keywords: ['cable', 'interruptor', 'tomacorriente', 'tablero', 'tubo conduit', 'lámpara', 'foco', 'eléctrico', 'electricidad'],
-  },
-  {
-    id: 'acabados',
-    label: 'Acabados',
-    icon: 'format_paint',
-    bg: 'bg-green-surface dark:bg-green-surface/20',
-    activeBg: 'bg-primary',
-    keywords: ['pintura', 'barniz', 'sellador', 'masilla', 'porcelanato', 'acabado', 'decoración'],
-  },
 ]
 
 // ─── Promo banners ────────────────────────────────────────────────────────────
