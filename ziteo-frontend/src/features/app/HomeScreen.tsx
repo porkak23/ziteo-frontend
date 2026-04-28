@@ -314,9 +314,9 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
 
             {/* Pedir Camión — secondary button (feature en desarrollo) */}
             <div className="w-full rounded-2xl bg-surface-container border border-outline-variant px-5 py-4 flex items-center gap-4 opacity-60">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-status-warning-bg flex items-center justify-center shrink-0">
                 <span
-                  className="material-symbols-outlined text-amber-600 text-xl"
+                  className="material-symbols-outlined text-status-warning-text text-xl"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
                   local_shipping

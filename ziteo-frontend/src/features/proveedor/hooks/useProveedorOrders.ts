@@ -21,6 +21,7 @@ export interface ProveedorOrder {
   status: string
   total: number
   created_at: string
+  payment_confirmed_at?: string | null
   items: OrderItem[]
   buyer_name?: string
 }
@@ -68,6 +69,7 @@ export function useIncomingOrders(providerId: string, onNewOrder?: () => void) {
           status,
           total,
           created_at,
+          payment_confirmed_at,
           buyer:profiles!orders_constructor_id_fkey(name)
         `)
         .eq('provider_id', providerId)

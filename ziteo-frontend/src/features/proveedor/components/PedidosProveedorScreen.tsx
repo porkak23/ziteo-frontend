@@ -4,6 +4,8 @@ import type { ProveedorOrder, OrderItem } from '../hooks/useProveedorOrders'
 import { OrderStatusChip } from './OrderStatusChip'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
+import { usePaymentQr } from '../hooks/usePaymentQr'
+import { useQueryClient } from '@tanstack/react-query'
 
 export function PedidosProveedorScreen() {
   const user = useAuthStore((s) => s.user)
@@ -16,6 +18,18 @@ export function PedidosProveedorScreen() {
   })
   
   const { mutate: updateStatus } = useUpdateOrderStatus()
+  const { confirmPayment } = usePaymentQr()
+  const queryClient = useQueryClient()
+
+  const handleConfirmPayment = async (orderId: string) => {
+    try {
+      await confirmPayment(orderId)
+      showToast('Pago confirmado', 'success')
+      queryClient.invalidateQueries({ queryKey: ['incoming-orders', providerId] })
+    } catch {
+      showToast('Error al confirmar pago', 'error')
+    }
+  }
 
   const pendingCount = orders.filter((o: ProveedorOrder) => o.status === 'pending').length
 
@@ -93,6 +107,14 @@ export function PedidosProveedorScreen() {
                   </span>
                 </div>
 
+                {order.status === 'pending' && !order.payment_confirmed_at && (
+                  <button
+                    onClick={() => handleConfirmPayment(order.id)}
+                    className="mt-2 w-full bg-secondary-container text-on-secondary-container rounded-2xl py-3 text-sm font-label font-semibold transition-opacity active:opacity-70 border border-outline-variant"
+                  >
+                    Confirmar pago recibido
+                  </button>
+                )}
                 {order.status === 'pending' && (
                   <button
                     onClick={() => updateStatus(

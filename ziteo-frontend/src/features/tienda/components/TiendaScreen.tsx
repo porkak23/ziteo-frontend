@@ -7,6 +7,7 @@ import { FilterSheet } from './FilterSheet'
 import type { ProductCard as ProductCardType, TiendaFilters } from '../types/tiendaTypes'
 import { useCategories, useProducts, TIENDA_PAGE_SIZE } from '../hooks/useTienda'
 import { useCart } from '../hooks/useCart'
+import { ChatScreen } from '../../../shared/components/ChatScreen'
 
 // ─── Category groups ──────────────────────────────────────────────────────────
 
@@ -124,16 +125,18 @@ function FeaturedCard({
         <span className="font-headline font-black text-primary text-sm leading-none">
           Bs. {product.price.toLocaleString('es-BO')}
         </span>
-        <div
+        <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation()
             handleAdd(e)
           }}
-          className="mt-auto flex items-center justify-center gap-1 w-full rounded-xl py-1.5 bg-primary text-white text-[11px] font-label font-bold active:opacity-80 transition-opacity cursor-pointer"
+          aria-label={`Agregar ${product.name} al carrito`}
+          className="mt-auto flex items-center justify-center gap-1 w-full rounded-xl py-1.5 bg-primary text-white text-[11px] font-label font-bold active:opacity-80 transition-opacity"
         >
-          <span className="material-symbols-outlined text-xs leading-none">add</span>
+          <span className="material-symbols-outlined text-xs leading-none" aria-hidden="true">add</span>
           Agregar
-        </div>
+        </button>
       </div>
     </button>
   )
@@ -175,6 +178,7 @@ export function TiendaScreen() {
   const [offset, setOffset] = useState(0)
   const [allProducts, setAllProducts] = useState<ProductCardType[]>([])
   const [activeBanner, setActiveBanner] = useState(0)
+  const [chatProvider, setChatProvider] = useState<{ id: string; name: string } | null>(null)
   const isFirstLoad = useRef(true)
   const bannerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -291,10 +295,26 @@ export function TiendaScreen() {
 
   if (selectedProduct) {
     return (
-      <ProductDetailScreen
-        product={selectedProduct}
-        onBack={() => setSelectedProduct(null)}
-      />
+      <>
+        <ProductDetailScreen
+          product={selectedProduct}
+          onBack={() => setSelectedProduct(null)}
+          onContact={(id, name) => setChatProvider({ id, name })}
+        />
+        {chatProvider && (
+          <ChatScreen
+            otherUserId={chatProvider.id}
+            otherUserName={chatProvider.name}
+            onClose={() => setChatProvider(null)}
+            productContext={{
+              id: selectedProduct.id,
+              name: selectedProduct.name,
+              image_url: selectedProduct.image_url,
+              price: selectedProduct.price,
+            }}
+          />
+        )}
+      </>
     )
   }
 
@@ -322,8 +342,8 @@ export function TiendaScreen() {
               onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value || undefined }))}
             />
             {filters.search && (
-              <button onClick={() => setFilters((f) => ({ ...f, search: undefined }))} className="shrink-0">
-                <span className="material-symbols-outlined text-on-surface-variant text-lg">close</span>
+              <button onClick={() => setFilters((f) => ({ ...f, search: undefined }))} className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors" aria-label="Limpiar búsqueda">
+                <span className="material-symbols-outlined text-on-surface-variant text-lg" aria-hidden="true">close</span>
               </button>
             )}
           </div>
@@ -344,10 +364,12 @@ export function TiendaScreen() {
 
       {/* ── Promo banner carousel ─────────────────────────────────────────── */}
       <div className="px-4 pt-4 pb-2">
-        <div
-          className="relative h-40 rounded-2xl overflow-hidden cursor-pointer active:opacity-90 transition-opacity"
+        <button
+          type="button"
+          className="relative h-40 w-full rounded-2xl overflow-hidden active:opacity-90 transition-opacity text-left"
           style={{ background: `linear-gradient(135deg, ${banner.from}, ${banner.to})` }}
           onClick={() => handleBannerCta(banner.group)}
+          aria-label={banner.title}
         >
           {/* Background texture */}
           <div className="absolute inset-0 opacity-10">
@@ -361,9 +383,9 @@ export function TiendaScreen() {
             <h2 className="font-headline font-black text-white text-2xl leading-tight mb-1">{banner.title}</h2>
             <p className="font-body text-white/80 text-sm mb-3">{banner.subtitle}</p>
             <div className="flex items-center justify-between">
-              <button className="bg-white/20 backdrop-blur-sm text-white text-xs font-label font-bold px-4 py-2 rounded-full border border-white/30 active:bg-white/30">
+              <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-label font-bold px-4 py-2 rounded-full border border-white/30 pointer-events-none">
                 {banner.cta} →
-              </button>
+              </span>
               {/* Dots */}
               <div className="flex gap-1.5">
                 {PROMO_BANNERS.map((_, i) => (
@@ -384,7 +406,7 @@ export function TiendaScreen() {
               </div>
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* ── Category horizontal scroll ────────────────────────────────────── */}
@@ -677,6 +699,14 @@ export function TiendaScreen() {
           if (!newFilters.category_id) setSelectedGroup(null)
         }}
       />
+      
+      {chatProvider && !selectedProduct && (
+        <ChatScreen
+          otherUserId={chatProvider.id}
+          otherUserName={chatProvider.name}
+          onClose={() => setChatProvider(null)}
+        />
+      )}
     </div>
   )
 }

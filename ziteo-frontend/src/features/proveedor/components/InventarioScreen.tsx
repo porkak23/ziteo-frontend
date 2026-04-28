@@ -8,7 +8,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ProductUnit } from '../../tienda/types/tiendaTypes'
 import { ImagePicker } from '../../../shared/components/ImagePicker'
-
+import { usePaymentQr } from '../hooks/usePaymentQr'
 interface Category {
   id: string
   name: string
@@ -64,6 +64,29 @@ export function InventarioScreen() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+
+  const { uploadQr, getSignedQrUrl, uploading } = usePaymentQr()
+  const [qrUrl, setQrUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (user?.user_id) {
+      getSignedQrUrl(user.user_id).then(setQrUrl)
+    }
+  }, [user?.user_id, getSignedQrUrl])
+
+  const handleUploadQr = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      await uploadQr(file)
+      showToast('QR de cobro guardado', 'success')
+      if (user?.user_id) {
+        getSignedQrUrl(user.user_id).then(setQrUrl)
+      }
+    } catch {
+      showToast('Error al subir QR', 'error')
+    }
+  }
 
   // Accumulate results as pages load
   useEffect(() => {
@@ -122,6 +145,25 @@ export function InventarioScreen() {
     <>
       <Toast toasts={toasts} onRemove={removeToast} />
       <div className="flex flex-col gap-3 py-3">
+          <div className="mx-4 bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-label font-semibold text-on-surface">Mi QR de Cobro</h3>
+              <label className={`bg-primary text-on-primary px-4 py-2 rounded-2xl font-label text-xs cursor-pointer transition-opacity active:opacity-80 ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                {uploading ? 'Subiendo...' : (qrUrl ? 'Actualizar QR' : 'Subir QR')}
+                <input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleUploadQr} disabled={uploading} />
+              </label>
+            </div>
+            {qrUrl && (
+              <div className="flex justify-center bg-surface-container rounded-xl p-2">
+                <img src={qrUrl} alt="QR de cobro" className="w-32 h-32 object-contain rounded-lg" />
+              </div>
+            )}
+            <p className="font-body text-xs text-on-surface-variant flex gap-1 items-start">
+              <span className="material-symbols-outlined text-[16px]">lock</span>
+              <span>Mantén tu QR privado. Solo tus compradores con pedidos activos pueden verlo.</span>
+            </p>
+          </div>
+
           <div className="flex items-center justify-end px-4">
             <button
               onClick={() => setShowForm(true)}

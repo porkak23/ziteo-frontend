@@ -12,7 +12,7 @@ export default function AppLayout({ activeTab, onTabChange, children }: AppLayou
   return (
     <div className="fixed inset-0 flex flex-col bg-background">
       <AppHeader />
-      <main className="flex-1 overflow-y-auto pt-14 pb-16 md:pb-4">
+      <main className="flex-1 overflow-y-auto pt-14 pb-16">
         {children}
       </main>
       <BottomNav activeTab={activeTab} onTabChange={onTabChange} />

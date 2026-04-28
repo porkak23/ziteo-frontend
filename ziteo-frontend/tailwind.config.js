@@ -65,6 +65,12 @@ export default {
         "status-warning-text": "var(--color-status-warning-text)",
         "status-purple-bg":    "var(--color-status-purple-bg)",
         "status-purple-text":  "var(--color-status-purple-text)",
+
+        /* Category icon surface tints */
+        "orange-surface": "#FFF0E6",
+        "blue-surface":   "#EFF6FF",
+        "yellow-surface": "#FEFCE8",
+        "red-surface":    "#FFF1F2",
       },
 
       fontFamily: {

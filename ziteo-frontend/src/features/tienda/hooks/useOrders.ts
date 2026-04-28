@@ -11,7 +11,7 @@ export interface OrderWithItems {
   constructor_id: string
   provider_id: string
   total: number
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
   notes: string | null
   created_at: string
   items: {

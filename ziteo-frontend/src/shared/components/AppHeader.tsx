@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useAuthStore } from '../../features/auth/store/authStore'
+import { useNavStore } from '../store/navStore'
+import { useUnreadCount } from '../hooks/useMessages'
 import AvatarMenu from './AvatarMenu'
 import NotificationBell from './NotificationBell'
 import { UserAvatar } from './UserAvatar'
@@ -7,6 +9,9 @@ import { UserAvatar } from './UserAvatar'
 export default function AppHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const user = useAuthStore((s) => s.user)
+  const setTab = useNavStore((s) => s.setTab)
+  const unreadMessages = useUnreadCount()
+  const messageBadge = unreadMessages > 9 ? '9+' : unreadMessages > 0 ? String(unreadMessages) : null
 
   return (
     <>
@@ -25,6 +30,25 @@ export default function AppHeader() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {user && (
+            <button
+              onClick={() => setTab('contratar')}
+              className="relative w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors"
+              aria-label={unreadMessages > 0 ? `${unreadMessages} mensajes sin leer` : 'Mensajes'}
+            >
+              <span
+                className="material-symbols-outlined text-on-surface-variant text-2xl leading-none"
+                style={{ fontVariationSettings: "'FILL' 0" }}
+              >
+                chat
+              </span>
+              {messageBadge && (
+                <span className="absolute top-1 right-1 min-w-[1.1rem] h-[1.1rem] px-1 flex items-center justify-center rounded-full bg-primary text-white font-label font-semibold text-[10px] leading-none">
+                  {messageBadge}
+                </span>
+              )}
+            </button>
+          )}
           {user && <NotificationBell userId={user.user_id} />}
           <button
             onClick={() => setIsMenuOpen((prev) => !prev)}

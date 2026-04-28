@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 
 export interface UseImageUploadOptions {
-  bucket: 'avatars' | 'project-photos' | 'product-images'
+  bucket: 'avatars' | 'project-photos' | 'product-images' | 'payment-qrs'
   folder?: string
 }
 

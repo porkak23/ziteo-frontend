@@ -7,9 +7,10 @@ import { Toast } from '../../../shared/components/Toast'
 interface ProductDetailScreenProps {
   product: ProductCard
   onBack: () => void
+  onContact?: (providerId: string, providerName: string) => void
 }
 
-export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProps) {
+export function ProductDetailScreen({ product, onBack, onContact }: ProductDetailScreenProps) {
   const [quantity, setQuantity] = useState(1)
   const addItem = useCart((s) => s.addItem)
   const { toasts, showToast, removeToast } = useToast()
@@ -134,12 +135,18 @@ export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProp
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-outline-variant px-4 py-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-outline-variant px-4 py-3 flex gap-3">
+        <button
+          onClick={() => onContact?.(product.proveedor.user_id, product.proveedor.store_name)}
+          className="flex-1 bg-secondary-container text-on-secondary-container font-label font-semibold rounded-2xl py-4 transition-opacity active:opacity-80"
+        >
+          Contactar
+        </button>
         <button
           onClick={handleAddToCart}
-          className="w-full bg-primary text-on-primary font-label font-semibold rounded-2xl py-4 transition-opacity active:opacity-80"
+          className="flex-[2] bg-primary text-on-primary font-label font-semibold rounded-2xl py-4 transition-opacity active:opacity-80"
         >
-          Agregar al carrito — Bs. {product.price * quantity}
+          Agregar — Bs. {product.price * quantity}
         </button>
       </div>
     </div>
