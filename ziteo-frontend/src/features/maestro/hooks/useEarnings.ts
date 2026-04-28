@@ -57,7 +57,7 @@ export function useEarnings(maestroId: string) {
           avgBudget,
           chartData
         }
-      } catch (err) {
+      } catch {
         // Retornar fallback si la tabla no existe u otro error
         return {
           totalEarned: 0,

@@ -235,7 +235,7 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
           .order('created_at', { ascending: false })
           .limit(5)
         if (error) return []
-        return (data ?? []).map((row: any) => ({ ...row, body: row.message })) as Notification[]
+        return (data ?? []).map((row) => ({ ...row, body: row.message })) as Notification[]
       } catch {
         return []
       }

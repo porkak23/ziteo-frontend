@@ -1,5 +1,6 @@
 import { useAuthStore } from '../../auth/store/authStore'
 import { useIncomingOrders, useUpdateOrderStatus } from '../hooks/useProveedorOrders'
+import type { ProveedorOrder, OrderItem } from '../hooks/useProveedorOrders'
 import { OrderStatusChip } from './OrderStatusChip'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
@@ -16,7 +17,7 @@ export function PedidosProveedorScreen() {
   
   const { mutate: updateStatus } = useUpdateOrderStatus()
 
-  const pendingCount = orders.filter((o: any) => o.status === 'pending').length
+  const pendingCount = orders.filter((o: ProveedorOrder) => o.status === 'pending').length
 
   if (isLoading) {
     return (
@@ -51,7 +52,7 @@ export function PedidosProveedorScreen() {
             <p className="font-body text-sm text-on-surface-variant/50 text-center">Cuando un cliente compre tus productos, los pedidos aparecerán aquí</p>
           </div>
         ) : (
-          orders.map((order: any) => {
+          orders.map((order: ProveedorOrder) => {
             const dateLabel = order.created_at
               ? new Date(order.created_at).toLocaleDateString('es-BO')
               : ''
@@ -73,7 +74,7 @@ export function PedidosProveedorScreen() {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  {order.items.map((item: any) => (
+                  {order.items.map((item: OrderItem) => (
                     <div key={item.id} className="flex items-center justify-between">
                       <span className="font-body text-sm text-on-surface">
                         {item.quantity}x {item.product?.name ?? 'Producto'}

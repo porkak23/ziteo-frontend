@@ -36,8 +36,8 @@ export function useImageUpload({ bucket, folder }: UseImageUploadOptions) {
 
       const { data } = supabase.storage.from(bucket).getPublicUrl(filePath)
       return data.publicUrl
-    } catch (err: any) {
-      const errMsg = err.message || 'Error al subir la imagen'
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Error al subir la imagen'
       setError(errMsg)
       throw new Error(errMsg)
     } finally {

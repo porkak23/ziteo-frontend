@@ -50,6 +50,7 @@ export function useProducts(filters: TiendaFilters, offset: number) {
         query = query.eq('listing_type', filters.listing_type)
       }
       if (filters.city) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         query = (query as any).eq('provider.city', filters.city)
       }
       if (filters.min_price !== undefined) {
@@ -71,7 +72,7 @@ export function useProducts(filters: TiendaFilters, offset: number) {
       const { data, error } = await query.range(offset, offset + TIENDA_PAGE_SIZE - 1)
       if (error) throw error
 
-      return (data ?? []).map((p: any) => ({
+      return (data ?? []).map((p) => ({
         id: p.id,
         name: p.name,
         description: p.description,
@@ -81,12 +82,15 @@ export function useProducts(filters: TiendaFilters, offset: number) {
         image_url: p.image_url,
         active: p.active,
         category_id: p.category_id,
-        proveedor: {
-          user_id: p.provider?.user_id ?? '',
-          store_name: p.provider?.user_roles?.[0]?.store_name ?? p.provider?.user_id ?? '',
-          city: p.provider?.city ?? '',
-          is_verified: p.provider?.user_roles?.[0]?.is_verified ?? false,
-        },
+        proveedor: (() => {
+          const prov = Array.isArray(p.provider) ? p.provider[0] : p.provider
+          return {
+            user_id: prov?.user_id ?? '',
+            store_name: prov?.user_roles?.[0]?.store_name ?? prov?.user_id ?? '',
+            city: prov?.city ?? '',
+            is_verified: prov?.user_roles?.[0]?.is_verified ?? false,
+          }
+        })(),
       })) as ProductCard[]
     },
   })

@@ -62,7 +62,7 @@ export function useUpsertHabilidad() {
 export function useDeleteHabilidad() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, maestro_id: _maestro_id }: { id: string; maestro_id: string }) => {
+    mutationFn: async ({ id }: { id: string; maestro_id: string }) => {
       const { error } = await supabase.from('maestro_habilidades').delete().eq('id', id)
       if (error) throw error
     },

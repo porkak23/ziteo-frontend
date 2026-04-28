@@ -4,11 +4,7 @@ import AvatarMenu from './AvatarMenu'
 import NotificationBell from './NotificationBell'
 import { UserAvatar } from './UserAvatar'
 
-interface AppHeaderProps {
-  title?: string
-}
-
-export default function AppHeader({ title: _title }: AppHeaderProps) {
+export default function AppHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const user = useAuthStore((s) => s.user)
 

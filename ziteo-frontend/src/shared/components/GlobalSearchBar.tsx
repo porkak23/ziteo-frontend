@@ -8,16 +8,12 @@ interface GlobalSearchBarProps {
 export default function GlobalSearchBar({ onClose }: GlobalSearchBarProps) {
   const [inputValue, setInputValue] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
-  const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('ziteo_recent_searches') ?? '[]') } catch { return [] }
+  })
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const saved = localStorage.getItem('ziteo_recent_searches')
-    if (saved) {
-      try {
-        setRecentSearches(JSON.parse(saved))
-      } catch (e) {}
-    }
     inputRef.current?.focus()
   }, [])
 
@@ -175,7 +171,7 @@ export default function GlobalSearchBar({ onClose }: GlobalSearchBarProps) {
                       </div>
                       <div className="flex-1 overflow-hidden">
                         <p className="font-label font-semibold text-on-surface truncate">{p.name}</p>
-                        <p className="font-body text-xs text-on-surface-variant truncate">${p.price}</p>
+                        <p className="font-body text-xs text-on-surface-variant truncate">${p.price_unit}</p>
                       </div>
                     </button>
                   ))}

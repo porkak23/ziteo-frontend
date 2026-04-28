@@ -62,8 +62,9 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       const publicUrl = await upload(file)
       setAvatarUrl(publicUrl)
       showToast('Foto de perfil cargada', 'success')
-    } catch (err: any) {
-      showToast(err.message ?? 'No se pudo subir la foto', 'error')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'No se pudo subir la foto'
+      showToast(msg, 'error')
     } finally {
       if (photoInputRef.current) photoInputRef.current.value = ''
     }

@@ -49,26 +49,6 @@ function TabSkeleton() {
 
 type AppScreen = 'splash' | 'welcome' | 'register' | 'login' | 'otp' | 'onboarding' | 'oauth-setup' | 'forgot-pin' | 'app'
 
-const TAB_TITLES: Record<string, string> = {
-  home: 'ZITEO',
-  proyectos: 'Proyectos',
-  contratar: 'Contratar',
-  tienda: 'Mi Tienda',
-  inventario: 'Inventario',
-  intel: 'Inteligencia',
-  pedidos: 'Pedidos',
-  'mis-pedidos': 'Mis Pedidos',
-  notificaciones: 'Notificaciones',
-  trabajos: 'Trabajos',
-  licitaciones: 'Licitaciones',
-  'mi-perfil': 'Mi Perfil',
-  perfil: 'Perfil',
-  settings: 'Configuración',
-  habilidades: 'Habilidades',
-  viajes: 'Mis Viajes',
-  historial: 'Historial',
-  billetera: 'Billetera',
-}
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('splash')
@@ -97,10 +77,11 @@ export default function App() {
 
   useEffect(() => {
     if (!isAuth && screen === 'app') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setScreen('welcome')
       setActiveTab('home')
     }
-  }, [isAuth, screen])
+  }, [isAuth, screen, setActiveTab])
 
   // Chofer has no 'home' tab — land them on 'viajes' instead.
   useEffect(() => {
@@ -250,12 +231,10 @@ export default function App() {
     )
   }
 
-  const tabTitle = TAB_TITLES[activeTab] ?? 'ZITEO'
-
   return (
     <>
       <ThemeInitializer />
-      <AppLayout title={tabTitle} activeTab={activeTab} onTabChange={setActiveTab}>
+      <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
         <Suspense fallback={<TabSkeleton />}>
           {activeTab === 'home'        && <HomeScreen onNavigate={setActiveTab} />}
           {activeTab === 'proyectos'  && <ProyectosScreen />}

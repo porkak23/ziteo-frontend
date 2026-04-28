@@ -224,12 +224,14 @@ export function TiendaScreen() {
       isFirstLoad.current = false
       return
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOffset(0)
     setAllProducts([])
   }, [filters])
 
   // Accumulate pages
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (page.length === 0 && offset === 0) { setAllProducts([]); return }
     if (page.length === 0) return
     if (offset === 0) {

@@ -68,6 +68,7 @@ export function InventarioScreen() {
   // Accumulate results as pages load
   useEffect(() => {
     if (page.length === 0 && offset === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllProducts([])
       return
     }

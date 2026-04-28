@@ -90,16 +90,16 @@ export function useIncomingOrders(providerId: string, onNewOrder?: () => void) {
           product_id,
           quantity,
           price_unit,
-          product:products!order_items_product_id_fkey(name)
+          product:products!order_items_product_id_fkey(id,name)
         `)
         .in('order_id', orderIds)
 
       if (itemsError) {
-         if (itemsError.code === '42P01') return ordersData.map(o => ({ ...o, items: [] })) as any
+         if (itemsError.code === '42P01') return ordersData.map(o => ({ ...o, items: [] })) as ProveedorOrder[]
          throw itemsError
       }
 
-      const itemsByOrder = (itemsData || []).reduce((acc: Record<string, any[]>, item: any) => {
+      const itemsByOrder = (itemsData || []).reduce((acc: Record<string, OrderItem[]>, item) => {
         if (!acc[item.order_id]) acc[item.order_id] = []
         acc[item.order_id].push({
            ...item,
@@ -108,9 +108,9 @@ export function useIncomingOrders(providerId: string, onNewOrder?: () => void) {
         return acc
       }, {})
 
-      return ordersData.map((order: any) => ({
+      return ordersData.map((order) => ({
         ...order,
-        buyer_name: Array.isArray(order.buyer) ? order.buyer[0]?.name : order.buyer?.name,
+        buyer_name: Array.isArray(order.buyer) ? (order.buyer as { name: string }[])[0]?.name : (order.buyer as { name: string } | null)?.name,
         items: itemsByOrder[order.id] || []
       })) as ProveedorOrder[]
     }

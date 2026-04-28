@@ -112,9 +112,9 @@ export function useMyOrders(constructorId?: string) {
 
       if (error) throw new Error(error.message)
 
-      return (data ?? []).map((o: any) => ({
+      return (data ?? []).map((o) => ({
         ...o,
-        items: (o.items ?? []).map((item: any) => ({
+        items: ((o as { items?: { id: string; product_id: string; quantity: number; unit_price?: number; price_unit: number; product?: { name: string } | null }[] }).items ?? []).map((item) => ({
           id:         item.id,
           product_id: item.product_id,
           quantity:   item.quantity,

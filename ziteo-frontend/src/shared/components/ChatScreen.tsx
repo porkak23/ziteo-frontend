@@ -15,7 +15,10 @@ function formatTime(iso: string): string {
   return `${h}:${m}`
 }
 
-function BubbleSkeleton({ align }: { align: 'left' | 'right' }) {
+const SKELETON_WIDTHS = [160, 200, 140, 180, 220] as const
+
+function BubbleSkeleton({ align, index = 0 }: { align: 'left' | 'right'; index?: number }) {
+  const width = SKELETON_WIDTHS[index % SKELETON_WIDTHS.length]
   return (
     <div
       className={`flex ${align === 'right' ? 'justify-end' : 'justify-start'}`}
@@ -25,7 +28,7 @@ function BubbleSkeleton({ align }: { align: 'left' | 'right' }) {
           className={`h-10 rounded-2xl animate-pulse bg-surface-container ${
             align === 'right' ? 'rounded-tr-sm' : 'rounded-tl-sm'
           }`}
-          style={{ width: `${120 + Math.random() * 80}px` }}
+          style={{ width: `${width}px` }}
         />
         <div
           className={`h-3 w-8 rounded animate-pulse bg-surface-container ${
@@ -97,9 +100,9 @@ export function ChatScreen({ otherUserId, otherUserName, onClose }: ChatScreenPr
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
         {isLoading && (
           <>
-            <BubbleSkeleton align="left" />
-            <BubbleSkeleton align="right" />
-            <BubbleSkeleton align="left" />
+            <BubbleSkeleton align="left" index={0} />
+            <BubbleSkeleton align="right" index={1} />
+            <BubbleSkeleton align="left" index={2} />
           </>
         )}
 

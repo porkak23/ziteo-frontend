@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 
+interface SearchProject { id: string; title: string; status: string; photo_url: string | null }
+interface SearchProfile { user_id: string; name: string; active_role: string; avatar_url: string | null }
+interface SearchProduct { id: string; name: string; price_unit: number; image_url: string | null }
+
 export function useGlobalSearch(query: string) {
-  const [projects, setProjects] = useState<any[]>([])
-  const [profiles, setProfiles] = useState<any[]>([])
-  const [products, setProducts] = useState<any[]>([])
+  const [projects, setProjects] = useState<SearchProject[]>([])
+  const [profiles, setProfiles] = useState<SearchProfile[]>([])
+  const [products, setProducts] = useState<SearchProduct[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {

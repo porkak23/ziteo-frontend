@@ -30,7 +30,7 @@ export function useInventario(offset: number) {
         .order('created_at', { ascending: false })
         .range(offset, offset + INVENTARIO_PAGE_SIZE - 1)
       if (error) throw error
-      return (data ?? []).map((p: any) => ({
+      return (data ?? []).map((p) => ({
         id: p.id,
         name: p.name,
         price: Number(p.price_unit),
