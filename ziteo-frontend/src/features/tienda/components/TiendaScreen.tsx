@@ -14,7 +14,9 @@ import { ChatScreen } from '../../../shared/components/ChatScreen'
 const CATEGORY_GROUPS = [
   {
     id: 'materiales',
-    label: 'Materiales',
+    label: 'Materiales de Construcción',
+    shortLabel: 'Materiales',
+    tagline: 'Cemento, acero, pinturas y más',
     icon: 'foundation',
     bg: 'bg-orange-surface dark:bg-orange-surface/20',
     activeBg: 'bg-primary',
@@ -22,7 +24,9 @@ const CATEGORY_GROUPS = [
   },
   {
     id: 'herramientas',
-    label: 'Herramientas',
+    label: 'Herramientas de Construcción',
+    shortLabel: 'Herramientas',
+    tagline: 'Manuales, eléctricas y más',
     icon: 'hardware',
     bg: 'bg-blue-surface dark:bg-blue-surface/20',
     activeBg: 'bg-primary',
@@ -30,7 +34,9 @@ const CATEGORY_GROUPS = [
   },
   {
     id: 'maquinaria',
-    label: 'Maquinaria',
+    label: 'Maquinaria Pesada',
+    shortLabel: 'Maquinaria',
+    tagline: 'Alquiler y venta en Bolivia',
     icon: 'precision_manufacturing',
     bg: 'bg-yellow-surface dark:bg-yellow-surface/20',
     activeBg: 'bg-primary',
@@ -38,7 +44,9 @@ const CATEGORY_GROUPS = [
   },
   {
     id: 'seguridad',
-    label: 'Seguridad',
+    label: 'Equipo de Seguridad',
+    shortLabel: 'Seguridad',
+    tagline: 'Cascos, chalecos y EPP',
     icon: 'safety_check',
     bg: 'bg-red-surface dark:bg-red-surface/20',
     activeBg: 'bg-primary',
@@ -362,8 +370,8 @@ export function TiendaScreen() {
         </div>
       </div>
 
-      {/* ── Promo banner carousel ─────────────────────────────────────────── */}
-      <div className="px-4 pt-4 pb-2">
+      {/* ── Promo banner carousel (home only) ────────────────────────────── */}
+      {!selectedGroup && !filters.search && <div className="px-4 pt-4 pb-2">
         <button
           type="button"
           className="relative h-40 w-full rounded-2xl overflow-hidden active:opacity-90 transition-opacity text-left"
@@ -407,89 +415,69 @@ export function TiendaScreen() {
             </div>
           </div>
         </button>
-      </div>
+      </div>}
 
-      {/* ── Category horizontal scroll ────────────────────────────────────── */}
-      <div className="pt-4 pb-2">
-        <div
-          className="flex overflow-x-auto gap-3 px-4 pb-1"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {/* "Todo" pill */}
+      {/* ── Category grid (home) / Group header strip (active) ───────────── */}
+      {!selectedGroup ? (
+        <div className="px-4 pt-5 pb-2">
+          <p className="font-label text-[11px] font-semibold text-on-surface-variant uppercase tracking-[0.12em] mb-3">
+            Buscar por categoría
+          </p>
+          {loadingCats ? (
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-28 rounded-2xl bg-surface-container animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {CATEGORY_GROUPS.map((group) => (
+                <button
+                  key={group.id}
+                  onClick={() => handleGroupSelect(group.id)}
+                  aria-label={`Ver ${group.label}`}
+                  className={`flex flex-col items-start gap-2 rounded-2xl p-4 h-[116px] transition-[transform,opacity] active:scale-[0.97] ${group.bg} text-left`}
+                >
+                  <span
+                    className="material-symbols-outlined text-3xl text-on-surface-variant"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                    aria-hidden="true"
+                  >
+                    {group.icon}
+                  </span>
+                  <div className="mt-auto">
+                    <p className="font-label font-bold text-on-surface text-sm leading-tight">{group.shortLabel}</p>
+                    <p className="font-body text-on-surface-variant text-xs mt-0.5 leading-snug">{group.tagline}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="sticky top-[57px] z-10 flex items-center gap-3 px-4 py-2.5 bg-surface border-b border-outline-variant">
           <button
             onClick={() => handleGroupSelect(null)}
-            aria-pressed={!selectedGroup}
-            aria-label="Ver todos los productos"
-            className="shrink-0 flex flex-col items-center gap-1.5"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-surface-container transition-colors hover:bg-surface-container-high shrink-0"
+            aria-label="Volver a categorías"
           >
-            <div
-              className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl transition-all ${
-                !selectedGroup
-                  ? 'bg-primary shadow-md scale-105'
-                  : 'bg-surface-container'
-              }`}
-            >
-              <span
-                className={`material-symbols-outlined text-2xl ${!selectedGroup ? 'text-white' : 'text-on-surface-variant'}`}
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                storefront
-              </span>
-            </div>
-            <span
-              className={`font-label text-[11px] font-semibold text-center ${
-                !selectedGroup ? 'text-primary' : 'text-on-surface-variant'
-              }`}
-            >
-              Todo
-            </span>
+            <span className="material-symbols-outlined text-on-surface text-xl" aria-hidden="true">arrow_back</span>
           </button>
-
-          {loadingCats
-            ? Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="shrink-0 flex flex-col items-center gap-1.5">
-                  <div className="w-16 h-16 rounded-2xl bg-surface-container animate-pulse" />
-                  <div className="w-12 h-2 rounded bg-surface-container animate-pulse" />
-                </div>
-              ))
-            : CATEGORY_GROUPS.map((group) => {
-                const isActive = selectedGroup === group.id
-                return (
-                  <button
-                    key={group.id}
-                    onClick={() => handleGroupSelect(group.id)}
-                    aria-pressed={isActive}
-                    aria-label={group.label}
-                    className="shrink-0 flex flex-col items-center gap-1.5"
-                  >
-                    <div
-                      className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${
-                        isActive
-                          ? 'bg-primary shadow-md scale-105'
-                          : group.bg
-                      }`}
-                    >
-                      <span
-                        className={`material-symbols-outlined text-3xl transition-colors ${
-                          isActive ? 'text-white' : 'text-on-surface-variant'
-                        }`}
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                      >
-                        {group.icon}
-                      </span>
-                    </div>
-                    <span
-                      className={`font-label text-[11px] font-semibold text-center ${
-                        isActive ? 'text-primary' : 'text-on-surface-variant'
-                      }`}
-                    >
-                      {group.label}
-                    </span>
-                  </button>
-                )
-              })}
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${activeGroup?.bg ?? ''}`}>
+            <span
+              className="material-symbols-outlined text-lg text-on-surface-variant"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+              aria-hidden="true"
+            >
+              {activeGroup?.icon}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-label font-bold text-on-surface text-sm truncate">{activeGroup?.label}</p>
+            <p className="font-body text-on-surface-variant text-xs">{activeGroup?.tagline}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Sub-categories ────────────────────────────────────────────────── */}
       {selectedGroup && matchedSubcategories.length > 0 && (
@@ -542,7 +530,7 @@ export function TiendaScreen() {
       )}
 
       {/* ── Ad slot #1 ────────────────────────────────────────────────────── */}
-      {!filters.search && <div className="py-3"><AdSlot /></div>}
+      {!filters.search && !selectedGroup && <div className="py-3"><AdSlot /></div>}
 
       {/* ── Main product grid ─────────────────────────────────────────────── */}
       <section className="px-4 pt-2">
