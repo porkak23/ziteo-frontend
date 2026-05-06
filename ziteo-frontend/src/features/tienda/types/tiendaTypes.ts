@@ -67,4 +67,5 @@ export interface TiendaFilters {
   group_keywords?: string[]
   listing_type?: ListingType
   construction_stage?: ConstructionStage
+  provider_id?: string
 }

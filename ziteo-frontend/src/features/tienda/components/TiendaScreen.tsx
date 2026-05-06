@@ -354,6 +354,7 @@ export function TiendaScreen() {
   const [surtidoOpen, setSurtidoOpen] = useState(false)
   const [surtidoProviderId, setSurtidoProviderId] = useState('')
   const [surtidoProviderName, setSurtidoProviderName] = useState('')
+  const [viewingProvider, setViewingProvider] = useState<{ id: string; name: string } | null>(null)
   const [offset, setOffset] = useState(0)
   const [allProducts, setAllProducts] = useState<ProductCardType[]>([])
   const [activeBanner, setActiveBanner] = useState(0)
@@ -479,6 +480,20 @@ export function TiendaScreen() {
     setSurtidoOpen(true)
   }
 
+  const handleViewProviderStore = (providerId: string, providerName: string) => {
+    setSelectedProduct(null)
+    setSelectedStage(null)
+    setSelectedGroup(null)
+    setSelectedCategory(null)
+    setViewingProvider({ id: providerId, name: providerName })
+    setFilters({ provider_id: providerId })
+  }
+
+  const handleClearProviderFilter = () => {
+    setViewingProvider(null)
+    setFilters({})
+  }
+
   const handleCargarMas = () => setOffset((prev) => prev + TIENDA_PAGE_SIZE)
   const hasMore = page.length === TIENDA_PAGE_SIZE
 
@@ -502,14 +517,15 @@ export function TiendaScreen() {
     ? CONSTRUCTION_STAGES.find((s) => s.id === selectedStage)
     : null
 
-  // When stage is selected, show grouped by provider
-  const showGroupedView = !!selectedStage || !!selectedGroup
+  // When stage, group, or viewing a single provider — show grouped by provider
+  const showGroupedView = !!selectedStage || !!selectedGroup || !!viewingProvider
 
   if (selectedProduct) {
     return (
       <ProductDetailScreen
         product={selectedProduct}
         onBack={() => setSelectedProduct(null)}
+        onViewProviderStore={handleViewProviderStore}
       />
     )
   }
@@ -558,8 +574,31 @@ export function TiendaScreen() {
         </div>
       </div>
 
+      {/* ── Provider store banner ────────────────────────────────────────── */}
+      {viewingProvider && (
+        <div className="mx-4 mt-3 bg-primary/5 border border-primary/20 rounded-2xl px-4 py-3 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <span className="font-label font-bold text-primary text-sm leading-none">
+              {viewingProvider.name.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-label font-semibold text-on-surface text-sm truncate">{viewingProvider.name}</p>
+            <p className="font-body text-xs text-on-surface-variant">Tienda completa</p>
+          </div>
+          <button
+            onClick={handleClearProviderFilter}
+            className="shrink-0 flex items-center gap-1 font-label text-xs text-primary font-semibold"
+            aria-label="Ver todos los proveedores"
+          >
+            <span className="material-symbols-outlined text-sm leading-none">close</span>
+            Salir
+          </button>
+        </div>
+      )}
+
       {/* ── Etapas de Obra (shown when no search active) ─────────────────── */}
-      {!filters.search && (
+      {!filters.search && !viewingProvider && (
         <section className="px-4 pt-5 pb-3">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-label font-semibold text-on-surface text-sm">Etapas de Obra</h2>
@@ -649,8 +688,8 @@ export function TiendaScreen() {
         </div>
       )}
 
-      {/* ── Promo banner carousel (shown when no stage/group/search filter) ─ */}
-      {!selectedStage && !filters.search && (
+      {/* ── Promo banner carousel (shown when no stage/group/search/provider filter) ─ */}
+      {!selectedStage && !filters.search && !viewingProvider && (
         <div className="px-4 pt-2 pb-2">
           <div
             className="relative h-40 rounded-2xl overflow-hidden cursor-pointer active:opacity-90 transition-opacity"
@@ -696,8 +735,8 @@ export function TiendaScreen() {
         </div>
       )}
 
-      {/* ── Category group horizontal scroll (shown when no stage selected) ─ */}
-      {!selectedStage && (
+      {/* ── Category group horizontal scroll (shown when no stage/provider filter) ─ */}
+      {!selectedStage && !viewingProvider && (
         <div className="pt-3 pb-2">
           <div
             className="flex overflow-x-auto gap-3 px-4 pb-1"
@@ -805,7 +844,7 @@ export function TiendaScreen() {
       )}
 
       {/* ── Featured products (horizontal scroll, only on "Todo" view) ────── */}
-      {!selectedGroup && !selectedStage && !filters.search && allProducts.length > 0 && (
+      {!selectedGroup && !selectedStage && !filters.search && !viewingProvider && allProducts.length > 0 && (
         <section className="pt-4 pb-2">
           <div className="flex items-center justify-between px-4 mb-3">
             <h2 className="font-label font-semibold text-on-surface text-sm">
@@ -831,7 +870,7 @@ export function TiendaScreen() {
       )}
 
       {/* ── Ad slot #1 ────────────────────────────────────────────────────── */}
-      {!filters.search && !selectedStage && <div className="py-3"><AdSlot /></div>}
+      {!filters.search && !selectedStage && !viewingProvider && <div className="py-3"><AdSlot /></div>}
 
       {/* ── Main product grid ─────────────────────────────────────────────── */}
       <section className="px-4 pt-2">

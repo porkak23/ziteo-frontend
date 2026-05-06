@@ -9,6 +9,7 @@ import { supabase } from '../../../lib/supabaseClient'
 interface ProductDetailScreenProps {
   product: ProductCard
   onBack: () => void
+  onViewProviderStore?: (providerId: string, providerName: string) => void
 }
 
 interface AlternativeProvider {
@@ -23,7 +24,7 @@ interface AlternativeProvider {
   } | null
 }
 
-export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProps) {
+export function ProductDetailScreen({ product, onBack, onViewProviderStore }: ProductDetailScreenProps) {
   const [quantity, setQuantity] = useState(1)
   const addItem = useCart((s) => s.addItem)
   const { toasts, showToast, removeToast } = useToast()
@@ -244,7 +245,10 @@ export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProp
                       </div>
                       <button
                         type="button"
-                        onClick={() => showToast('Ver tienda completa: próximamente disponible', 'info')}
+                        onClick={() => onViewProviderStore
+                          ? onViewProviderStore(alt.provider_id, storeName)
+                          : showToast('Ver tienda completa: próximamente disponible', 'info')
+                        }
                         className="shrink-0 bg-primary/10 text-primary border border-primary/20 rounded-xl px-3 py-1.5 font-label text-xs font-semibold active:opacity-70 transition-opacity"
                       >
                         Ver tienda

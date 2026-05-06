@@ -69,6 +69,9 @@ export function useProducts(filters: TiendaFilters, offset: number) {
       if (filters.search) {
         query = query.ilike('name', `%${filters.search}%`)
       }
+      if (filters.provider_id) {
+        query = query.eq('provider_id', filters.provider_id)
+      }
       if (filters.construction_stage) {
         query = query.eq('construction_stage', filters.construction_stage)
       } else if (filters.category_id) {
