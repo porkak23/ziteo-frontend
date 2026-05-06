@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuthStore } from '../../auth/store/authStore'
 import { usePendingDeliveries, useMyDeliveries } from '../hooks/useDeliveries'
 import { useDriverEarnings } from '../hooks/useDriverEarnings'
+import { useDriverProfile } from '../hooks/useDriverProfile'
 import { DeliveryCard, DeliverySkeleton } from './DeliveryCard'
 import { deliveryFee } from '../utils/deliveryUtils'
 import { DeliveryDetailScreen } from './DeliveryDetailScreen'
@@ -132,15 +133,18 @@ function JobCard({
       {/* Fee row */}
       <div className="px-4 py-3 flex items-center justify-between border-b border-outline-variant/50">
         <div className="flex items-center gap-2">
-          <span
-            className="material-symbols-outlined text-primary text-lg"
-            style={{ fontVariationSettings: "'FILL' 1" }}
-            aria-hidden="true"
-          >
-            local_shipping
+          <span className="text-base leading-none" aria-hidden="true">
+            {delivery.cargo_type === 'heavy' ? '🚛' : '🛵'}
           </span>
           <span className="font-label font-semibold text-on-surface text-sm">
             Pedido #{delivery.id.slice(0, 6).toUpperCase()}
+          </span>
+          <span className={`font-label text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+            delivery.cargo_type === 'heavy'
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+          }`}>
+            {delivery.cargo_type === 'heavy' ? 'Pesado' : 'Ligero'}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -211,7 +215,10 @@ export function TransportistaScreen() {
   const [detailId, setDetailId] = useState<string | null>(null)
   const [arrivedAt, setArrivedAt] = useState<string | null>(null)
 
-  const { data: poolDeliveries = [], isLoading: poolLoading } = usePendingDeliveries()
+  const { data: driverProfile } = useDriverProfile()
+  const cargoCapability = driverProfile?.cargo_capability ?? null
+
+  const { data: poolDeliveries = [], isLoading: poolLoading } = usePendingDeliveries(cargoCapability)
   const { data: myDeliveries = [], isLoading: myLoading } = useMyDeliveries()
   const { today } = useDriverEarnings()
   const geo = useGeolocation(isOnline)
@@ -342,7 +349,16 @@ export function TransportistaScreen() {
         <div className="px-4 pt-4 pb-3 flex items-center justify-between">
           <div>
             <p className="font-body text-white/40 text-xs">Conectado</p>
-            <h1 className="font-headline font-black text-white text-xl leading-tight">{firstName}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-headline font-black text-white text-xl leading-tight">{firstName}</h1>
+              {driverProfile?.vehicle_type && (
+                <span className="font-label text-[11px] font-semibold bg-white/10 text-white/70 px-2 py-0.5 rounded-full">
+                  {driverProfile.vehicle_type === 'moto' ? '🛵 Moto' :
+                   driverProfile.vehicle_type === 'camion' ? '🚛 Camión' :
+                   driverProfile.vehicle_type === 'camioneta' ? '🚗 Camioneta' : '🛻 Pickup'}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Toggle online — pill visible */}
@@ -474,9 +490,20 @@ export function TransportistaScreen() {
       {/* Content */}
       <div className="flex-1 px-4 pt-4 pb-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-label font-semibold text-on-surface text-sm">
-            {serviceMode === 'entregas' ? 'Disponibles en tu zona' : 'Solicitudes de transporte'}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-label font-semibold text-on-surface text-sm">
+              {serviceMode === 'entregas' ? 'Disponibles en tu zona' : 'Solicitudes de transporte'}
+            </h2>
+            {serviceMode === 'entregas' && cargoCapability && (
+              <span className={`font-label text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                cargoCapability === 'heavy'
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+              }`}>
+                {cargoCapability === 'heavy' ? '🚛 Pesados' : '🛵 Ligeros'}
+              </span>
+            )}
+          </div>
           {serviceMode === 'entregas' && poolDeliveries.length > 0 && (
             <span className="font-body text-xs text-on-surface-variant">{poolDeliveries.length} disponibles</span>
           )}

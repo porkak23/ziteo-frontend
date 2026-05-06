@@ -4,6 +4,7 @@ import { ProductCard } from './ProductCard'
 import { ProductDetailScreen } from './ProductDetailScreen'
 import { CartDrawer } from './CartDrawer'
 import { FilterSheet } from './FilterSheet'
+import { SurtidoRapidoSheet } from './SurtidoRapidoSheet'
 import type { ProductCard as ProductCardType, TiendaFilters, ConstructionStage } from '../types/tiendaTypes'
 import { useCategories, useProducts, TIENDA_PAGE_SIZE } from '../hooks/useTienda'
 import { useCart } from '../hooks/useCart'
@@ -130,8 +131,10 @@ const PROMO_BANNERS = [
 
 function ProviderStoreHeader({
   product,
+  onSurtido,
 }: {
   product: ProductCardType
+  onSurtido: (providerId: string, providerName: string) => void
 }) {
   const { store_name, is_verified, city, min_order_amount, delivery_time_hours, free_shipping_threshold } = product.proveedor
   const proveedorInitial = store_name.charAt(0).toUpperCase()
@@ -164,7 +167,7 @@ function ProviderStoreHeader({
         {/* Surtido rápido button */}
         <button
           type="button"
-          onClick={() => alert('Próximamente: Surtido Rápido')}
+          onClick={() => onSurtido(product.proveedor.user_id, store_name)}
           className="flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 rounded-xl px-3 py-1.5 font-label text-xs font-semibold shrink-0 active:opacity-70 transition-opacity"
           aria-label="Surtir pedido rápido"
         >
@@ -306,9 +309,11 @@ function AdSlot() {
 function ProductsGroupedByProvider({
   products,
   onSelectProduct,
+  onSurtido,
 }: {
   products: ProductCardType[]
   onSelectProduct: (p: ProductCardType) => void
+  onSurtido: (providerId: string, providerName: string) => void
 }) {
   // Group products by provider user_id, preserving order of first appearance
   const providerOrder: string[] = []
@@ -329,7 +334,7 @@ function ProductsGroupedByProvider({
         const firstProduct = providerProducts[0]
         return (
           <div key={providerId} className="flex flex-col gap-3">
-            <ProviderStoreHeader product={firstProduct} />
+            <ProviderStoreHeader product={firstProduct} onSurtido={onSurtido} />
             <div className="grid grid-cols-2 gap-3">
               {providerProducts.map((product) => (
                 <ProductCard
@@ -356,6 +361,9 @@ export function TiendaScreen() {
   const [selectedProduct, setSelectedProduct] = useState<ProductCardType | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+  const [surtidoOpen, setSurtidoOpen] = useState(false)
+  const [surtidoProviderId, setSurtidoProviderId] = useState('')
+  const [surtidoProviderName, setSurtidoProviderName] = useState('')
   const [offset, setOffset] = useState(0)
   const [allProducts, setAllProducts] = useState<ProductCardType[]>([])
   const [activeBanner, setActiveBanner] = useState(0)
@@ -475,6 +483,12 @@ export function TiendaScreen() {
 
   const handleBannerCta = (group: string | null) => {
     if (group) handleGroupSelect(group)
+  }
+
+  const handleSurtido = (providerId: string, providerName: string) => {
+    setSurtidoProviderId(providerId)
+    setSurtidoProviderName(providerName)
+    setSurtidoOpen(true)
   }
 
   const handleCargarMas = () => setOffset((prev) => prev + TIENDA_PAGE_SIZE)
@@ -895,6 +909,7 @@ export function TiendaScreen() {
             <ProductsGroupedByProvider
               products={allProducts.slice(0, 6)}
               onSelectProduct={setSelectedProduct}
+              onSurtido={handleSurtido}
             />
 
             {/* Ad slot #2 after 6 products (grouped view) */}
@@ -908,6 +923,7 @@ export function TiendaScreen() {
               <ProductsGroupedByProvider
                 products={allProducts.slice(6)}
                 onSelectProduct={setSelectedProduct}
+                onSurtido={handleSurtido}
               />
             )}
 
@@ -1045,6 +1061,14 @@ export function TiendaScreen() {
             ...newFilters,
           }))
         }}
+      />
+
+      {/* ── Surtido Rápido Sheet ──────────────────────────────────────────── */}
+      <SurtidoRapidoSheet
+        open={surtidoOpen}
+        onClose={() => setSurtidoOpen(false)}
+        providerId={surtidoProviderId}
+        providerName={surtidoProviderName}
       />
     </div>
   )
