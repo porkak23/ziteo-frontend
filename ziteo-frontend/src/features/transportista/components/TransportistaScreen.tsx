@@ -2,14 +2,64 @@ import { useState, useEffect } from 'react'
 import { useAuthStore } from '../../auth/store/authStore'
 import { usePendingDeliveries, useMyDeliveries } from '../hooks/useDeliveries'
 import { useDriverEarnings } from '../hooks/useDriverEarnings'
-import { useDriverProfile } from '../hooks/useDriverProfile'
+import { useDriverProfile, useSaveVehicleType } from '../hooks/useDriverProfile'
 import { DeliveryCard, DeliverySkeleton } from './DeliveryCard'
 import { deliveryFee } from '../utils/deliveryUtils'
 import { DeliveryDetailScreen } from './DeliveryDetailScreen'
 import { useGeolocation, haversineDistance } from '../../../shared/hooks/useGeolocation'
-import type { Delivery } from '../types/deliveryTypes'
+import type { Delivery, VehicleType } from '../types/deliveryTypes'
 
 type ServiceMode = 'entregas' | 'transporte'
+
+// ─── Vehicle setup banner ─────────────────────────────────────────────────────
+
+const VEHICLE_OPTS: { value: VehicleType; icon: string; label: string }[] = [
+  { value: 'moto',      icon: '🛵', label: 'Moto' },
+  { value: 'camioneta', icon: '🚗', label: 'Camioneta' },
+  { value: 'camion',    icon: '🚛', label: 'Camión' },
+  { value: 'pickup',    icon: '🛻', label: 'Pickup' },
+]
+
+function VehicleSetupBanner() {
+  const { mutate: save, isPending } = useSaveVehicleType()
+  const [dismissed, setDismissed] = useState(false)
+
+  if (dismissed) return null
+
+  return (
+    <div className="mx-4 mt-4 bg-surface border border-outline-variant rounded-2xl p-4 flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-label font-bold text-on-surface text-sm">Configura tu vehículo</p>
+          <p className="font-body text-xs text-on-surface-variant mt-0.5">
+            Verás solo pedidos compatibles con tu tipo de carga
+          </p>
+        </div>
+        <button
+          onClick={() => setDismissed(true)}
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors"
+          aria-label="Cerrar"
+        >
+          <span className="material-symbols-outlined text-on-surface-variant text-base" aria-hidden="true">close</span>
+        </button>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {VEHICLE_OPTS.map((v) => (
+          <button
+            key={v.value}
+            type="button"
+            disabled={isPending}
+            onClick={() => save(v.value)}
+            className="flex flex-col items-center gap-1 py-2 rounded-xl border border-outline-variant bg-surface-container active:opacity-70 transition-opacity disabled:opacity-50 text-center"
+          >
+            <span className="text-xl leading-none">{v.icon}</span>
+            <span className="font-label text-[11px] font-semibold text-on-surface">{v.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 // ─── Radar SVG ────────────────────────────────────────────────────────────────
 
@@ -419,6 +469,11 @@ export function TransportistaScreen() {
             <span className="material-symbols-outlined text-on-surface-variant text-base" aria-hidden="true">close</span>
           </button>
         </div>
+      )}
+
+      {/* Vehicle setup nudge — shown only if driver has no vehicle_type configured */}
+      {driverProfile !== undefined && driverProfile.vehicle_type === null && (
+        <VehicleSetupBanner />
       )}
 
       {/* Service mode selector */}

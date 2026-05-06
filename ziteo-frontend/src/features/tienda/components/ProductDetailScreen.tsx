@@ -244,7 +244,7 @@ export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProp
                       </div>
                       <button
                         type="button"
-                        onClick={() => alert(`Ver tienda de ${storeName}: próximamente`)}
+                        onClick={() => showToast('Ver tienda completa: próximamente disponible', 'info')}
                         className="shrink-0 bg-primary/10 text-primary border border-primary/20 rounded-xl px-3 py-1.5 font-label text-xs font-semibold active:opacity-70 transition-opacity"
                       >
                         Ver tienda

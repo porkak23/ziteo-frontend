@@ -231,17 +231,6 @@ function FeaturedCard({
   const cartItem = useCart((s) => s.items.find((i) => i.productId === product.id))
   const inCart = !!cartItem
 
-  function handleAdd(e: React.MouseEvent) {
-    e.stopPropagation()
-    addItem({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      sellerId: product.proveedor.user_id,
-      imageUrl: product.image_url ?? undefined,
-    })
-  }
-
   return (
     <button
       onClick={onPress}
@@ -266,13 +255,14 @@ function FeaturedCard({
           Bs. {product.price.toLocaleString('es-BO')}
         </span>
         <div
-          onClick={(e) => {
-            e.stopPropagation()
-            handleAdd(e)
-          }}
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); addItem({ productId: product.id, name: product.name, price: product.price, sellerId: product.proveedor.user_id, imageUrl: product.image_url ?? undefined }) }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); addItem({ productId: product.id, name: product.name, price: product.price, sellerId: product.proveedor.user_id, imageUrl: product.image_url ?? undefined }) } }}
+          aria-label={`Agregar ${product.name} al carrito`}
           className="mt-auto flex items-center justify-center gap-1 w-full rounded-xl py-1.5 bg-primary text-white text-[11px] font-label font-bold active:opacity-80 transition-opacity cursor-pointer"
         >
-          <span className="material-symbols-outlined text-xs leading-none">add</span>
+          <span className="material-symbols-outlined text-xs leading-none" aria-hidden="true">add</span>
           Agregar
         </div>
       </div>
