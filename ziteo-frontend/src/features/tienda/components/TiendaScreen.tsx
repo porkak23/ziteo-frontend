@@ -418,7 +418,6 @@ export function TiendaScreen() {
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOffset(0)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAllProducts([])
   }, [filters])
 
@@ -428,7 +427,6 @@ export function TiendaScreen() {
     if (page.length === 0 && offset === 0) { setAllProducts([]); return }
     if (page.length === 0) return
     if (offset === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllProducts(page)
     } else {
       setAllProducts((prev) => {
