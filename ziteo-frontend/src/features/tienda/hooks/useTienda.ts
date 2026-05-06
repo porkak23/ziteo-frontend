@@ -35,12 +35,19 @@ export function useProducts(filters: TiendaFilters, offset: number) {
           active,
           category_id,
           listing_type,
+          construction_stage,
+          bulk_price,
+          bulk_unit,
+          bulk_min_qty,
           provider:profiles!products_provider_id_fkey (
             user_id,
             city,
             user_roles (
               store_name,
-              is_verified
+              is_verified,
+              min_order_amount,
+              delivery_time_hours,
+              free_shipping_threshold
             )
           )
         `)
@@ -62,7 +69,9 @@ export function useProducts(filters: TiendaFilters, offset: number) {
       if (filters.search) {
         query = query.ilike('name', `%${filters.search}%`)
       }
-      if (filters.category_id) {
+      if (filters.construction_stage) {
+        query = query.eq('construction_stage', filters.construction_stage)
+      } else if (filters.category_id) {
         query = query.eq('category_id', filters.category_id)
       } else if (filters.group_keywords && filters.group_keywords.length > 0) {
         const kws = filters.group_keywords.slice(0, 5)
@@ -72,7 +81,8 @@ export function useProducts(filters: TiendaFilters, offset: number) {
       const { data, error } = await query.range(offset, offset + TIENDA_PAGE_SIZE - 1)
       if (error) throw error
 
-      return (data ?? []).map((p) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (data ?? []).map((p: any) => ({
         id: p.id,
         name: p.name,
         description: p.description,
@@ -82,15 +92,19 @@ export function useProducts(filters: TiendaFilters, offset: number) {
         image_url: p.image_url,
         active: p.active,
         category_id: p.category_id,
-        proveedor: (() => {
-          const prov = Array.isArray(p.provider) ? p.provider[0] : p.provider
-          return {
-            user_id: prov?.user_id ?? '',
-            store_name: prov?.user_roles?.[0]?.store_name ?? prov?.user_id ?? '',
-            city: prov?.city ?? '',
-            is_verified: prov?.user_roles?.[0]?.is_verified ?? false,
-          }
-        })(),
+        construction_stage: p.construction_stage ?? null,
+        bulk_price: p.bulk_price ?? null,
+        bulk_unit: p.bulk_unit ?? null,
+        bulk_min_qty: p.bulk_min_qty ?? null,
+        proveedor: {
+          user_id: p.provider?.user_id ?? '',
+          store_name: p.provider?.user_roles?.[0]?.store_name ?? p.provider?.user_id ?? '',
+          city: p.provider?.city ?? '',
+          is_verified: p.provider?.user_roles?.[0]?.is_verified ?? false,
+          min_order_amount: p.provider?.user_roles?.[0]?.min_order_amount ?? null,
+          delivery_time_hours: p.provider?.user_roles?.[0]?.delivery_time_hours ?? null,
+          free_shipping_threshold: p.provider?.user_roles?.[0]?.free_shipping_threshold ?? null,
+        },
       })) as ProductCard[]
     },
   })

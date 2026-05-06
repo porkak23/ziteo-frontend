@@ -4,19 +4,65 @@ import { ProductCard } from './ProductCard'
 import { ProductDetailScreen } from './ProductDetailScreen'
 import { CartDrawer } from './CartDrawer'
 import { FilterSheet } from './FilterSheet'
-import type { ProductCard as ProductCardType, TiendaFilters } from '../types/tiendaTypes'
+import type { ProductCard as ProductCardType, TiendaFilters, ConstructionStage } from '../types/tiendaTypes'
 import { useCategories, useProducts, TIENDA_PAGE_SIZE } from '../hooks/useTienda'
 import { useCart } from '../hooks/useCart'
-import { ChatScreen } from '../../../shared/components/ChatScreen'
+
+// ─── Construction stages ──────────────────────────────────────────────────────
+
+const CONSTRUCTION_STAGES: {
+  id: ConstructionStage
+  label: string
+  subtitle: string
+  icon: string
+  bg: string
+  iconColor: string
+  activeBg: string
+}[] = [
+  {
+    id: 'fundaciones',
+    label: 'Fundaciones',
+    subtitle: 'Hierro, cemento, arena',
+    icon: 'foundation',
+    bg: 'bg-amber-50 dark:bg-amber-950/40',
+    iconColor: 'text-amber-600 dark:text-amber-400',
+    activeBg: 'bg-amber-500',
+  },
+  {
+    id: 'muros',
+    label: 'Muros',
+    subtitle: 'Ladrillo, bloques, mezcla',
+    icon: 'holiday_village',
+    bg: 'bg-slate-100 dark:bg-slate-800/60',
+    iconColor: 'text-slate-600 dark:text-slate-300',
+    activeBg: 'bg-slate-600',
+  },
+  {
+    id: 'techos',
+    label: 'Techos',
+    subtitle: 'Calaminas, vigas, impermeabilizante',
+    icon: 'roofing',
+    bg: 'bg-blue-50 dark:bg-blue-950/40',
+    iconColor: 'text-blue-600 dark:text-blue-400',
+    activeBg: 'bg-blue-600',
+  },
+  {
+    id: 'terminaciones',
+    label: 'Terminaciones',
+    subtitle: 'Pintura, cerámicos, sanitarios',
+    icon: 'format_paint',
+    bg: 'bg-green-50 dark:bg-green-950/40',
+    iconColor: 'text-green-600 dark:text-green-400',
+    activeBg: 'bg-green-600',
+  },
+]
 
 // ─── Category groups ──────────────────────────────────────────────────────────
 
 const CATEGORY_GROUPS = [
   {
     id: 'materiales',
-    label: 'Materiales de Construcción',
-    shortLabel: 'Materiales',
-    tagline: 'Cemento, acero, pinturas y más',
+    label: 'Materiales',
     icon: 'foundation',
     bg: 'bg-orange-surface dark:bg-orange-surface/20',
     activeBg: 'bg-primary',
@@ -24,9 +70,7 @@ const CATEGORY_GROUPS = [
   },
   {
     id: 'herramientas',
-    label: 'Herramientas de Construcción',
-    shortLabel: 'Herramientas',
-    tagline: 'Manuales, eléctricas y más',
+    label: 'Herramientas',
     icon: 'hardware',
     bg: 'bg-blue-surface dark:bg-blue-surface/20',
     activeBg: 'bg-primary',
@@ -34,9 +78,7 @@ const CATEGORY_GROUPS = [
   },
   {
     id: 'maquinaria',
-    label: 'Maquinaria Pesada',
-    shortLabel: 'Maquinaria',
-    tagline: 'Alquiler y venta en Bolivia',
+    label: 'Maquinaria',
     icon: 'precision_manufacturing',
     bg: 'bg-yellow-surface dark:bg-yellow-surface/20',
     activeBg: 'bg-primary',
@@ -44,9 +86,7 @@ const CATEGORY_GROUPS = [
   },
   {
     id: 'seguridad',
-    label: 'Equipo de Seguridad',
-    shortLabel: 'Seguridad',
-    tagline: 'Cascos, chalecos y EPP',
+    label: 'Seguridad',
     icon: 'safety_check',
     bg: 'bg-red-surface dark:bg-red-surface/20',
     activeBg: 'bg-primary',
@@ -85,6 +125,95 @@ const PROMO_BANNERS = [
     to: 'var(--color-success-dark)',
   },
 ]
+
+// ─── Provider store header with badges ───────────────────────────────────────
+
+function ProviderStoreHeader({
+  product,
+}: {
+  product: ProductCardType
+}) {
+  const { store_name, is_verified, city, min_order_amount, delivery_time_hours, free_shipping_threshold } = product.proveedor
+  const proveedorInitial = store_name.charAt(0).toUpperCase()
+  const hasBadges = min_order_amount != null || delivery_time_hours != null || free_shipping_threshold != null
+
+  return (
+    <div className="bg-surface-container rounded-2xl px-4 py-3 flex flex-col gap-2">
+      {/* Store name row */}
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <span className="font-label font-bold text-primary text-sm leading-none">{proveedorInitial}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="font-label font-semibold text-on-surface text-sm truncate">{store_name}</span>
+            {is_verified && (
+              <span
+                className="material-symbols-outlined text-sm text-primary shrink-0"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                verified
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-on-surface-variant text-xs leading-none">location_on</span>
+            <span className="font-body text-xs text-on-surface-variant">{city}</span>
+          </div>
+        </div>
+        {/* Surtido rápido button */}
+        <button
+          type="button"
+          onClick={() => alert('Próximamente: Surtido Rápido')}
+          className="flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 rounded-xl px-3 py-1.5 font-label text-xs font-semibold shrink-0 active:opacity-70 transition-opacity"
+          aria-label="Surtir pedido rápido"
+        >
+          <span className="text-xs leading-none">⚡</span>
+          Surtir pedido
+        </button>
+      </div>
+
+      {/* Badges row */}
+      {hasBadges && (
+        <div className="flex gap-2 flex-wrap">
+          {min_order_amount != null && (
+            <span className="flex items-center gap-1 bg-background rounded-full px-2.5 py-1 border border-outline-variant font-label text-xs text-on-surface-variant">
+              <span
+                className="material-symbols-outlined text-xs leading-none text-primary"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                shopping_bag
+              </span>
+              Mín Bs.{min_order_amount.toLocaleString('es-BO')}
+            </span>
+          )}
+          {delivery_time_hours != null && (
+            <span className="flex items-center gap-1 bg-background rounded-full px-2.5 py-1 border border-outline-variant font-label text-xs text-on-surface-variant">
+              <span
+                className="material-symbols-outlined text-xs leading-none text-primary"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                schedule
+              </span>
+              Entrega {delivery_time_hours}h
+            </span>
+          )}
+          {free_shipping_threshold != null && (
+            <span className="flex items-center gap-1 bg-background rounded-full px-2.5 py-1 border border-outline-variant font-label text-xs text-on-surface-variant">
+              <span
+                className="material-symbols-outlined text-xs leading-none text-green-600"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                local_shipping
+              </span>
+              Gratis +Bs.{free_shipping_threshold.toLocaleString('es-BO')}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Featured product card (horizontal scroll) ────────────────────────────────
 
@@ -133,18 +262,16 @@ function FeaturedCard({
         <span className="font-headline font-black text-primary text-sm leading-none">
           Bs. {product.price.toLocaleString('es-BO')}
         </span>
-        <button
-          type="button"
+        <div
           onClick={(e) => {
             e.stopPropagation()
             handleAdd(e)
           }}
-          aria-label={`Agregar ${product.name} al carrito`}
-          className="mt-auto flex items-center justify-center gap-1 w-full rounded-xl py-1.5 bg-primary text-white text-[11px] font-label font-bold active:opacity-80 transition-opacity"
+          className="mt-auto flex items-center justify-center gap-1 w-full rounded-xl py-1.5 bg-primary text-white text-[11px] font-label font-bold active:opacity-80 transition-opacity cursor-pointer"
         >
-          <span className="material-symbols-outlined text-xs leading-none" aria-hidden="true">add</span>
+          <span className="material-symbols-outlined text-xs leading-none">add</span>
           Agregar
-        </button>
+        </div>
       </div>
     </button>
   )
@@ -174,19 +301,64 @@ function AdSlot() {
   )
 }
 
+// ─── Products grouped by provider ────────────────────────────────────────────
+
+function ProductsGroupedByProvider({
+  products,
+  onSelectProduct,
+}: {
+  products: ProductCardType[]
+  onSelectProduct: (p: ProductCardType) => void
+}) {
+  // Group products by provider user_id, preserving order of first appearance
+  const providerOrder: string[] = []
+  const grouped: Record<string, ProductCardType[]> = {}
+  for (const p of products) {
+    const pid = p.proveedor.user_id
+    if (!grouped[pid]) {
+      grouped[pid] = []
+      providerOrder.push(pid)
+    }
+    grouped[pid].push(p)
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {providerOrder.map((providerId) => {
+        const providerProducts = grouped[providerId]
+        const firstProduct = providerProducts[0]
+        return (
+          <div key={providerId} className="flex flex-col gap-3">
+            <ProviderStoreHeader product={firstProduct} />
+            <div className="grid grid-cols-2 gap-3">
+              {providerProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onPress={() => onSelectProduct(product)}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function TiendaScreen() {
   const [filters, setFilters] = useState<TiendaFilters>({})
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
+  const [selectedStage, setSelectedStage] = useState<ConstructionStage | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<ProductCardType | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [offset, setOffset] = useState(0)
   const [allProducts, setAllProducts] = useState<ProductCardType[]>([])
   const [activeBanner, setActiveBanner] = useState(0)
-  const [chatProvider, setChatProvider] = useState<{ id: string; name: string } | null>(null)
   const isFirstLoad = useRef(true)
   const bannerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -238,6 +410,7 @@ export function TiendaScreen() {
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOffset(0)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAllProducts([])
   }, [filters])
 
@@ -247,6 +420,7 @@ export function TiendaScreen() {
     if (page.length === 0 && offset === 0) { setAllProducts([]); return }
     if (page.length === 0) return
     if (offset === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllProducts(page)
     } else {
       setAllProducts((prev) => {
@@ -266,7 +440,7 @@ export function TiendaScreen() {
     if (groupId === null || selectedGroup === groupId) {
       setSelectedGroup(null)
       setSelectedCategory(null)
-      setFilters({})
+      setFilters((f) => ({ ...f, category_id: undefined, group_keywords: undefined }))
       return
     }
     const group = CATEGORY_GROUPS.find((g) => g.id === groupId)
@@ -276,7 +450,27 @@ export function TiendaScreen() {
     const matchedCats = categories.filter((cat) =>
       group.keywords.some((kw) => cat.name.toLowerCase().includes(kw))
     )
-    setFilters(matchedCats.length === 0 ? { group_keywords: group.keywords } : {})
+    setFilters((f) => ({
+      ...f,
+      category_id: undefined,
+      ...(matchedCats.length === 0 ? { group_keywords: group.keywords } : { group_keywords: undefined }),
+    }))
+  }
+
+  const handleStageSelect = (stageId: ConstructionStage) => {
+    const next = selectedStage === stageId ? null : stageId
+    setSelectedStage(next)
+    // When stage selected, clear group/category filters and apply stage filter
+    setSelectedGroup(null)
+    setSelectedCategory(null)
+    setFilters((f) => ({
+      search: f.search,
+      listing_type: f.listing_type,
+      city: f.city,
+      min_price: f.min_price,
+      max_price: f.max_price,
+      construction_stage: next ?? undefined,
+    }))
   }
 
   const handleBannerCta = (group: string | null) => {
@@ -297,32 +491,24 @@ export function TiendaScreen() {
     filters.listing_type,
     filters.category_id,
     filters.city,
+    filters.construction_stage,
     filters.min_price !== undefined,
     filters.max_price !== undefined,
   ].filter(Boolean).length
 
+  const activeStageInfo = selectedStage
+    ? CONSTRUCTION_STAGES.find((s) => s.id === selectedStage)
+    : null
+
+  // When stage is selected, show grouped by provider
+  const showGroupedView = !!selectedStage || !!selectedGroup
+
   if (selectedProduct) {
     return (
-      <>
-        <ProductDetailScreen
-          product={selectedProduct}
-          onBack={() => setSelectedProduct(null)}
-          onContact={(id, name) => setChatProvider({ id, name })}
-        />
-        {chatProvider && (
-          <ChatScreen
-            otherUserId={chatProvider.id}
-            otherUserName={chatProvider.name}
-            onClose={() => setChatProvider(null)}
-            productContext={{
-              id: selectedProduct.id,
-              name: selectedProduct.name,
-              image_url: selectedProduct.image_url,
-              price: selectedProduct.price,
-            }}
-          />
-        )}
-      </>
+      <ProductDetailScreen
+        product={selectedProduct}
+        onBack={() => setSelectedProduct(null)}
+      />
     )
   }
 
@@ -350,8 +536,8 @@ export function TiendaScreen() {
               onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value || undefined }))}
             />
             {filters.search && (
-              <button onClick={() => setFilters((f) => ({ ...f, search: undefined }))} className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors" aria-label="Limpiar búsqueda">
-                <span className="material-symbols-outlined text-on-surface-variant text-lg" aria-hidden="true">close</span>
+              <button onClick={() => setFilters((f) => ({ ...f, search: undefined }))} className="shrink-0">
+                <span className="material-symbols-outlined text-on-surface-variant text-lg">close</span>
               </button>
             )}
           </div>
@@ -370,117 +556,230 @@ export function TiendaScreen() {
         </div>
       </div>
 
-      {/* ── Promo banner carousel (home only) ────────────────────────────── */}
-      {!selectedGroup && !filters.search && <div className="px-4 pt-4 pb-2">
-        <button
-          type="button"
-          className="relative h-40 w-full rounded-2xl overflow-hidden active:opacity-90 transition-opacity text-left"
-          style={{ background: `linear-gradient(135deg, ${banner.from}, ${banner.to})` }}
-          onClick={() => handleBannerCta(banner.group)}
-          aria-label={banner.title}
-        >
-          {/* Background texture */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute -right-8 -top-8 w-48 h-48 rounded-full bg-white/30" />
-            <div className="absolute -left-4 -bottom-8 w-32 h-32 rounded-full bg-white/20" />
+      {/* ── Etapas de Obra (shown when no search active) ─────────────────── */}
+      {!filters.search && (
+        <section className="px-4 pt-5 pb-3">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-label font-semibold text-on-surface text-sm">Etapas de Obra</h2>
+            {selectedStage && (
+              <button
+                onClick={() => handleStageSelect(selectedStage)}
+                className="font-label text-xs text-primary"
+              >
+                Ver todo
+              </button>
+            )}
           </div>
-
-          {/* Content */}
-          <div className="absolute inset-0 p-5 flex flex-col justify-end">
-            <p className="font-body text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">Destacado</p>
-            <h2 className="font-headline font-black text-white text-2xl leading-tight mb-1">{banner.title}</h2>
-            <p className="font-body text-white/80 text-sm mb-3">{banner.subtitle}</p>
-            <div className="flex items-center justify-between">
-              <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-label font-bold px-4 py-2 rounded-full border border-white/30 pointer-events-none">
-                {banner.cta} →
-              </span>
-              {/* Dots */}
-              <div className="flex gap-1.5">
-                {PROMO_BANNERS.map((_, i) => (
-                  <button
-                    key={i}
-                    aria-label={`Ir al slide ${i + 1}`}
-                    aria-pressed={i === activeBanner}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setActiveBanner(i)
-                      pauseAndResumeBanner()
-                    }}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      i === activeBanner ? 'w-6 bg-white' : 'w-1.5 bg-white/40'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </button>
-      </div>}
-
-      {/* ── Category grid (home) / Group header strip (active) ───────────── */}
-      {!selectedGroup ? (
-        <div className="px-4 pt-5 pb-2">
-          <p className="font-label text-[11px] font-semibold text-on-surface-variant uppercase tracking-[0.12em] mb-3">
-            Buscar por categoría
-          </p>
-          {loadingCats ? (
-            <div className="grid grid-cols-2 gap-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-28 rounded-2xl bg-surface-container animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {CATEGORY_GROUPS.map((group) => (
+          <div className="grid grid-cols-2 gap-3">
+            {CONSTRUCTION_STAGES.map((stage) => {
+              const isActive = selectedStage === stage.id
+              return (
                 <button
-                  key={group.id}
-                  onClick={() => handleGroupSelect(group.id)}
-                  aria-label={`Ver ${group.label}`}
-                  className={`flex flex-col items-start gap-2 rounded-2xl p-4 h-[116px] transition-[transform,opacity] active:scale-[0.97] ${group.bg} text-left`}
+                  key={stage.id}
+                  type="button"
+                  onClick={() => handleStageSelect(stage.id)}
+                  aria-pressed={isActive}
+                  aria-label={`${stage.label}: ${stage.subtitle}`}
+                  className={`h-[130px] rounded-2xl flex flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-all active:scale-[0.97] active:opacity-90 ${
+                    isActive
+                      ? `${stage.activeBg} shadow-md`
+                      : stage.bg
+                  }`}
                 >
                   <span
-                    className="material-symbols-outlined text-3xl text-on-surface-variant"
+                    className={`material-symbols-outlined text-4xl leading-none transition-colors ${
+                      isActive ? 'text-white' : stage.iconColor
+                    }`}
                     style={{ fontVariationSettings: "'FILL' 1" }}
-                    aria-hidden="true"
                   >
-                    {group.icon}
+                    {stage.icon}
                   </span>
-                  <div className="mt-auto">
-                    <p className="font-label font-bold text-on-surface text-sm leading-tight">{group.shortLabel}</p>
-                    <p className="font-body text-on-surface-variant text-xs mt-0.5 leading-snug">{group.tagline}</p>
+                  <div className="flex flex-col gap-0.5">
+                    <span
+                      className={`font-label font-bold text-sm leading-tight transition-colors ${
+                        isActive ? 'text-white' : 'text-on-surface'
+                      }`}
+                    >
+                      {stage.label}
+                    </span>
+                    <span
+                      className={`font-body text-[11px] leading-tight transition-colors ${
+                        isActive ? 'text-white/80' : 'text-on-surface-variant'
+                      }`}
+                    >
+                      {stage.subtitle}
+                    </span>
                   </div>
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="sticky top-[57px] z-10 flex items-center gap-3 px-4 py-2.5 bg-surface border-b border-outline-variant">
-          <button
-            onClick={() => handleGroupSelect(null)}
-            className="flex items-center justify-center w-9 h-9 rounded-full bg-surface-container transition-colors hover:bg-surface-container-high shrink-0"
-            aria-label="Volver a categorías"
-          >
-            <span className="material-symbols-outlined text-on-surface text-xl" aria-hidden="true">arrow_back</span>
-          </button>
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${activeGroup?.bg ?? ''}`}>
-            <span
-              className="material-symbols-outlined text-lg text-on-surface-variant"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-              aria-hidden="true"
-            >
-              {activeGroup?.icon}
-            </span>
+              )
+            })}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-label font-bold text-on-surface text-sm truncate">{activeGroup?.label}</p>
-            <p className="font-body text-on-surface-variant text-xs">{activeGroup?.tagline}</p>
+        </section>
+      )}
+
+      {/* ── Secondary category chips (shown when stage selected) ──────────── */}
+      {selectedStage && (
+        <div className="pb-1">
+          <div
+            className="flex overflow-x-auto gap-2 px-4 pb-2 pt-1"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            <span className="font-label text-xs text-on-surface-variant self-center shrink-0">Categoría:</span>
+            <button
+              onClick={() => handleCategorySelect('')}
+              className={`shrink-0 rounded-full px-4 py-1.5 border font-label text-sm font-medium transition-[border-color,background-color,color] ${
+                !selectedCategory
+                  ? 'bg-primary text-on-primary border-primary'
+                  : 'bg-surface-container text-on-surface-variant border-outline-variant'
+              }`}
+            >
+              Todas
+            </button>
+            {categories.map((cat) => (
+              <CategoryChip
+                key={cat.id}
+                category={cat}
+                isSelected={selectedCategory === cat.id}
+                onSelect={handleCategorySelect}
+              />
+            ))}
           </div>
         </div>
       )}
 
-      {/* ── Sub-categories ────────────────────────────────────────────────── */}
-      {selectedGroup && matchedSubcategories.length > 0 && (
+      {/* ── Promo banner carousel (shown when no stage/group/search filter) ─ */}
+      {!selectedStage && !filters.search && (
+        <div className="px-4 pt-2 pb-2">
+          <div
+            className="relative h-40 rounded-2xl overflow-hidden cursor-pointer active:opacity-90 transition-opacity"
+            style={{ background: `linear-gradient(135deg, ${banner.from}, ${banner.to})` }}
+            onClick={() => handleBannerCta(banner.group)}
+          >
+            {/* Background texture */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute -right-8 -top-8 w-48 h-48 rounded-full bg-white/30" />
+              <div className="absolute -left-4 -bottom-8 w-32 h-32 rounded-full bg-white/20" />
+            </div>
+
+            {/* Content */}
+            <div className="absolute inset-0 p-5 flex flex-col justify-end">
+              <p className="font-body text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">Destacado</p>
+              <h2 className="font-headline font-black text-white text-2xl leading-tight mb-1">{banner.title}</h2>
+              <p className="font-body text-white/80 text-sm mb-3">{banner.subtitle}</p>
+              <div className="flex items-center justify-between">
+                <button className="bg-white/20 backdrop-blur-sm text-white text-xs font-label font-bold px-4 py-2 rounded-full border border-white/30 active:bg-white/30">
+                  {banner.cta} →
+                </button>
+                {/* Dots */}
+                <div className="flex gap-1.5">
+                  {PROMO_BANNERS.map((_, i) => (
+                    <button
+                      key={i}
+                      aria-label={`Ir al slide ${i + 1}`}
+                      aria-pressed={i === activeBanner}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setActiveBanner(i)
+                        pauseAndResumeBanner()
+                      }}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        i === activeBanner ? 'w-6 bg-white' : 'w-1.5 bg-white/40'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Category group horizontal scroll (shown when no stage selected) ─ */}
+      {!selectedStage && (
+        <div className="pt-3 pb-2">
+          <div
+            className="flex overflow-x-auto gap-3 px-4 pb-1"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {/* "Todo" pill */}
+            <button
+              onClick={() => handleGroupSelect(null)}
+              aria-pressed={!selectedGroup}
+              aria-label="Ver todos los productos"
+              className="shrink-0 flex flex-col items-center gap-1.5"
+            >
+              <div
+                className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl transition-all ${
+                  !selectedGroup
+                    ? 'bg-primary shadow-md scale-105'
+                    : 'bg-surface-container'
+                }`}
+              >
+                <span
+                  className={`material-symbols-outlined text-2xl ${!selectedGroup ? 'text-white' : 'text-on-surface-variant'}`}
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  storefront
+                </span>
+              </div>
+              <span
+                className={`font-label text-[11px] font-semibold text-center ${
+                  !selectedGroup ? 'text-primary' : 'text-on-surface-variant'
+                }`}
+              >
+                Todo
+              </span>
+            </button>
+
+            {loadingCats
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="shrink-0 flex flex-col items-center gap-1.5">
+                    <div className="w-16 h-16 rounded-2xl bg-surface-container animate-pulse" />
+                    <div className="w-12 h-2 rounded bg-surface-container animate-pulse" />
+                  </div>
+                ))
+              : CATEGORY_GROUPS.map((group) => {
+                  const isActive = selectedGroup === group.id
+                  return (
+                    <button
+                      key={group.id}
+                      onClick={() => handleGroupSelect(group.id)}
+                      aria-pressed={isActive}
+                      aria-label={group.label}
+                      className="shrink-0 flex flex-col items-center gap-1.5"
+                    >
+                      <div
+                        className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${
+                          isActive
+                            ? 'bg-primary shadow-md scale-105'
+                            : group.bg
+                        }`}
+                      >
+                        <span
+                          className={`material-symbols-outlined text-3xl transition-colors ${
+                            isActive ? 'text-white' : 'text-on-surface-variant'
+                          }`}
+                          style={{ fontVariationSettings: "'FILL' 1" }}
+                        >
+                          {group.icon}
+                        </span>
+                      </div>
+                      <span
+                        className={`font-label text-[11px] font-semibold text-center ${
+                          isActive ? 'text-primary' : 'text-on-surface-variant'
+                        }`}
+                      >
+                        {group.label}
+                      </span>
+                    </button>
+                  )
+                })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Sub-categories (shown when group selected) ────────────────────── */}
+      {!selectedStage && selectedGroup && matchedSubcategories.length > 0 && (
         <div className="flex overflow-x-auto gap-2 px-4 pb-2 pt-1" style={{ scrollbarWidth: 'none' }}>
           <button
             onClick={() => handleCategorySelect('')}
@@ -504,7 +803,7 @@ export function TiendaScreen() {
       )}
 
       {/* ── Featured products (horizontal scroll, only on "Todo" view) ────── */}
-      {!selectedGroup && !filters.search && allProducts.length > 0 && (
+      {!selectedGroup && !selectedStage && !filters.search && allProducts.length > 0 && (
         <section className="pt-4 pb-2">
           <div className="flex items-center justify-between px-4 mb-3">
             <h2 className="font-label font-semibold text-on-surface text-sm">
@@ -530,17 +829,19 @@ export function TiendaScreen() {
       )}
 
       {/* ── Ad slot #1 ────────────────────────────────────────────────────── */}
-      {!filters.search && !selectedGroup && <div className="py-3"><AdSlot /></div>}
+      {!filters.search && !selectedStage && <div className="py-3"><AdSlot /></div>}
 
       {/* ── Main product grid ─────────────────────────────────────────────── */}
       <section className="px-4 pt-2">
         {/* Section header */}
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-label font-semibold text-on-surface text-sm">
-            {selectedGroup
+            {selectedStage
+              ? activeStageInfo?.label ?? 'Productos'
+              : selectedGroup
               ? activeGroup?.label ?? 'Productos'
               : filters.search
-              ? `Resultados`
+              ? 'Resultados'
               : 'Todo el catálogo'}
             {allProducts.length > 0 && (
               <span className="text-on-surface-variant font-normal ml-1">
@@ -574,16 +875,66 @@ export function TiendaScreen() {
             <p className="font-body text-sm text-on-surface-variant/50 text-center">
               Prueba con otra categoría o elimina los filtros activos
             </p>
-            {(selectedGroup || activeFilterCount > 0) && (
+            {(selectedGroup || selectedStage || activeFilterCount > 0) && (
               <button
-                onClick={() => { setSelectedGroup(null); setFilters({}); setSelectedCategory(null) }}
+                onClick={() => {
+                  setSelectedGroup(null)
+                  setSelectedStage(null)
+                  setFilters({})
+                  setSelectedCategory(null)
+                }}
                 className="mt-2 bg-primary text-on-primary font-label font-semibold text-sm px-5 py-2.5 rounded-full"
               >
                 Limpiar filtros
               </button>
             )}
           </div>
+        ) : showGroupedView ? (
+          /* Grouped by provider view for stage/group selections */
+          <div className="flex flex-col gap-3">
+            <ProductsGroupedByProvider
+              products={allProducts.slice(0, 6)}
+              onSelectProduct={setSelectedProduct}
+            />
+
+            {/* Ad slot #2 after 6 products (grouped view) */}
+            {allProducts.length > 6 && (
+              <div className="py-1 -mx-4">
+                <AdSlot />
+              </div>
+            )}
+
+            {allProducts.length > 6 && (
+              <ProductsGroupedByProvider
+                products={allProducts.slice(6)}
+                onSelectProduct={setSelectedProduct}
+              />
+            )}
+
+            {/* Loading next page */}
+            {isFetching && offset > 0 && (
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="bg-surface-container animate-pulse rounded-2xl h-52" />
+                ))}
+              </div>
+            )}
+
+            {/* Cargar más */}
+            {hasMore && !isFetching && (
+              <div className="flex justify-center pt-2">
+                <button
+                  onClick={handleCargarMas}
+                  className="flex items-center gap-2 bg-surface-container text-on-surface font-label font-semibold rounded-2xl px-8 py-3 border border-outline-variant active:opacity-80"
+                >
+                  <span className="material-symbols-outlined text-lg">expand_more</span>
+                  Cargar más
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
+          /* Standard grid view */
           <div className="flex flex-col gap-3">
             {/* First 6 products */}
             <div className="grid grid-cols-2 gap-3">
@@ -598,7 +949,7 @@ export function TiendaScreen() {
 
             {/* Ad slot #2 after 6 products */}
             {allProducts.length > 6 && (
-              <div className="py-1">
+              <div className="py-1 -mx-4">
                 <AdSlot />
               </div>
             )}
@@ -678,23 +1029,23 @@ export function TiendaScreen() {
         filters={filters}
         categories={categories}
         onApply={(newFilters) => {
+          // If filter sheet sets a construction_stage, sync local state
+          if (newFilters.construction_stage) {
+            setSelectedStage(newFilters.construction_stage)
+            setSelectedGroup(null)
+            setSelectedCategory(newFilters.category_id ?? null)
+          } else {
+            setSelectedStage(null)
+            setSelectedCategory(newFilters.category_id ?? null)
+            if (!newFilters.category_id) setSelectedGroup(null)
+          }
           setFilters((f) => ({
             search: f.search,
             group_keywords: f.group_keywords,
             ...newFilters,
           }))
-          setSelectedCategory(newFilters.category_id ?? null)
-          if (!newFilters.category_id) setSelectedGroup(null)
         }}
       />
-      
-      {chatProvider && !selectedProduct && (
-        <ChatScreen
-          otherUserId={chatProvider.id}
-          otherUserName={chatProvider.name}
-          onClose={() => setChatProvider(null)}
-        />
-      )}
     </div>
   )
 }

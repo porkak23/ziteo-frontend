@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 import { useCart } from './useCart'
-import type { CartItem } from './useCart'
+import type { CartItem, CargoType } from './useCart'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -11,7 +11,7 @@ export interface OrderWithItems {
   constructor_id: string
   provider_id: string
   total: number
-  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
   notes: string | null
   created_at: string
   items: {
@@ -29,15 +29,25 @@ export interface OrderWithItems {
 // PostgreSQL transaction — no phantom orders if the connection drops.
 
 export function usePlaceOrder() {
-  const queryClient = useQueryClient()
-  const cartItems = useCart((s) => s.items)
-  const clearCart = useCart((s) => s.clear)
-  const currentUser = useAuthStore((s) => s.user)
+  const queryClient  = useQueryClient()
+  const cartItems    = useCart((s) => s.items)
+  const clearCart    = useCart((s) => s.clear)
+  const cargoType    = useCart((s) => s.cargoType)
+  const totalWeight  = useCart((s) => s.totalWeight)
+  const currentUser  = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async () => {
       if (cartItems.length === 0) throw new Error('El carrito está vacío')
       if (!currentUser?.user_id) throw new Error('Usuario no autenticado')
+
+      // Resolve effective cargo type: user override → auto-detection → null
+      const autoDetected: CargoType | null = (() => {
+        const w = totalWeight()
+        if (w === null) return null
+        return w < 5 ? 'light' : 'heavy'
+      })()
+      const effectiveCargo: CargoType | null = cargoType ?? autoDetected
 
       // Group by providerId
       const byProvider = cartItems.reduce<Record<string, CartItem[]>>((acc, item) => {
@@ -71,7 +81,22 @@ export function usePlaceOrder() {
           throw new Error(error.message)
         }
 
-        orderIds.push(orderId as string)
+        const oid = orderId as string
+        orderIds.push(oid)
+
+        // Patch cargo_type on the order and its delivery if cargo was determined
+        if (effectiveCargo) {
+          // Fire-and-forget — non-critical, don't fail the whole flow on error
+          void supabase
+            .from('orders')
+            .update({ cargo_type: effectiveCargo })
+            .eq('id', oid)
+
+          void supabase
+            .from('deliveries')
+            .update({ cargo_type: effectiveCargo })
+            .eq('order_id', oid)
+        }
       }
 
       return { orderIds, providerIds: Object.keys(byProvider) }
@@ -112,9 +137,11 @@ export function useMyOrders(constructorId?: string) {
 
       if (error) throw new Error(error.message)
 
-      return (data ?? []).map((o) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (data ?? []).map((o: any) => ({
         ...o,
-        items: ((o as { items?: { id: string; product_id: string; quantity: number; unit_price?: number; price_unit: number; product?: { name: string } | null }[] }).items ?? []).map((item) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        items: (o.items ?? []).map((item: any) => ({
           id:         item.id,
           product_id: item.product_id,
           quantity:   item.quantity,

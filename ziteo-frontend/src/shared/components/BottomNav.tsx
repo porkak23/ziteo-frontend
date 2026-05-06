@@ -15,10 +15,12 @@ const TAB_CONFIG: Record<UserRole, Tab[]> = {
     { id: 'tienda',       label: 'Tienda',       icon: 'storefront' },
   ],
   proveedor: [
-    { id: 'home',        label: 'Inicio',     icon: 'home' },
-    { id: 'inventario',  label: 'Inventario', icon: 'inventory_2' },
-    { id: 'pedidos',     label: 'Pedidos',    icon: 'receipt_long' },
-    { id: 'intel',       label: 'Intel',      icon: 'bar_chart' },
+    { id: 'home',         label: 'Inicio',     icon: 'home' },
+    { id: 'inventario',   label: 'Inventario', icon: 'inventory_2' },
+    { id: 'pedidos',      label: 'Pedidos',    icon: 'receipt_long' },
+    { id: 'logistica',    label: 'Logística',  icon: 'local_shipping' },
+    { id: 'cotizaciones', label: 'Cotiz.',     icon: 'request_quote' },
+    { id: 'intel',        label: 'Intel',      icon: 'bar_chart' },
   ],
   maestro: [
     { id: 'home',        label: 'Inicio',      icon: 'home' },
@@ -45,7 +47,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const tabs = TAB_CONFIG[role]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-outline-variant flex h-16 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-outline-variant hidden md:flex h-16 px-2">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id
         return (

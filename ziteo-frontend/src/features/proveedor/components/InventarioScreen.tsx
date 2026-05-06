@@ -8,7 +8,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ProductUnit } from '../../tienda/types/tiendaTypes'
 import { ImagePicker } from '../../../shared/components/ImagePicker'
-import { usePaymentQr } from '../hooks/usePaymentQr'
+
 interface Category {
   id: string
   name: string
@@ -29,6 +29,21 @@ function useCategories() {
 const UNIT_OPTIONS: ProductUnit[] = ['kg', 'm2', 'm3', 'unidad', 'saco', 'varilla']
 
 type ListingType = 'sell' | 'rent'
+type ConstructionStage = 'fundaciones' | 'muros' | 'techos' | 'terminaciones'
+
+const CONSTRUCTION_STAGES: { value: ConstructionStage; label: string }[] = [
+  { value: 'fundaciones', label: 'Fundaciones' },
+  { value: 'muros', label: 'Muros' },
+  { value: 'techos', label: 'Techos' },
+  { value: 'terminaciones', label: 'Terminaciones' },
+]
+
+const STAGE_BADGE: Record<ConstructionStage, { bg: string; text: string }> = {
+  fundaciones: { bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-800 dark:text-amber-200' },
+  muros:       { bg: 'bg-slate-100 dark:bg-slate-800/60', text: 'text-slate-700 dark:text-slate-300' },
+  techos:      { bg: 'bg-blue-100 dark:bg-blue-900/40',  text: 'text-blue-800 dark:text-blue-200' },
+  terminaciones: { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-200' },
+}
 
 interface ProductForm {
   name: string
@@ -39,6 +54,12 @@ interface ProductForm {
   category_id: string
   image_url: string
   listing_type: ListingType
+  construction_stage: ConstructionStage | ''
+  bulk_price: string
+  bulk_unit: string
+  bulk_min_qty: string
+  weight_kg: string
+  showBulkSection: boolean
 }
 
 const EMPTY_FORM: ProductForm = {
@@ -50,6 +71,12 @@ const EMPTY_FORM: ProductForm = {
   category_id: '',
   image_url: '',
   listing_type: 'sell',
+  construction_stage: '',
+  bulk_price: '',
+  bulk_unit: '',
+  bulk_min_qty: '',
+  weight_kg: '',
+  showBulkSection: false,
 }
 
 export function InventarioScreen() {
@@ -64,29 +91,6 @@ export function InventarioScreen() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
-
-  const { uploadQr, getSignedQrUrl, uploading } = usePaymentQr()
-  const [qrUrl, setQrUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (user?.user_id) {
-      getSignedQrUrl(user.user_id).then(setQrUrl)
-    }
-  }, [user?.user_id, getSignedQrUrl])
-
-  const handleUploadQr = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    try {
-      await uploadQr(file)
-      showToast('QR de cobro guardado', 'success')
-      if (user?.user_id) {
-        getSignedQrUrl(user.user_id).then(setQrUrl)
-      }
-    } catch {
-      showToast('Error al subir QR', 'error')
-    }
-  }
 
   // Accumulate results as pages load
   useEffect(() => {
@@ -127,7 +131,13 @@ export function InventarioScreen() {
       image_url: form.image_url || null,
       listing_type: form.listing_type,
       active: true,
-    })
+      construction_stage: form.construction_stage || null,
+      bulk_price: form.bulk_price ? parseFloat(form.bulk_price) : null,
+      bulk_unit: form.bulk_unit || null,
+      bulk_min_qty: form.bulk_min_qty ? parseInt(form.bulk_min_qty, 10) : null,
+      weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
     setSaving(false)
     if (error) {
       showToast('Error al guardar el producto', 'error')
@@ -145,25 +155,6 @@ export function InventarioScreen() {
     <>
       <Toast toasts={toasts} onRemove={removeToast} />
       <div className="flex flex-col gap-3 py-3">
-          <div className="mx-4 bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-label font-semibold text-on-surface">Mi QR de Cobro</h3>
-              <label className={`bg-primary text-on-primary px-4 py-2 rounded-2xl font-label text-xs cursor-pointer transition-opacity active:opacity-80 ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                {uploading ? 'Subiendo...' : (qrUrl ? 'Actualizar QR' : 'Subir QR')}
-                <input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleUploadQr} disabled={uploading} />
-              </label>
-            </div>
-            {qrUrl && (
-              <div className="flex justify-center bg-surface-container rounded-xl p-2">
-                <img src={qrUrl} alt="QR de cobro" className="w-32 h-32 object-contain rounded-lg" />
-              </div>
-            )}
-            <p className="font-body text-xs text-on-surface-variant flex gap-1 items-start">
-              <span className="material-symbols-outlined text-[16px]">lock</span>
-              <span>Mantén tu QR privado. Solo tus compradores con pedidos activos pueden verlo.</span>
-            </p>
-          </div>
-
           <div className="flex items-center justify-end px-4">
             <button
               onClick={() => setShowForm(true)}
@@ -211,9 +202,23 @@ export function InventarioScreen() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="font-label font-semibold text-on-surface text-sm truncate">
-                        {product.name}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-label font-semibold text-on-surface text-sm truncate">
+                          {product.name}
+                        </p>
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {(product as any).construction_stage && (() => {
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          const stage = (product as any).construction_stage as ConstructionStage
+                          const badge = STAGE_BADGE[stage]
+                          const stageLabel = CONSTRUCTION_STAGES.find(s => s.value === stage)?.label ?? stage
+                          return badge ? (
+                            <span className={`px-1.5 py-0.5 rounded-md font-label text-[10px] font-semibold leading-none ${badge.bg} ${badge.text}`}>
+                              {stageLabel}
+                            </span>
+                          ) : null
+                        })()}
+                      </div>
                       <p className="font-body text-on-surface-variant text-xs">
                         Bs. {product.price}/{product.unit}
                       </p>
@@ -388,6 +393,124 @@ export function InventarioScreen() {
                 })}
               </div>
             </div>
+
+            {/* Etapa de obra */}
+            <div className="flex flex-col gap-2">
+              <label className="font-label text-xs text-on-surface-variant">
+                Etapa de obra <span className="text-on-surface-variant/50">(opcional)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {CONSTRUCTION_STAGES.map((s) => {
+                  const isSelected = form.construction_stage === s.value
+                  return (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          construction_stage: isSelected ? '' : s.value,
+                        }))
+                      }
+                      className={`flex-1 min-w-[40%] py-2 rounded-2xl border font-label text-sm font-medium transition-[border-color,background-color,color] ${
+                        isSelected
+                          ? 'bg-primary text-on-primary border-primary'
+                          : 'bg-surface-container text-on-surface-variant border-outline-variant'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Peso unitario */}
+            <div className="flex flex-col gap-1">
+              <label className="font-label text-xs text-on-surface-variant">
+                Peso unitario <span className="text-on-surface-variant/50">(opcional)</span>
+              </label>
+              <div className="flex items-center gap-2 bg-surface-container rounded-2xl px-4 py-2.5">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={form.weight_kg}
+                  onChange={(e) => setForm((f) => ({ ...f, weight_kg: e.target.value }))}
+                  className="flex-1 bg-transparent outline-none font-body text-sm text-on-surface placeholder:text-on-surface-variant/40"
+                  placeholder="ej: 42.5"
+                />
+                <span className="font-label text-on-surface-variant text-sm">kg / unidad</span>
+              </div>
+              {form.weight_kg && parseFloat(form.weight_kg) > 0 && (
+                <p className="font-body text-xs text-on-surface-variant px-1">
+                  {parseFloat(form.weight_kg) >= 50 ? '🚛 Se clasificará como carga pesada' : '🛵 Se clasificará como carga ligera'}
+                </p>
+              )}
+            </div>
+
+            {/* Precio de volumen (colapsable) */}
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, showBulkSection: !f.showBulkSection }))}
+                className="flex items-center justify-between w-full py-2 bg-surface-container rounded-2xl px-4 transition-opacity active:opacity-70"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-on-surface-variant text-[18px]"
+                    style={{ fontVariationSettings: "'FILL' 1" }}>
+                    inventory
+                  </span>
+                  <span className="font-label text-sm font-semibold text-on-surface">
+                    Precio de volumen
+                  </span>
+                  <span className="font-body text-xs text-on-surface-variant/60">(opcional)</span>
+                </div>
+                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">
+                  {form.showBulkSection ? 'expand_less' : 'expand_more'}
+                </span>
+              </button>
+
+              {form.showBulkSection && (
+                <div className="flex flex-col gap-3 bg-surface-container/50 rounded-2xl p-3 border border-outline-variant">
+                  <div className="flex flex-col gap-1">
+                    <label className="font-label text-xs text-on-surface-variant">Unidad de bulto</label>
+                    <input
+                      type="text"
+                      value={form.bulk_unit}
+                      onChange={(e) => setForm((f) => ({ ...f, bulk_unit: e.target.value }))}
+                      className="bg-surface-container rounded-2xl px-4 py-2.5 font-body text-sm text-on-surface outline-none border-none"
+                      placeholder='ej: "bolsa de 42 kg", "docena"'
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="font-label text-xs text-on-surface-variant">Precio por bulto (Bs.)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.bulk_price}
+                        onChange={(e) => setForm((f) => ({ ...f, bulk_price: e.target.value }))}
+                        className="bg-surface-container rounded-2xl px-4 py-2.5 font-body text-sm text-on-surface outline-none border-none"
+                        placeholder="ej: 450"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="font-label text-xs text-on-surface-variant">Qty mínima</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.bulk_min_qty}
+                        onChange={(e) => setForm((f) => ({ ...f, bulk_min_qty: e.target.value }))}
+                        className="bg-surface-container rounded-2xl px-4 py-2.5 font-body text-sm text-on-surface outline-none border-none"
+                        placeholder="ej: 10"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
 
           <div className="p-4 border-t border-outline-variant shrink-0">

@@ -48,8 +48,8 @@ const ACTIONS_BY_ROLE: Record<UserRole, QuickAction[]> = {
   proveedor: [
     { label: 'Mi inventario', icon: 'inventory_2', tab: 'inventario' },
     { label: 'Pedidos', icon: 'inbox', tab: 'pedidos' },
-    { label: 'Agregar producto', icon: 'add_box', tab: 'inventario' },
-    { label: 'Estadísticas', icon: 'bar_chart', tab: 'intel' },
+    { label: 'Logística', icon: 'local_shipping', tab: 'logistica' },
+    { label: 'Cotizaciones', icon: 'request_quote', tab: 'cotizaciones' },
   ],
   chofer: [
     { label: 'Mis entregas', icon: 'local_shipping', tab: 'home' },
@@ -235,7 +235,8 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
           .order('created_at', { ascending: false })
           .limit(5)
         if (error) return []
-        return (data ?? []).map((row) => ({ ...row, body: row.message })) as Notification[]
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (data ?? []).map((row: any) => ({ ...row, body: row.message })) as Notification[]
       } catch {
         return []
       }
@@ -314,9 +315,9 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
 
             {/* Pedir Camión — secondary button (feature en desarrollo) */}
             <div className="w-full rounded-2xl bg-surface-container border border-outline-variant px-5 py-4 flex items-center gap-4 opacity-60">
-              <div className="w-10 h-10 rounded-xl bg-status-warning-bg flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
                 <span
-                  className="material-symbols-outlined text-status-warning-text text-xl"
+                  className="material-symbols-outlined text-amber-600 text-xl"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
                   local_shipping

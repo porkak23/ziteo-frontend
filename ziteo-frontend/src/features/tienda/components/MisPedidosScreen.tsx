@@ -97,7 +97,7 @@ export function MisPedidosScreen() {
               </span>
             </div>
             
-            {(order.status === 'pending' || order.status === 'confirmed') && (
+            {(['pending', 'confirmed'] as string[]).includes(order.status as string) && (
               <button
                 onClick={() => handleVerQr(order.provider_id)}
                 className="mt-2 w-full bg-secondary-container text-on-secondary-container rounded-2xl py-3 text-sm font-label font-semibold transition-opacity active:opacity-70"

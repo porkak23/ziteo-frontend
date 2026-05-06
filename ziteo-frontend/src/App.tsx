@@ -26,6 +26,8 @@ const MisPedidosScreen  = lazy(() => import('./features/tienda/components/MisPed
 const TrabajosScreen    = lazy(() => import('./features/maestro/components/TrabajosScreen').then(m => ({ default: m.TrabajosScreen })))
 const InventarioScreen  = lazy(() => import('./features/proveedor/components/InventarioScreen').then(m => ({ default: m.InventarioScreen })))
 const IntelScreen       = lazy(() => import('./features/proveedor/components/IntelScreen').then(m => ({ default: m.IntelScreen })))
+const LogisticaScreen   = lazy(() => import('./features/proveedor/components/LogisticaScreen').then(m => ({ default: m.LogisticaScreen })))
+const CotizacionesScreen = lazy(() => import('./features/proveedor/components/CotizacionesScreen').then(m => ({ default: m.CotizacionesScreen })))
 const ContratarScreen   = lazy(() => import('./features/contratar/components/ContratarScreen').then(m => ({ default: m.ContratarScreen })))
 const SettingsScreen        = lazy(() => import('./features/settings/components/SettingsScreen').then(m => ({ default: m.SettingsScreen })))
 const HabilidadesScreen     = lazy(() => import('./features/maestro/components/HabilidadesScreen').then(m => ({ default: m.HabilidadesScreen })))
@@ -81,7 +83,7 @@ export default function App() {
       setScreen('welcome')
       setActiveTab('home')
     }
-  }, [isAuth, screen, setActiveTab])
+  }, [isAuth, screen])
 
   // Chofer has no 'home' tab — land them on 'viajes' instead.
   useEffect(() => {
@@ -265,7 +267,9 @@ export default function App() {
           {activeTab === 'tienda'     && <TiendaScreen />}
           {activeTab === 'pedidos'     && <PedidosProveedorScreen />}
           {activeTab === 'mis-pedidos' && <MisPedidosScreen />}
-          {activeTab === 'intel'      && <IntelScreen />}
+          {activeTab === 'intel'        && <IntelScreen />}
+          {activeTab === 'logistica'    && <LogisticaScreen />}
+          {activeTab === 'cotizaciones' && <CotizacionesScreen />}
           {activeTab === 'trabajos'   && <TrabajosScreen />}
           {activeTab === 'inventario' && <InventarioScreen />}
           {activeTab === 'viajes'     && <TransportistaScreen />}

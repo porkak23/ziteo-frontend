@@ -366,6 +366,7 @@ export type Database = {
           status: string | null
           total: number
           updated_at: string | null
+          cargo_type: 'light' | 'heavy' | null
         }
         Insert: {
           constructor_id: string
@@ -380,6 +381,7 @@ export type Database = {
           status?: string | null
           total: number
           updated_at?: string | null
+          cargo_type?: 'light' | 'heavy' | null
         }
         Update: {
           constructor_id?: string
@@ -394,6 +396,7 @@ export type Database = {
           status?: string | null
           total?: number
           updated_at?: string | null
+          cargo_type?: 'light' | 'heavy' | null
         }
         Relationships: [
           {
@@ -868,6 +871,57 @@ export type Database = {
           },
         ]
       }
+      quotations: {
+        Row: {
+          id: string
+          buyer_id: string
+          provider_id: string
+          items: Json
+          subtotal: number
+          pdf_url: string | null
+          expires_at: string
+          status: 'pending' | 'accepted' | 'expired' | 'converted'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          buyer_id: string
+          provider_id: string
+          items: Json
+          subtotal: number
+          pdf_url?: string | null
+          expires_at: string
+          status?: 'pending' | 'accepted' | 'expired' | 'converted'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          buyer_id?: string
+          provider_id?: string
+          items?: Json
+          subtotal?: number
+          pdf_url?: string | null
+          expires_at?: string
+          status?: 'pending' | 'accepted' | 'expired' | 'converted'
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "quotations_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       deliveries: {
         Row: {
           id: string
@@ -888,6 +942,7 @@ export type Database = {
           delivered_at: string | null
           created_at: string
           updated_at: string
+          cargo_type: 'light' | 'heavy' | null
         }
         Insert: {
           id?: string
@@ -908,6 +963,7 @@ export type Database = {
           delivered_at?: string | null
           created_at?: string
           updated_at?: string
+          cargo_type?: 'light' | 'heavy' | null
         }
         Update: {
           id?: string
@@ -928,6 +984,7 @@ export type Database = {
           delivered_at?: string | null
           created_at?: string
           updated_at?: string
+          cargo_type?: 'light' | 'heavy' | null
         }
         Relationships: [
           {
@@ -979,6 +1036,25 @@ export type Database = {
       update_delivery_status: {
         Args: { p_delivery_id: string; p_new_status: string }
         Returns: { success: boolean; new_status: string }
+      }
+      generate_quotation: {
+        Args: {
+          p_buyer_id: string
+          p_provider_id: string
+          p_items: Json
+          p_subtotal: number
+          p_expires_in_days: number
+        }
+        Returns: string
+      }
+      send_notification: {
+        Args: {
+          p_user_id: string
+          p_type: string
+          p_title: string
+          p_message: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

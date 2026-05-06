@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { useCart } from '../hooks/useCart'
 import type { ProductCard as ProductCardType } from '../types/tiendaTypes'
 
@@ -12,18 +12,30 @@ function ProductCardComponent({ product, onPress }: ProductCardProps) {
   const updateQty = useCart((s) => s.updateQty)
   const cartItem = useCart((s) => s.items.find((i) => i.productId === product.id))
 
+  const hasBulk = !!(product.bulk_price && product.bulk_unit)
+  const [isBulk, setIsBulk] = useState(false)
+
   const inCart = !!cartItem
   const outOfStock = typeof product.stock === 'number' && product.stock === 0
 
+  // Active mode values
+  const activePrice = isBulk && hasBulk ? product.bulk_price! : product.price
+  const activeUnit = isBulk && hasBulk ? product.bulk_unit! : product.unit
+  const bulkQty = product.bulk_min_qty && product.bulk_min_qty > 0 ? product.bulk_min_qty : 1
+
   function handleAdd(e: React.MouseEvent) {
     e.stopPropagation()
-    addItem({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      sellerId: product.proveedor.user_id,
-      imageUrl: product.image_url ?? undefined,
-    })
+    const qty = isBulk && hasBulk ? bulkQty : 1
+    addItem(
+      {
+        productId: product.id,
+        name: product.name,
+        price: activePrice,
+        sellerId: product.proveedor.user_id,
+        imageUrl: product.image_url ?? undefined,
+      },
+      qty,
+    )
   }
 
   function handleDecrease(e: React.MouseEvent) {
@@ -73,12 +85,48 @@ function ProductCardComponent({ product, onPress }: ProductCardProps) {
           {product.name}
         </p>
 
+        {/* Unit / Bulk toggle */}
+        {hasBulk && (
+          <div
+            className="flex items-center self-start rounded-lg bg-surface-container p-0.5 gap-0.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setIsBulk(false)}
+              className={`px-2 py-0.5 rounded-md text-[10px] font-label font-semibold transition-colors ${
+                !isBulk
+                  ? 'bg-primary text-on-primary'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              Por unidad
+            </button>
+            <button
+              onClick={() => setIsBulk(true)}
+              className={`px-2 py-0.5 rounded-md text-[10px] font-label font-semibold transition-colors ${
+                isBulk
+                  ? 'bg-primary text-on-primary'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              Por bulto
+            </button>
+          </div>
+        )}
+
         <div className="flex items-baseline gap-1">
           <span className="font-headline font-black text-primary text-base leading-none tracking-[-0.02em]">
-            Bs. {product.price.toLocaleString('es-BO')}
+            Bs. {activePrice.toLocaleString('es-BO')}
           </span>
-          <span className="font-body text-on-surface-variant text-xs">/{product.unit}</span>
+          <span className="font-body text-on-surface-variant text-xs">/{activeUnit}</span>
         </div>
+
+        {/* Bulk hint */}
+        {isBulk && hasBulk && bulkQty > 1 && (
+          <p className="font-body text-on-surface-variant text-[10px] -mt-0.5">
+            Mínimo {bulkQty} unidades por bulto
+          </p>
+        )}
 
         <div className="flex items-center gap-1">
           <span className="material-symbols-outlined text-[12px] text-on-surface-variant">store</span>
@@ -113,7 +161,7 @@ function ProductCardComponent({ product, onPress }: ProductCardProps) {
             className="mt-1 flex items-center justify-center gap-1.5 w-full rounded-xl py-2.5 bg-primary text-white text-xs font-label font-bold disabled:opacity-40 active:opacity-80 transition-opacity cursor-pointer uppercase tracking-wide"
           >
             <span className="material-symbols-outlined text-sm leading-none">add_shopping_cart</span>
-            Agregar
+            {isBulk && hasBulk && bulkQty > 1 ? `Agregar x${bulkQty}` : 'Agregar'}
           </button>
         )}
       </div>

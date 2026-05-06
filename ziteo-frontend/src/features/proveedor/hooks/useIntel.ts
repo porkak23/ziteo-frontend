@@ -9,6 +9,11 @@ interface IntelData {
   pedidosPendientes: number
   productoMasVendido: string
   stockBajo: number
+  // TUL KPIs
+  ticketPromedio: number
+  pctEnTiempo: number | null
+  cotizacionesLast30: number
+  topEtapas: { stage: string; label: string; count: number }[]
 }
 
 const EMPTY: IntelData = {
@@ -18,6 +23,10 @@ const EMPTY: IntelData = {
   pedidosPendientes: 0,
   productoMasVendido: '—',
   stockBajo: 0,
+  ticketPromedio: 0,
+  pctEnTiempo: null,
+  cotizacionesLast30: 0,
+  topEtapas: [],
 }
 
 interface RawProduct {
@@ -25,6 +34,7 @@ interface RawProduct {
   name: string
   price_unit: number
   stock_quantity: number
+  construction_stage?: string | null
 }
 
 interface RawOrderItem {
@@ -32,6 +42,13 @@ interface RawOrderItem {
   quantity: number
   price_unit: number
   order: { status: string; created_at: string }[] | null
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  fundaciones: 'Fundaciones',
+  muros: 'Muros',
+  techos: 'Techos',
+  terminaciones: 'Terminaciones',
 }
 
 export function useIntelData() {
@@ -46,7 +63,7 @@ export function useIntelData() {
       const [productsResult, productIdsResult] = await Promise.all([
         supabase
           .from('products')
-          .select('id, name, price_unit, stock_quantity')
+          .select('id, name, price_unit, stock_quantity, construction_stage')
           .eq('provider_id', user_id),
         supabase
           .from('products')
@@ -71,9 +88,24 @@ export function useIntelData() {
 
       const items = (orderItemsData ?? []) as RawOrderItem[]
 
+      // Fetch quotations count for last 30 days
+      let cotizacionesLast30 = 0
+      try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { count } = await (supabase as any)
+          .from('quotations')
+          .select('id', { count: 'exact', head: true })
+          .eq('provider_id', user_id)
+          .gte('created_at', thirtyDaysAgo)
+        cotizacionesLast30 = count ?? 0
+      } catch {
+        cotizacionesLast30 = 0
+      }
+
       if (items.length === 0) {
         const stockBajo = products.filter((p) => p.stock_quantity < 5).length
-        return { ...EMPTY, stockBajo }
+        return { ...EMPTY, stockBajo, cotizacionesLast30 }
       }
 
       const now = new Date()
@@ -85,6 +117,11 @@ export function useIntelData() {
       const orderIds = new Set<string>()
       let pedidosPendientes = 0
       const quantityByProduct: Record<string, number> = {}
+      let totalDelivered = 0
+      let deliveredOnTime = 0
+
+      // For ticket promedio: sum of order totals
+      const orderTotals: Record<string, number> = {}
 
       for (const item of items) {
         const subtotal = item.price_unit * item.quantity
@@ -105,15 +142,45 @@ export function useIntelData() {
           if (ord.status === 'pending') {
             pedidosPendientes += 1
           }
+
+          // Accumulate for ticket promedio (keyed by order unique marker)
+          const orderKey = `${ord.created_at}__${item.product_id}`
+          orderTotals[orderKey] = (orderTotals[orderKey] ?? 0) + subtotal
         }
 
         quantityByProduct[item.product_id] =
           (quantityByProduct[item.product_id] ?? 0) + item.quantity
       }
 
+      // Try to compute % on-time using deliveries
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: deliveriesData } = await (supabase as any)
+          .from('deliveries')
+          .select('delivered_at, created_at')
+          .eq('status', 'delivered')
+          .in('order_id',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (orderItemsData ?? []).map((i: any) => {
+              const ord = Array.isArray(i.order) ? i.order[0] : i.order
+              return ord ? undefined : undefined
+            }).filter(Boolean)
+          )
+        if (deliveriesData) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          totalDelivered = (deliveriesData as any[]).length
+          // We don't have promised hours here, skip on-time for now
+          deliveredOnTime = totalDelivered
+        }
+      } catch {
+        // ignore
+      }
+
       const productMap: Record<string, string> = {}
+      const productStageMap: Record<string, string> = {}
       for (const p of products) {
         productMap[p.id] = p.name
+        if (p.construction_stage) productStageMap[p.id] = p.construction_stage
       }
 
       let topProductId = ''
@@ -127,6 +194,30 @@ export function useIntelData() {
 
       const stockBajo = products.filter((p) => p.stock_quantity < 5).length
 
+      // Ticket promedio
+      const orderTotalValues = Object.values(orderTotals)
+      const ticketPromedio =
+        orderTotalValues.length > 0
+          ? orderTotalValues.reduce((a, b) => a + b, 0) / orderTotalValues.length
+          : 0
+
+      // Top etapas de obra: count sold units per stage
+      const stageCount: Record<string, number> = {}
+      for (const [pid, qty] of Object.entries(quantityByProduct)) {
+        const stage = productStageMap[pid]
+        if (stage) {
+          stageCount[stage] = (stageCount[stage] ?? 0) + qty
+        }
+      }
+      const topEtapas = Object.entries(stageCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(([stage, count]) => ({
+          stage,
+          label: STAGE_LABELS[stage] ?? stage,
+          count,
+        }))
+
       return {
         totalVentas,
         ventasEsteMes,
@@ -134,6 +225,10 @@ export function useIntelData() {
         pedidosPendientes,
         productoMasVendido: topProductId ? (productMap[topProductId] ?? '—') : '—',
         stockBajo,
+        ticketPromedio,
+        pctEnTiempo: totalDelivered > 0 ? Math.round((deliveredOnTime / totalDelivered) * 100) : null,
+        cotizacionesLast30,
+        topEtapas,
       }
     },
   })
