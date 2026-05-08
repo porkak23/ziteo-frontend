@@ -36,6 +36,7 @@ const MisLicitacionesScreen = lazy(() => import('./features/licitaciones/compone
 const LicitacionFeed        = lazy(() => import('./features/licitaciones/components/LicitacionFeed').then(m => ({ default: m.LicitacionFeed })))
 const MaestroProfileScreen  = lazy(() => import('./features/maestro/components/MaestroProfileScreen').then(m => ({ default: m.MaestroProfileScreen })))
 const TransportistaScreen   = lazy(() => import('./features/transportista/components/TransportistaScreen').then(m => ({ default: m.TransportistaScreen })))
+const SolicitarTransporteScreen = lazy(() => import('./features/transporte/components/SolicitarTransporteScreen').then(m => ({ default: m.SolicitarTransporteScreen })))
 const HistorialTransportistaScreen = lazy(() => import('./features/transportista/components/HistorialScreen').then(m => ({ default: m.HistorialScreen })))
 const BilleteraTransportistaScreen = lazy(() => import('./features/transportista/components/BilleteraScreen').then(m => ({ default: m.BilleteraScreen })))
 
@@ -273,6 +274,8 @@ export default function App() {
           {activeTab === 'trabajos'   && <TrabajosScreen />}
           {activeTab === 'inventario' && <InventarioScreen />}
           {activeTab === 'viajes'     && <TransportistaScreen />}
+          {activeTab === 'transporte-pesado' && <SolicitarTransporteScreen type="pesado" onBack={() => setActiveTab('home')} />}
+          {activeTab === 'transporte-ligero' && <SolicitarTransporteScreen type="ligero" onBack={() => setActiveTab('home')} />}
           {activeTab === 'historial'  && <HistorialTransportistaScreen />}
           {activeTab === 'billetera'  && <BilleteraTransportistaScreen />}
           {activeTab === 'mi-perfil'  && (isMaestro && currentUser

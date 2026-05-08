@@ -34,7 +34,6 @@ interface Notification {
 
 const ACTIONS_BY_ROLE: Record<UserRole, QuickAction[]> = {
   constructor: [
-    { label: 'Ir a la Tienda', icon: 'storefront', tab: 'tienda' },
     { label: 'Nuevo proyecto', icon: 'add_circle', tab: 'proyectos' },
     { label: 'Contratar maestro', icon: 'handshake', tab: 'contratar' },
     { label: 'Mis proyectos', icon: 'folder', tab: 'proyectos' },
@@ -313,8 +312,11 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
               </span>
             </button>
 
-            {/* Pedir Camión — secondary button (feature en desarrollo) */}
-            <div className="w-full rounded-2xl bg-surface-container border border-outline-variant px-5 py-4 flex items-center gap-4 opacity-60">
+            {/* Transporte pesado — camión/volqueta */}
+            <button
+              onClick={() => onNavigate?.('transporte-pesado')}
+              className="w-full rounded-2xl bg-surface-container border border-outline-variant px-5 py-4 flex items-center gap-4 active:bg-on-surface/[0.04] transition-colors cursor-pointer text-left mb-3"
+            >
               <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
                 <span
                   className="material-symbols-outlined text-amber-600 text-xl"
@@ -325,16 +327,42 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
               </div>
               <div className="flex-1">
                 <p className="font-label font-bold text-on-surface text-sm leading-tight">
-                  Solicitar transporte / camión
+                  Transporte pesado
                 </p>
                 <p className="font-body text-on-surface-variant text-xs mt-0.5">
-                  Retira escombros, traslada materiales
+                  Acero, cemento, volquetas
                 </p>
               </div>
-              <span className="font-label font-bold text-[10px] text-on-surface-variant bg-surface-container-high px-2 py-1 rounded-full uppercase tracking-wider shrink-0">
-                Pronto
+              <span className="material-symbols-outlined text-on-surface-variant/50 text-xl shrink-0">
+                chevron_right
               </span>
-            </div>
+            </button>
+
+            {/* Transporte ligero — moto/mensajería */}
+            <button
+              onClick={() => onNavigate?.('transporte-ligero')}
+              className="w-full rounded-2xl bg-surface-container border border-outline-variant px-5 py-4 flex items-center gap-4 active:bg-on-surface/[0.04] transition-colors cursor-pointer text-left"
+            >
+              <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center shrink-0">
+                <span
+                  className="material-symbols-outlined text-sky-600 text-xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  two_wheeler
+                </span>
+              </div>
+              <div className="flex-1">
+                <p className="font-label font-bold text-on-surface text-sm leading-tight">
+                  Transporte ligero
+                </p>
+                <p className="font-body text-on-surface-variant text-xs mt-0.5">
+                  Herramientas, clavos, insumos
+                </p>
+              </div>
+              <span className="material-symbols-outlined text-on-surface-variant/50 text-xl shrink-0">
+                chevron_right
+              </span>
+            </button>
           </section>
         )}
 
@@ -398,7 +426,7 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
             )}
 
             {/* Secondary actions — bare grid, no card wrappers */}
-            <div className="grid grid-cols-3 gap-0 border border-outline-variant/60 rounded-2xl overflow-hidden">
+            <div className={`grid gap-0 border border-outline-variant/60 rounded-2xl overflow-hidden ${actions.slice(1).length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
               {actions.slice(1).map((action, idx) => (
                 <button
                   key={action.label}
