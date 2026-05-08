@@ -1,15 +1,30 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { ProductCard } from '../types/tiendaTypes'
 import { useCart } from '../hooks/useCart'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
+import { supabase } from '../../../lib/supabaseClient'
 
 interface ProductDetailScreenProps {
   product: ProductCard
   onBack: () => void
+  onViewProviderStore?: (providerId: string, providerName: string) => void
 }
 
-export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProps) {
+interface AlternativeProvider {
+  id: string
+  price_unit: number
+  unit_type: string
+  provider_id: string
+  user_roles: {
+    store_name: string
+    delivery_time_hours: number | null
+    min_order_amount: number | null
+  } | null
+}
+
+export function ProductDetailScreen({ product, onBack, onViewProviderStore }: ProductDetailScreenProps) {
   const [quantity, setQuantity] = useState(1)
   const addItem = useCart((s) => s.addItem)
   const { toasts, showToast, removeToast } = useToast()
@@ -20,7 +35,6 @@ export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProp
   const increment = () => setQuantity((q) => Math.min(product.stock, q + 1))
 
   const handleAddToCart = () => {
-    // Single addItem call passes the desired quantity — no loop, no N re-renders
     addItem(
       {
         productId: product.id,
@@ -34,6 +48,40 @@ export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProp
     showToast('Agregado al carrito', 'success')
     setTimeout(onBack, 800)
   }
+
+  // ── Query: alternative providers for same product ──────────────────────────
+  const { data: altProviders = [] } = useQuery<AlternativeProvider[]>({
+    queryKey: ['alt-providers', product.name, product.proveedor.user_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          price_unit,
+          unit_type,
+          provider_id,
+          user_roles!inner (
+            store_name,
+            delivery_time_hours,
+            min_order_amount
+          )
+        `)
+        .eq('name', product.name)
+        .neq('provider_id', product.proveedor.user_id)
+        .eq('active', true)
+        .limit(3)
+      if (error) return []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (data ?? []).map((p: any) => ({
+        id: p.id,
+        price_unit: Number(p.price_unit),
+        unit_type: p.unit_type,
+        provider_id: p.provider_id,
+        user_roles: Array.isArray(p.user_roles) ? (p.user_roles[0] ?? null) : (p.user_roles ?? null),
+      })) as AlternativeProvider[]
+    },
+    staleTime: 60_000,
+  })
 
   return (
     <div className="flex flex-col min-h-dvh bg-background">
@@ -73,6 +121,7 @@ export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProp
             </span>
           </p>
 
+          {/* Proveedor info */}
           <div className="flex items-center gap-2 mt-1">
             <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0">
               <span className="font-label font-semibold text-on-surface text-sm">
@@ -97,6 +146,45 @@ export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProp
             )}
           </div>
 
+          {/* Provider delivery badges */}
+          {(product.proveedor.delivery_time_hours != null || product.proveedor.min_order_amount != null || product.proveedor.free_shipping_threshold != null) && (
+            <div className="flex gap-2 flex-wrap mt-1">
+              {product.proveedor.min_order_amount != null && (
+                <span className="flex items-center gap-1 bg-surface-container rounded-full px-2.5 py-1 font-label text-xs text-on-surface-variant">
+                  <span
+                    className="material-symbols-outlined text-xs leading-none text-primary"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    shopping_bag
+                  </span>
+                  Mín Bs.{product.proveedor.min_order_amount.toLocaleString('es-BO')}
+                </span>
+              )}
+              {product.proveedor.delivery_time_hours != null && (
+                <span className="flex items-center gap-1 bg-surface-container rounded-full px-2.5 py-1 font-label text-xs text-on-surface-variant">
+                  <span
+                    className="material-symbols-outlined text-xs leading-none text-primary"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    schedule
+                  </span>
+                  Entrega {product.proveedor.delivery_time_hours}h
+                </span>
+              )}
+              {product.proveedor.free_shipping_threshold != null && (
+                <span className="flex items-center gap-1 bg-surface-container rounded-full px-2.5 py-1 font-label text-xs text-on-surface-variant">
+                  <span
+                    className="material-symbols-outlined text-xs leading-none text-green-600"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    local_shipping
+                  </span>
+                  Gratis +Bs.{product.proveedor.free_shipping_threshold.toLocaleString('es-BO')}
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-1">
             <span className="material-symbols-outlined text-on-surface-variant text-sm leading-none">
               location_on
@@ -110,6 +198,68 @@ export function ProductDetailScreen({ product, onBack }: ProductDetailScreenProp
             Disponible: {product.stock} {product.unit}
           </span>
         </div>
+
+        {/* ── Otros proveedores ─────────────────────────────────────────────── */}
+        {altProviders.length > 0 && (
+          <div className="px-4 pt-2 pb-4">
+            <div className="border-t border-outline-variant pt-4">
+              <h2 className="font-label font-semibold text-on-surface text-sm mb-3">
+                Otros proveedores con este producto
+              </h2>
+              <div className="flex flex-col gap-2">
+                {altProviders.map((alt) => {
+                  const storeName = alt.user_roles?.store_name ?? 'Proveedor'
+                  const initial = storeName.charAt(0).toUpperCase()
+                  return (
+                    <div
+                      key={alt.id}
+                      className="bg-surface-container rounded-2xl px-4 py-3 flex items-center gap-3"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <span className="font-label font-bold text-primary text-sm leading-none">{initial}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-label font-semibold text-on-surface text-sm truncate">{storeName}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className="font-headline font-bold text-primary text-sm">
+                            Bs. {alt.price_unit.toLocaleString('es-BO')}
+                            <span className="font-body font-normal text-on-surface-variant text-xs"> /{alt.unit_type}</span>
+                          </span>
+                          {alt.user_roles?.delivery_time_hours != null && (
+                            <span className="flex items-center gap-0.5 font-label text-xs text-on-surface-variant">
+                              <span
+                                className="material-symbols-outlined text-xs leading-none"
+                                style={{ fontVariationSettings: "'FILL' 1" }}
+                              >
+                                schedule
+                              </span>
+                              {alt.user_roles.delivery_time_hours}h
+                            </span>
+                          )}
+                          {alt.user_roles?.min_order_amount != null && (
+                            <span className="font-label text-xs text-on-surface-variant">
+                              Mín Bs.{alt.user_roles.min_order_amount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onViewProviderStore
+                          ? onViewProviderStore(alt.provider_id, storeName)
+                          : showToast('Ver tienda completa: próximamente disponible', 'info')
+                        }
+                        className="shrink-0 bg-primary/10 text-primary border border-primary/20 rounded-xl px-3 py-1.5 font-label text-xs font-semibold active:opacity-70 transition-opacity"
+                      >
+                        Ver tienda
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="px-4 py-2">
           <div className="flex items-center gap-4">

@@ -1,5 +1,7 @@
 export type ProductUnit = 'kg' | 'm2' | 'm3' | 'unidad' | 'saco' | 'varilla'
 
+export type ConstructionStage = 'fundaciones' | 'muros' | 'techos' | 'terminaciones'
+
 export interface Category {
   id: string
   name: string
@@ -39,11 +41,18 @@ export interface ProductCard {
   image_url: string | null
   active: boolean
   category_id: string
+  construction_stage?: ConstructionStage | null
+  bulk_price?: number | null
+  bulk_unit?: string | null
+  bulk_min_qty?: number | null
   proveedor: {
     user_id: string
     store_name: string
     city: string
     is_verified: boolean
+    min_order_amount?: number | null
+    delivery_time_hours?: number | null
+    free_shipping_threshold?: number | null
   }
 }
 
@@ -57,4 +66,6 @@ export interface TiendaFilters {
   search?: string
   group_keywords?: string[]
   listing_type?: ListingType
+  construction_stage?: ConstructionStage
+  provider_id?: string
 }

@@ -85,6 +85,14 @@
 
     /* Rating */
     --color-rating:              #F59E0B;
+
+    /* Dark-always (splash screen, dark surfaces) */
+    --color-background-dark:     #0A0A0A;
+
+    /* Extended brand — for gradients */
+    --color-primary-dark:        #A83800;
+    --color-success:             #16A34A;
+    --color-success-dark:        #166534;
   }
 
   .dark {
@@ -165,6 +173,11 @@
 
     /* Rating */
     --color-rating:              #FBBF24;
+
+    /* Extended brand — for gradients */
+    --color-primary-dark:        #7A2900;
+    --color-success:             #22C55E;
+    --color-success-dark:        #15803D;
   }
 
   body {

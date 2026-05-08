@@ -1,11 +1,19 @@
 import { useRef, useEffect, useState, type KeyboardEvent } from 'react'
 import { useAuthStore } from '../../features/auth/store/authStore'
-import { useChat } from '../hooks/useChat'
+import { useMessages } from '../hooks/useMessages'
+
+export interface ProductContext {
+  id: string
+  name: string
+  image_url: string | null
+  price: number
+}
 
 interface ChatScreenProps {
   otherUserId: string
   otherUserName: string
   onClose: () => void
+  productContext?: ProductContext
 }
 
 function formatTime(iso: string): string {
@@ -15,7 +23,10 @@ function formatTime(iso: string): string {
   return `${h}:${m}`
 }
 
-function BubbleSkeleton({ align }: { align: 'left' | 'right' }) {
+const SKELETON_WIDTHS = [160, 200, 140, 180, 220] as const
+
+function BubbleSkeleton({ align, index = 0 }: { align: 'left' | 'right'; index?: number }) {
+  const width = SKELETON_WIDTHS[index % SKELETON_WIDTHS.length]
   return (
     <div
       className={`flex ${align === 'right' ? 'justify-end' : 'justify-start'}`}
@@ -25,7 +36,7 @@ function BubbleSkeleton({ align }: { align: 'left' | 'right' }) {
           className={`h-10 rounded-2xl animate-pulse bg-surface-container ${
             align === 'right' ? 'rounded-tr-sm' : 'rounded-tl-sm'
           }`}
-          style={{ width: `${120 + Math.random() * 80}px` }}
+          style={{ width: `${width}px` }}
         />
         <div
           className={`h-3 w-8 rounded animate-pulse bg-surface-container ${
@@ -37,11 +48,11 @@ function BubbleSkeleton({ align }: { align: 'left' | 'right' }) {
   )
 }
 
-export function ChatScreen({ otherUserId, otherUserName, onClose }: ChatScreenProps) {
+export function ChatScreen({ otherUserId, otherUserName, onClose, productContext }: ChatScreenProps) {
   const user = useAuthStore((s) => s.user)
   const currentUserId = user?.user_id ?? ''
 
-  const { messages, isLoading, sendMessage } = useChat(currentUserId, otherUserId)
+  const { messages, loading: isLoading, sendMessage } = useMessages(otherUserId)
 
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -57,8 +68,15 @@ export function ChatScreen({ otherUserId, otherUserName, onClose }: ChatScreenPr
     if (!trimmed || isSending) return
     setInput('')
     setIsSending(true)
-    await sendMessage(trimmed)
-    setIsSending(false)
+    
+    // Si es el primer mensaje y hay contexto de producto, enviar productId
+    const productId = (messages.length === 0 && productContext) ? productContext.id : null
+    
+    try {
+      await sendMessage(trimmed, productId)
+    } finally {
+      setIsSending(false)
+    }
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -97,16 +115,33 @@ export function ChatScreen({ otherUserId, otherUserName, onClose }: ChatScreenPr
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
         {isLoading && (
           <>
-            <BubbleSkeleton align="left" />
-            <BubbleSkeleton align="right" />
-            <BubbleSkeleton align="left" />
+            <BubbleSkeleton align="left" index={0} />
+            <BubbleSkeleton align="right" index={1} />
+            <BubbleSkeleton align="left" index={2} />
           </>
         )}
 
-        {!isLoading && messages.length === 0 && (
+        {!isLoading && messages.length === 0 && !productContext && (
           <div className="flex flex-col items-center justify-center gap-3 h-full text-on-surface-variant">
             <span className="material-symbols-outlined text-5xl">chat_bubble</span>
             <span className="font-body text-sm">Comienza una conversación</span>
+          </div>
+        )}
+        
+        {productContext && (
+          <div className="bg-surface-container rounded-2xl p-3 flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 rounded-lg bg-surface flex items-center justify-center shrink-0">
+              {productContext.image_url ? (
+                <img src={productContext.image_url} alt={productContext.name} className="w-12 h-12 rounded-lg object-cover" />
+              ) : (
+                <span className="material-symbols-outlined text-on-surface-variant text-xl">inventory_2</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-label font-semibold text-sm text-on-surface truncate">{productContext.name}</p>
+              <p className="font-body text-xs text-on-surface-variant">Bs. {productContext.price.toFixed(2)}</p>
+              <p className="font-body text-xs text-primary mt-0.5">Consultando sobre este producto</p>
+            </div>
           </div>
         )}
 

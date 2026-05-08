@@ -1,10 +1,21 @@
 export type DeliveryStatus = 'pending' | 'accepted' | 'in_transit' | 'delivered' | 'failed'
+export type CargoType = 'light' | 'heavy'
+export type VehicleType = 'moto' | 'camion' | 'camioneta' | 'pickup'
+export type CargoCapability = 'light' | 'heavy'
+
+export function vehicleToCargoCapability(vehicleType: string | null): CargoCapability | null {
+  if (!vehicleType) return null
+  if (vehicleType === 'moto') return 'light'
+  if (['camion', 'camioneta', 'pickup'].includes(vehicleType)) return 'heavy'
+  return null
+}
 
 export interface Delivery {
   id: string
   order_id: string
   driver_id: string | null
   status: DeliveryStatus
+  cargo_type: CargoType
   pickup_address: string | null
   dropoff_address: string | null
   pickup_lat: number | null

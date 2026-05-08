@@ -66,8 +66,8 @@ export function PerfilScreen() {
     try {
       await upload(file)
       showToast('Foto de perfil actualizada', 'success')
-    } catch (err: any) {
-      showToast(err.message ?? 'No se pudo subir la foto', 'error')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'No se pudo subir la foto', 'error')
     } finally {
       if (photoInputRef.current) photoInputRef.current.value = ''
     }

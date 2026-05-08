@@ -60,7 +60,11 @@ export function useMaestros(search?: string) {
       const { data, error } = await query.limit(50)
       if (error) throw error
 
-      return (data ?? []).map((row: any) => ({
+      type RawRow = {
+        user_id: string; name: string; city: string; avatar_url: string | null
+        maestro_profiles: { specialties: string[]; rate_type: string; rate_amount: number; available: boolean; experience_years: number }[] | null
+      }
+      return (data as RawRow[] ?? []).map((row) => ({
         user_id: row.user_id,
         name: row.name,
         city: row.city,

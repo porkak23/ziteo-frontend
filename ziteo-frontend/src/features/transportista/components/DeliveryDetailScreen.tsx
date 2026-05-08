@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { usePendingDeliveries, useMyDeliveries, useUpdateDeliveryStatus, useAcceptDelivery } from '../hooks/useDeliveries'
-import { StatusBadge, deliveryFee } from './DeliveryCard'
+import { StatusBadge } from './DeliveryCard'
+import { deliveryFee } from '../utils/deliveryUtils'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
 import type { Delivery } from '../types/deliveryTypes'

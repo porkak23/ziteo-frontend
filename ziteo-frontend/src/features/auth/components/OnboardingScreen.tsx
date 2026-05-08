@@ -6,6 +6,7 @@ import type { UserRole } from '../store/authStore'
 import { useUploadPhoto } from '../../../shared/hooks/useUploadPhoto'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
+import { supabase } from '../../../lib/supabaseClient'
 
 interface OnboardingScreenProps {
   onComplete: () => void
@@ -30,6 +31,13 @@ const ROLE_LABELS: Record<UserRole, string> = {
   chofer: 'Chofer',
 }
 
+const VEHICLE_OPTIONS = [
+  { value: 'moto', label: 'Motocicleta', icon: '🛵', subtitle: 'Carga ligera — hasta 5 kg' },
+  { value: 'camioneta', label: 'Camioneta', icon: '🚗', subtitle: 'Carga pesada — más de 5 kg' },
+  { value: 'camion', label: 'Camión', icon: '🚛', subtitle: 'Carga pesada — más de 5 kg' },
+  { value: 'pickup', label: 'Pickup', icon: '🛻', subtitle: 'Carga pesada — más de 5 kg' },
+] as const
+
 export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const { user, setUser } = useAuthStore()
   const { upload, isUploading } = useUploadPhoto()
@@ -41,6 +49,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
   const [city, setCity] = useState('')
   const [activeRole, setActiveRole] = useState<UserRole>(user?.active_role ?? 'constructor')
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url ?? '')
+  const [vehicleType, setVehicleType] = useState<string>('')
   const [apiError, setApiError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -53,7 +62,9 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
 
   const cityError = !city ? 'Selecciona una ciudad' : null
 
-  const hasErrors = !!nameError || !!cityError || name.trim().length < 3
+  const isChofer = activeRole === 'chofer' || (user?.roles ?? []).includes('chofer')
+  const vehicleError = isChofer && !vehicleType ? 'Selecciona tu tipo de vehículo' : null
+  const hasErrors = !!nameError || !!cityError || name.trim().length < 3 || !!vehicleError
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -62,8 +73,9 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       const publicUrl = await upload(file)
       setAvatarUrl(publicUrl)
       showToast('Foto de perfil cargada', 'success')
-    } catch (err: any) {
-      showToast(err.message ?? 'No se pudo subir la foto', 'error')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'No se pudo subir la foto'
+      showToast(msg, 'error')
     } finally {
       if (photoInputRef.current) photoInputRef.current.value = ''
     }
@@ -83,6 +95,15 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
         active_role: activeRole,
         ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
       })
+
+      // If chofer and vehicle type selected, persist to user_roles
+      if (isChofer && vehicleType) {
+        await supabase
+          .from('user_roles')
+          .update({ vehicle_type: vehicleType })
+          .eq('user_id', user!.user_id)
+          .eq('role', 'chofer')
+      }
 
       // Update the Zustand store with the new profile data
       if (user) {
@@ -269,6 +290,41 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
             </div>
           )}
         </div>
+
+        {/* Tipo de vehículo — solo para choferes */}
+        {isChofer && (
+          <div className="flex flex-col gap-1.5">
+            <label className="font-label text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
+              Tipo de vehículo
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {VEHICLE_OPTIONS.map((v) => {
+                const isSelected = vehicleType === v.value
+                return (
+                  <button
+                    key={v.value}
+                    type="button"
+                    onClick={() => setVehicleType(v.value)}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all text-center ${
+                      isSelected
+                        ? 'border-primary bg-primary/5'
+                        : 'border-outline-variant bg-surface'
+                    }`}
+                  >
+                    <span className="text-2xl leading-none">{v.icon}</span>
+                    <span className={`font-label text-sm font-semibold ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
+                      {v.label}
+                    </span>
+                    <span className="font-body text-[10px] text-on-surface-variant leading-tight">{v.subtitle}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {nameTouched && vehicleError && (
+              <span className="text-error text-xs">{vehicleError}</span>
+            )}
+          </div>
+        )}
 
         {/* Error API */}
         {apiError && (

@@ -73,7 +73,13 @@
       "Bash(git init *)",
       "Bash(git config *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(npm list *)",
+      "Bash(chmod +x \"d:/Ziteo.1/.git/hooks/pre-commit\")",
+      "Bash(vercel --prod)",
+      "Bash(git merge *)",
+      "Bash(npx eslint *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\pereira\\.claude\\plugins"

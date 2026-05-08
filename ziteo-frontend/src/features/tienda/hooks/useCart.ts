@@ -31,23 +31,33 @@ export interface CartItem {
   quantity: number
   sellerId: string
   imageUrl?: string
+  /** Peso unitario en kg (opcional, proveniente de products.weight_kg) */
+  weight_kg?: number
 }
+
+export type CargoType = 'light' | 'heavy'
 
 interface CartStore {
   items: CartItem[]
+  /** Tipo de carga seleccionado (puede ser override manual) */
+  cargoType: CargoType | null
   /** Add an item to the cart. Pass `quantity` (default 1) to add multiple at once without N re-renders. */
   addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void
   removeItem: (productId: string) => void
   updateQty: (productId: string, qty: number) => void
+  setCargoType: (type: CargoType) => void
   clear: () => void
   total: () => number
   itemCount: () => number
+  /** Peso total del pedido en kg (suma de weight_kg * quantity para cada item) */
+  totalWeight: () => number | null
 }
 
 export const useCart = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      cargoType: null,
 
       addItem: (item, quantity = 1) =>
         set((state) => {
@@ -82,13 +92,22 @@ export const useCart = create<CartStore>()(
           }
         }),
 
-      clear: () => set({ items: [] }),
+      setCargoType: (type) => set({ cargoType: type }),
+
+      clear: () => set({ items: [], cargoType: null }),
 
       total: () =>
         get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
 
       itemCount: () =>
         get().items.reduce((sum, i) => sum + i.quantity, 0),
+
+      totalWeight: () => {
+        const items = get().items
+        const hasWeight = items.some((i) => i.weight_kg != null)
+        if (!hasWeight) return null
+        return items.reduce((sum, i) => sum + (i.weight_kg ?? 0) * i.quantity, 0)
+      },
     }),
     { name: 'ziteo-cart' }
   )

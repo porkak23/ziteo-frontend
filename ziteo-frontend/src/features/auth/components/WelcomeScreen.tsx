@@ -31,7 +31,7 @@ const ROLE_CARDS = [
 
 export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
   return (
-    <main className="relative min-h-dvh w-full flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--color-background-dark)' }}>
+    <main className="relative min-h-dvh w-full flex flex-col overflow-hidden bg-[#0A0A0A]">
       {/* Geometric orange corner accent */}
       <div className="absolute top-0 right-0 w-px h-28 bg-primary/80" />
       <div className="absolute top-0 right-0 w-28 h-px bg-primary/80" />

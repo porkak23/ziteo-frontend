@@ -26,6 +26,8 @@ const MisPedidosScreen  = lazy(() => import('./features/tienda/components/MisPed
 const TrabajosScreen    = lazy(() => import('./features/maestro/components/TrabajosScreen').then(m => ({ default: m.TrabajosScreen })))
 const InventarioScreen  = lazy(() => import('./features/proveedor/components/InventarioScreen').then(m => ({ default: m.InventarioScreen })))
 const IntelScreen       = lazy(() => import('./features/proveedor/components/IntelScreen').then(m => ({ default: m.IntelScreen })))
+const LogisticaScreen   = lazy(() => import('./features/proveedor/components/LogisticaScreen').then(m => ({ default: m.LogisticaScreen })))
+const CotizacionesScreen = lazy(() => import('./features/proveedor/components/CotizacionesScreen').then(m => ({ default: m.CotizacionesScreen })))
 const ContratarScreen   = lazy(() => import('./features/contratar/components/ContratarScreen').then(m => ({ default: m.ContratarScreen })))
 const SettingsScreen        = lazy(() => import('./features/settings/components/SettingsScreen').then(m => ({ default: m.SettingsScreen })))
 const HabilidadesScreen     = lazy(() => import('./features/maestro/components/HabilidadesScreen').then(m => ({ default: m.HabilidadesScreen })))
@@ -34,6 +36,7 @@ const MisLicitacionesScreen = lazy(() => import('./features/licitaciones/compone
 const LicitacionFeed        = lazy(() => import('./features/licitaciones/components/LicitacionFeed').then(m => ({ default: m.LicitacionFeed })))
 const MaestroProfileScreen  = lazy(() => import('./features/maestro/components/MaestroProfileScreen').then(m => ({ default: m.MaestroProfileScreen })))
 const TransportistaScreen   = lazy(() => import('./features/transportista/components/TransportistaScreen').then(m => ({ default: m.TransportistaScreen })))
+const SolicitarTransporteScreen = lazy(() => import('./features/transporte/components/SolicitarTransporteScreen').then(m => ({ default: m.SolicitarTransporteScreen })))
 const HistorialTransportistaScreen = lazy(() => import('./features/transportista/components/HistorialScreen').then(m => ({ default: m.HistorialScreen })))
 const BilleteraTransportistaScreen = lazy(() => import('./features/transportista/components/BilleteraScreen').then(m => ({ default: m.BilleteraScreen })))
 
@@ -49,26 +52,6 @@ function TabSkeleton() {
 
 type AppScreen = 'splash' | 'welcome' | 'register' | 'login' | 'otp' | 'onboarding' | 'oauth-setup' | 'forgot-pin' | 'app'
 
-const TAB_TITLES: Record<string, string> = {
-  home: 'ZITEO',
-  proyectos: 'Proyectos',
-  contratar: 'Contratar',
-  tienda: 'Mi Tienda',
-  inventario: 'Inventario',
-  intel: 'Inteligencia',
-  pedidos: 'Pedidos',
-  'mis-pedidos': 'Mis Pedidos',
-  notificaciones: 'Notificaciones',
-  trabajos: 'Trabajos',
-  licitaciones: 'Licitaciones',
-  'mi-perfil': 'Mi Perfil',
-  perfil: 'Perfil',
-  settings: 'Configuración',
-  habilidades: 'Habilidades',
-  viajes: 'Mis Viajes',
-  historial: 'Historial',
-  billetera: 'Billetera',
-}
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('splash')
@@ -97,6 +80,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isAuth && screen === 'app') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setScreen('welcome')
       setActiveTab('home')
     }
@@ -250,12 +234,10 @@ export default function App() {
     )
   }
 
-  const tabTitle = TAB_TITLES[activeTab] ?? 'ZITEO'
-
   return (
     <>
       <ThemeInitializer />
-      <AppLayout title={tabTitle} activeTab={activeTab} onTabChange={setActiveTab}>
+      <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
         <Suspense fallback={<TabSkeleton />}>
           {activeTab === 'home'        && <HomeScreen onNavigate={setActiveTab} />}
           {activeTab === 'proyectos'  && <ProyectosScreen />}
@@ -286,10 +268,14 @@ export default function App() {
           {activeTab === 'tienda'     && <TiendaScreen />}
           {activeTab === 'pedidos'     && <PedidosProveedorScreen />}
           {activeTab === 'mis-pedidos' && <MisPedidosScreen />}
-          {activeTab === 'intel'      && <IntelScreen />}
+          {activeTab === 'intel'        && <IntelScreen />}
+          {activeTab === 'logistica'    && <LogisticaScreen />}
+          {activeTab === 'cotizaciones' && <CotizacionesScreen />}
           {activeTab === 'trabajos'   && <TrabajosScreen />}
           {activeTab === 'inventario' && <InventarioScreen />}
           {activeTab === 'viajes'     && <TransportistaScreen />}
+          {activeTab === 'transporte-pesado' && <SolicitarTransporteScreen type="pesado" onBack={() => setActiveTab('home')} />}
+          {activeTab === 'transporte-ligero' && <SolicitarTransporteScreen type="ligero" onBack={() => setActiveTab('home')} />}
           {activeTab === 'historial'  && <HistorialTransportistaScreen />}
           {activeTab === 'billetera'  && <BilleteraTransportistaScreen />}
           {activeTab === 'mi-perfil'  && (isMaestro && currentUser

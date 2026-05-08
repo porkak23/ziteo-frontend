@@ -2,25 +2,26 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
-import type { Delivery, AcceptDeliveryResult } from '../types/deliveryTypes'
+import type { Delivery, AcceptDeliveryResult, CargoCapability } from '../types/deliveryTypes'
 
 // ─── Query keys ──────────────────────────────────────────────────────────────
 
-const POOL_KEY    = ['deliveries', 'pool']
+const POOL_KEY    = (cargo?: CargoCapability | null) => ['deliveries', 'pool', cargo ?? 'all']
 const MY_JOBS_KEY = (driverId: string) => ['deliveries', 'driver', driverId]
 
 // ─── usePendingDeliveries ────────────────────────────────────────────────────
 // Fetches the open pool of deliveries available for transportistas to claim.
+// Pass cargoCapability to show only matching deliveries (light/heavy).
 // Realtime subscription keeps the list fresh as new orders are confirmed.
 
-export function usePendingDeliveries() {
+export function usePendingDeliveries(cargoCapability?: CargoCapability | null) {
   const queryClient = useQueryClient()
   const queryClientRef = useRef(queryClient)
 
   const query = useQuery<Delivery[]>({
-    queryKey: POOL_KEY,
+    queryKey: POOL_KEY(cargoCapability),
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('deliveries')
         .select(`
           *,
@@ -31,6 +32,12 @@ export function usePendingDeliveries() {
           )
         `)
         .eq('status', 'pending')
+
+      if (cargoCapability) {
+        q = q.eq('cargo_type', cargoCapability)
+      }
+
+      const { data, error } = await q
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -47,14 +54,13 @@ export function usePendingDeliveries() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'deliveries' },
         () => {
-          // Refetch instead of manual merge to keep data consistent
-          queryClientRef.current.invalidateQueries({ queryKey: POOL_KEY })
+          queryClientRef.current.invalidateQueries({ queryKey: POOL_KEY(cargoCapability) })
         },
       )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, [cargoCapability])
 
   return query
 }
@@ -133,8 +139,8 @@ export function useAcceptDelivery() {
       return data as AcceptDeliveryResult
     },
     onSuccess: () => {
-      // Refresh both the pool and the driver's jobs
-      queryClient.invalidateQueries({ queryKey: POOL_KEY })
+      // Invalidate all pool variants (any cargo_type filter)
+      queryClient.invalidateQueries({ queryKey: ['deliveries', 'pool'] })
       if (driver?.user_id) {
         queryClient.invalidateQueries({ queryKey: MY_JOBS_KEY(driver.user_id) })
       }
@@ -161,7 +167,7 @@ export function useUpdateDeliveryStatus() {
       if (driver?.user_id) {
         queryClient.invalidateQueries({ queryKey: MY_JOBS_KEY(driver.user_id) })
       }
-      queryClient.invalidateQueries({ queryKey: POOL_KEY })
+      queryClient.invalidateQueries({ queryKey: ['deliveries', 'pool'] })
     },
   })
 }

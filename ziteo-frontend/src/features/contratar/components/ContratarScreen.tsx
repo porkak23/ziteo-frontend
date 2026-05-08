@@ -250,9 +250,10 @@ export function ContratarScreen({ onViewProfile, initialHireMaestroId }: Contrat
   useEffect(() => {
     if (initialHireMaestroId && maestros && !selectedMaestro) {
       const found = maestros.find(m => m.user_id === initialHireMaestroId)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (found) setSelectedMaestro(found)
     }
-  }, [initialHireMaestroId, maestros])
+  }, [initialHireMaestroId, maestros, selectedMaestro])
 
   if (selectedMaestro) {
     return (

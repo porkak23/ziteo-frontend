@@ -20,8 +20,8 @@ export function ImagePicker({ value, onChange, bucket, folder, shape = 'square',
     try {
       const publicUrl = await upload(file)
       onChange(publicUrl)
-    } catch (err: any) {
-      alert(err.message)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al subir imagen')
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = ''

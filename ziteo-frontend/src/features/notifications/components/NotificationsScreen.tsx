@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 
@@ -50,6 +51,31 @@ export function NotificationsScreen() {
       return (data ?? []) as AppNotification[]
     },
   })
+
+  useEffect(() => {
+    if (!user?.user_id) return
+
+    const channel = supabase
+      .channel(`notifications:${user.user_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.user_id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.user_id] })
+          queryClient.invalidateQueries({ queryKey: ['recentNotifications', user.user_id] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user?.user_id, queryClient])
 
   const { mutate: markAllRead, isPending: isMarking } = useMutation({
     mutationFn: async () => {

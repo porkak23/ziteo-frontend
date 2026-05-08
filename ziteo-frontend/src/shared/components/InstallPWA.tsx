@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react'
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>
+}
+
 export function InstallPWA() {
-  const [prompt, setPrompt] = useState<Event | null>(null)
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [dismissed, setDismissed] = useState(() =>
     localStorage.getItem('pwa_install_dismissed') === 'true'
   )
 
   useEffect(() => {
-    const handler = (e: Event) => { e.preventDefault(); setPrompt(e) }
+    const handler = (e: Event) => { e.preventDefault(); setPrompt(e as BeforeInstallPromptEvent) }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
@@ -24,7 +28,7 @@ export function InstallPWA() {
         <p className="text-on-surface-variant text-xs">Agrega la app a tu pantalla de inicio</p>
       </div>
       <button
-        onClick={async () => { await (prompt as any).prompt(); setPrompt(null) }}
+        onClick={async () => { await (prompt as BeforeInstallPromptEvent).prompt(); setPrompt(null) }}
         className="bg-primary text-on-primary rounded-xl px-3 py-2 text-sm font-semibold"
       >
         Instalar

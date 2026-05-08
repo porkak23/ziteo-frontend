@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { TiendaFilters, ListingType } from '../types/tiendaTypes'
+import type { TiendaFilters, ListingType, ConstructionStage } from '../types/tiendaTypes'
 import type { Category } from '../types/tiendaTypes'
 import { BOLIVIAN_CITIES } from '../../auth/constants/authConstants'
 
@@ -10,6 +10,13 @@ interface FilterSheetProps {
   categories: Category[]
   onApply: (filters: TiendaFilters) => void
 }
+
+const CONSTRUCTION_STAGES: { value: ConstructionStage; label: string; icon: string }[] = [
+  { value: 'fundaciones', label: 'Fundaciones', icon: 'foundation' },
+  { value: 'muros', label: 'Muros', icon: 'holiday_village' },
+  { value: 'techos', label: 'Techos', icon: 'roofing' },
+  { value: 'terminaciones', label: 'Terminaciones', icon: 'format_paint' },
+]
 
 export function FilterSheet({ open, onClose, filters, categories, onApply }: FilterSheetProps) {
   const [draft, setDraft] = useState<TiendaFilters>(filters)
@@ -30,6 +37,7 @@ export function FilterSheet({ open, onClose, filters, categories, onApply }: Fil
     draft.listing_type,
     draft.category_id,
     draft.city,
+    draft.construction_stage,
     draft.min_price !== undefined,
     draft.max_price !== undefined,
   ].filter(Boolean).length
@@ -70,6 +78,51 @@ export function FilterSheet({ open, onClose, filters, categories, onApply }: Fil
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-6">
+
+          {/* Section 0: Etapa de Obra */}
+          <div className="flex flex-col gap-3">
+            <span className="font-label font-semibold text-on-surface text-sm">Etapa de Obra</span>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setDraft((d) => ({ ...d, construction_stage: undefined }))}
+                className={`rounded-full px-4 py-1.5 border font-label text-sm font-medium transition-[border-color,background-color,color] ${
+                  !draft.construction_stage
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-surface-container text-on-surface-variant border-outline-variant'
+                }`}
+              >
+                Todas
+              </button>
+              {CONSTRUCTION_STAGES.map((stage) => (
+                <button
+                  key={stage.value}
+                  type="button"
+                  onClick={() =>
+                    setDraft((d) => ({
+                      ...d,
+                      construction_stage:
+                        d.construction_stage === stage.value ? undefined : stage.value,
+                    }))
+                  }
+                  className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 border font-label text-sm font-medium transition-[border-color,background-color,color] ${
+                    draft.construction_stage === stage.value
+                      ? 'bg-primary text-on-primary border-primary'
+                      : 'bg-surface-container text-on-surface-variant border-outline-variant'
+                  }`}
+                >
+                  <span
+                    className="material-symbols-outlined text-sm leading-none"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    {stage.icon}
+                  </span>
+                  {stage.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Section 1: Tipo de publicación */}
           <div className="flex flex-col gap-3">
             <span className="font-label font-semibold text-on-surface text-sm">Tipo de publicación</span>
