@@ -19,6 +19,8 @@ import { ChatScreen } from './shared/components/ChatScreen'
 
 const ConstructorApp    = lazy(() => import('./features/constructor/ConstructorApp').then(m => ({ default: m.ConstructorApp })))
 const VendedorApp       = lazy(() => import('./features/vendedor/VendedorApp').then(m => ({ default: m.VendedorApp })))
+const TrabajadorApp     = lazy(() => import('./features/trabajador/TrabajadorApp').then(m => ({ default: m.TrabajadorApp })))
+const RepartidorApp     = lazy(() => import('./features/repartidor/RepartidorApp').then(m => ({ default: m.RepartidorApp })))
 const HomeScreen        = lazy(() => import('./features/app/HomeScreen'))
 const TiendaScreen      = lazy(() => import('./features/tienda').then(m => ({ default: m.TiendaScreen })))
 const ProyectosScreen   = lazy(() => import('./features/proyectos').then(m => ({ default: m.ProyectosScreen })))
@@ -245,6 +247,33 @@ export default function App() {
         <ThemeInitializer />
         <Suspense fallback={<TabSkeleton />}>
           <VendedorApp />
+        </Suspense>
+        <InstallPWA />
+      </>
+    )
+  }
+
+  if (currentUser?.active_role === 'chofer') {
+    return (
+      <>
+        <ThemeInitializer />
+        <Suspense fallback={<TabSkeleton />}>
+          <RepartidorApp />
+        </Suspense>
+        <InstallPWA />
+      </>
+    )
+  }
+
+  const TRABAJADOR_TABS = ['home', 'licitaciones', 'proyectos', 'perfil']
+  const isTrabajadorTab = currentUser?.active_role === 'maestro' && TRABAJADOR_TABS.includes(activeTab)
+
+  if (isTrabajadorTab) {
+    return (
+      <>
+        <ThemeInitializer />
+        <Suspense fallback={<TabSkeleton />}>
+          <TrabajadorApp />
         </Suspense>
         <InstallPWA />
       </>
