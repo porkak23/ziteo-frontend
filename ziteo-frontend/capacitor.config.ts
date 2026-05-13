@@ -7,11 +7,20 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
   },
-  ios: {
-    backgroundColor: '#F8F6F2',
-  },
-  android: {
-    backgroundColor: '#F8F6F2',
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      backgroundColor: '#0D1020',
+      androidSplashResourceName: 'splash',
+      showSpinner: false,
+    },
+    StatusBar: {
+      style: 'Dark',
+      backgroundColor: '#0D1020',
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
   },
 };
 
