@@ -77,6 +77,7 @@ export default {
         headline: ["Barlow", "sans-serif"],
         body:     ["Figtree", "sans-serif"],
         label:    ["Figtree", "sans-serif"],
+        manrope:  ["Manrope", "sans-serif"],
       },
 
       borderRadius: {
