@@ -17,6 +17,8 @@ import AppLayout from './shared/components/AppLayout'
 import { ThemeInitializer } from './shared/components/ThemeInitializer'
 import { ChatScreen } from './shared/components/ChatScreen'
 
+const ConstructorApp    = lazy(() => import('./features/constructor/ConstructorApp').then(m => ({ default: m.ConstructorApp })))
+const VendedorApp       = lazy(() => import('./features/vendedor/VendedorApp').then(m => ({ default: m.VendedorApp })))
 const HomeScreen        = lazy(() => import('./features/app/HomeScreen'))
 const TiendaScreen      = lazy(() => import('./features/tienda').then(m => ({ default: m.TiendaScreen })))
 const ProyectosScreen   = lazy(() => import('./features/proyectos').then(m => ({ default: m.ProyectosScreen })))
@@ -234,14 +236,33 @@ export default function App() {
     )
   }
 
+  const VENDEDOR_TABS = ['home', 'inventario', 'pedidos', 'cotizaciones']
+  const isVendedorTab = currentUser?.active_role === 'proveedor' && VENDEDOR_TABS.includes(activeTab)
+
+  if (isVendedorTab) {
+    return (
+      <>
+        <ThemeInitializer />
+        <Suspense fallback={<TabSkeleton />}>
+          <VendedorApp />
+        </Suspense>
+        <InstallPWA />
+      </>
+    )
+  }
+
   return (
     <>
       <ThemeInitializer />
       <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
         <Suspense fallback={<TabSkeleton />}>
-          {activeTab === 'home'        && <HomeScreen onNavigate={setActiveTab} />}
-          {activeTab === 'proyectos'  && <ProyectosScreen />}
-          {activeTab === 'contratar'  && (
+          {/* ── Constructor role: 4-tab dashboard ──────────────────────────── */}
+          {currentUser?.active_role === 'constructor' && (
+            activeTab === 'home' || activeTab === 'tienda' || activeTab === 'proyectos' || activeTab === 'licitaciones'
+          ) && <ConstructorApp />}
+
+          {/* ── Constructor sub-screens (non-tab) ──────────────────────────── */}
+          {currentUser?.active_role === 'constructor' && activeTab === 'contratar' && (
             <>
               {chatWith && (
                 <ChatScreen
@@ -265,7 +286,44 @@ export default function App() {
               }
             </>
           )}
-          {activeTab === 'tienda'     && <TiendaScreen />}
+          {activeTab === 'transporte-pesado' && <SolicitarTransporteScreen type="pesado" onBack={() => setActiveTab('home')} />}
+          {activeTab === 'transporte-ligero' && <SolicitarTransporteScreen type="ligero" onBack={() => setActiveTab('home')} />}
+
+          {/* ── Non-constructor roles ──────────────────────────────────────── */}
+          {currentUser?.active_role !== 'constructor' && activeTab === 'home' && (
+            <HomeScreen onNavigate={setActiveTab} />
+          )}
+          {currentUser?.active_role !== 'constructor' && activeTab === 'proyectos' && <ProyectosScreen />}
+          {currentUser?.active_role !== 'constructor' && activeTab === 'contratar' && (
+            <>
+              {chatWith && (
+                <ChatScreen
+                  otherUserId={chatWith.userId}
+                  otherUserName={chatWith.name}
+                  onClose={() => setChatWith(null)}
+                />
+              )}
+              {viewingMaestroId
+                ? <MaestroProfileScreen
+                    maestroId={viewingMaestroId}
+                    isOwn={false}
+                    onBack={() => setViewingMaestroId(null)}
+                    onChat={(id, name) => { setViewingMaestroId(null); setChatWith({ userId: id, name }) }}
+                    onHire={(id) => { setHireTargetId(id); setViewingMaestroId(null) }}
+                  />
+                : <ContratarScreen
+                    onViewProfile={(id) => setViewingMaestroId(id)}
+                    initialHireMaestroId={hireTargetId}
+                  />
+              }
+            </>
+          )}
+          {currentUser?.active_role !== 'constructor' && activeTab === 'tienda' && <TiendaScreen />}
+          {currentUser?.active_role !== 'constructor' && activeTab === 'licitaciones' && (
+            currentUser?.active_role === 'maestro' ? <LicitacionFeed /> : <MisLicitacionesScreen />
+          )}
+
+          {/* ── Shared screens (all roles) ─────────────────────────────────── */}
           {activeTab === 'pedidos'     && <PedidosProveedorScreen />}
           {activeTab === 'mis-pedidos' && <MisPedidosScreen />}
           {activeTab === 'intel'        && <IntelScreen />}
@@ -274,8 +332,6 @@ export default function App() {
           {activeTab === 'trabajos'   && <TrabajosScreen />}
           {activeTab === 'inventario' && <InventarioScreen />}
           {activeTab === 'viajes'     && <TransportistaScreen />}
-          {activeTab === 'transporte-pesado' && <SolicitarTransporteScreen type="pesado" onBack={() => setActiveTab('home')} />}
-          {activeTab === 'transporte-ligero' && <SolicitarTransporteScreen type="ligero" onBack={() => setActiveTab('home')} />}
           {activeTab === 'historial'  && <HistorialTransportistaScreen />}
           {activeTab === 'billetera'  && <BilleteraTransportistaScreen />}
           {activeTab === 'mi-perfil'  && (isMaestro && currentUser
@@ -286,7 +342,6 @@ export default function App() {
           {activeTab === 'habilidades'     && <HabilidadesScreen />}
           {activeTab === 'settings'        && <SettingsScreen onLogout={() => { setScreen('welcome'); setActiveTab('home') }} />}
           {activeTab === 'notificaciones'  && <NotificationsScreen />}
-          {activeTab === 'licitaciones'    && (currentUser?.active_role === 'maestro' ? <LicitacionFeed /> : <MisLicitacionesScreen />)}
         </Suspense>
         <InstallPWA />
       </AppLayout>
