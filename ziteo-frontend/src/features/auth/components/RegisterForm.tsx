@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { UserRole } from '../store/authStore'
 import { registerUser, AuthServiceError } from '../services/authService'
 import { AUTH_ERRORS } from '../constants/authConstants'
 import { OAuthButtons } from './OAuthButtons'
+import { Z } from '@/shared/design/tokens'
 
 interface RegisterFormProps {
   onSuccess: (phone: string, pin: string, debugOtp?: string) => void
@@ -12,7 +13,6 @@ interface RegisterFormProps {
 type RoleOption = {
   value: UserRole
   label: string
-  icon: string
   description: string
   disabled?: boolean
 }
@@ -21,73 +21,22 @@ const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'constructor',
     label: 'Constructor',
-    icon: 'engineering',
-    description: 'Gestiona tus proyectos de construcción, compra materiales y contrata trabajadores especializados.',
+    description: 'Busca materiales, herramientas y contrata profesionales para tus obras.',
   },
   {
     value: 'proveedor',
     label: 'Vendedor',
-    icon: 'storefront',
-    description: 'Vende y alquila materiales, herramientas y maquinaria a constructores.',
+    description: 'Gestiona tu inventario, ventas y pedidos de materiales de construcción.',
   },
   {
     value: 'maestro',
     label: 'Trabajador',
-    icon: 'construction',
-    description: 'Encuentra trabajo en proyectos de construcción y muestra tus habilidades.',
+    description: 'Recibe solicitudes de trabajo y muestra tu experiencia profesional.',
   },
   {
     value: 'chofer' as UserRole,
-    label: 'Transportista',
-    icon: 'local_shipping',
-    description: 'Transporta materiales entre vendedores y constructores.',
-  },
-]
-
-type PlanOption = {
-  value: 'free' | 'pro' | 'ultra'
-  label: string
-  icon: string
-  disabled: boolean
-  benefits: string[]
-}
-
-const PLAN_OPTIONS: PlanOption[] = [
-  {
-    value: 'free',
-    label: 'Plan Gratuito',
-    icon: 'card_membership',
-    disabled: false,
-    benefits: [
-      'Hasta 3 proyectos activos',
-      'Acceso a la tienda',
-      'Perfil básico',
-      'Chat con otros usuarios',
-    ],
-  },
-  {
-    value: 'pro',
-    label: 'Plan Pro',
-    icon: 'workspace_premium',
-    disabled: true,
-    benefits: [
-      'Proyectos ilimitados',
-      'Publicidad destacada',
-      'Analytics avanzados',
-      'Soporte prioritario',
-    ],
-  },
-  {
-    value: 'ultra',
-    label: 'Plan Ultra',
-    icon: 'diamond',
-    disabled: true,
-    benefits: [
-      'Todo lo de Pro',
-      'API access',
-      'Multi-cuenta',
-      'Manager dedicado',
-    ],
+    label: 'Repartidor',
+    description: 'Gestiona entregas de materiales con camiones o motocicletas.',
   },
 ]
 
@@ -119,14 +68,81 @@ interface FormErrors {
   companyName?: string
 }
 
-const STEP_META = [
-  { label: 'Tu información', heading: 'Crea tu\ncuenta', sub: 'Ingresa tus datos para comenzar' },
-  { label: 'Tu rol', heading: '¿Cómo usarás\nZITEO?', sub: 'Elige el rol que mejor describe lo que haces' },
-  { label: 'Tu plan', heading: 'Elige\ntu plan', sub: 'Comienza gratis, actualiza cuando quieras' },
-]
+function ArrowLeftIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M15 18l-6-6 6-6" stroke={Z.text} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <path d="M5 12l5 5L19 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function RoleIconConstructor() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+      <rect x="8" y="28" width="32" height="14" rx="2" fill={Z.orangeDark} opacity="0.15"/>
+      <rect x="12" y="32" width="6" height="6" rx="1" fill={Z.orange} opacity="0.5"/>
+      <rect x="21" y="32" width="6" height="6" rx="1" fill={Z.orange} opacity="0.5"/>
+      <rect x="30" y="32" width="6" height="6" rx="1" fill={Z.orange} opacity="0.5"/>
+      <path d="M6 28h36" stroke={Z.orangeDark} strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M14 28V18l10-8 10 8v10" stroke={Z.orangeDark} strokeWidth="2.5" strokeLinejoin="round" fill="none"/>
+      <rect x="20" y="20" width="8" height="8" rx="1.5" stroke={Z.orange} strokeWidth="2" fill="none"/>
+    </svg>
+  )
+}
+
+function RoleIconVendedor() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+      <rect x="8" y="20" width="32" height="22" rx="3" fill={Z.blue} opacity="0.12"/>
+      <path d="M8 20h32" stroke={Z.blueDark} strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M6 20c0 0 4-10 18-10s18 10 18 10" stroke={Z.blue} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+      <rect x="18" y="28" width="12" height="14" rx="2" stroke={Z.blueDark} strokeWidth="2" fill={Z.blue} opacity="0.2"/>
+      <circle cx="24" cy="34" r="1.5" fill={Z.blueDark}/>
+    </svg>
+  )
+}
+
+function RoleIconTrabajador() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+      <path d="M18 10l-8 8 3 3 8-8M30 38l8-8-3-3-8 8" stroke={Z.orange} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M14 34l20-20" stroke={Z.orangeDark} strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="14" cy="34" r="3" fill={Z.orange} opacity="0.3" stroke={Z.orangeDark} strokeWidth="2"/>
+      <circle cx="34" cy="14" r="3" fill={Z.orange} opacity="0.3" stroke={Z.orangeDark} strokeWidth="2"/>
+    </svg>
+  )
+}
+
+function RoleIconRepartidor() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+      <rect x="4" y="16" width="24" height="18" rx="3" stroke={Z.blueDark} strokeWidth="2.5" fill={Z.blue} opacity="0.1"/>
+      <path d="M28 22h10l6 8v4h-16v-12z" stroke={Z.blueDark} strokeWidth="2.5" strokeLinejoin="round" fill={Z.blue} opacity="0.1"/>
+      <circle cx="14" cy="36" r="4" stroke={Z.blue} strokeWidth="2.5" fill="white"/>
+      <circle cx="38" cy="36" r="4" stroke={Z.blue} strokeWidth="2.5" fill="white"/>
+      <circle cx="14" cy="36" r="1.5" fill={Z.blueDark}/>
+      <circle cx="38" cy="36" r="1.5" fill={Z.blueDark}/>
+    </svg>
+  )
+}
+
+const ROLE_ICONS: Record<string, React.ReactNode> = {
+  constructor: <RoleIconConstructor />,
+  proveedor: <RoleIconVendedor />,
+  maestro: <RoleIconTrabajador />,
+  chofer: <RoleIconRepartidor />,
+}
 
 export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<0 | 1 | 2>(0)
 
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
@@ -134,15 +150,25 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
   const [city, setCity] = useState('')
   const [pin, setPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
-  const [role, setRole] = useState<UserRole>('constructor')
-  const [plan, setPlan] = useState<'free' | 'pro' | 'ultra'>('free')
+  const [roles, setRoles] = useState<UserRole[]>(['constructor'])
   const [isCompany, setIsCompany] = useState(false)
   const [companyName, setCompanyName] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [apiError, setApiError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const pinRef = useRef<HTMLInputElement>(null)
+  const confirmPinRef = useRef<HTMLInputElement>(null)
 
-  function validateStep1(): FormErrors {
+  function toggleRole(r: UserRole) {
+    setRoles((prev) => prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r])
+  }
+
+  function goBack() {
+    if (step === 0) onNavigate('welcome')
+    else setStep((s) => (s - 1) as 0 | 1 | 2)
+  }
+
+  function validateStep0(): FormErrors {
     const errs: FormErrors = {}
     if (!PHONE_REGEX.test(phone)) {
       errs.phone = 'Ingresa un número válido (8 dígitos, ej. 76543210)'
@@ -168,22 +194,21 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
     return errs
   }
 
-  function handleStep1Next() {
-    const errs = validateStep1()
+  function handleStep0Next() {
+    const errs = validateStep0()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
       return
     }
     setErrors({})
-    setStep(2)
+    setStep(1)
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const errs = validateStep1()
+  async function handleSubmit() {
+    const errs = validateStep0()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
-      setStep(1)
+      setStep(0)
       return
     }
     setErrors({})
@@ -197,8 +222,8 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
         email: email.trim() || undefined,
         city,
         pin,
-        initial_role: role,
-        plan,
+        initial_role: roles[0] ?? 'constructor',
+        plan: 'free',
         company_name: companyName || undefined,
       })
       onSuccess(phone, pin, result.debug_otp)
@@ -210,378 +235,435 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
     }
   }
 
-  const currentMeta = STEP_META[step - 1]
+  const inputStyle: React.CSSProperties = {
+    fontFamily: Z.font, fontSize: 15, fontWeight: 500, color: Z.text,
+    padding: '14px', borderRadius: Z.r.sm, border: `1.5px solid ${Z.border}`,
+    background: Z.surface, outline: 'none', width: '100%', boxSizing: 'border-box',
+  }
 
   return (
-    <main className="min-h-dvh w-full flex flex-col bg-background overflow-y-auto">
-      {/* Sticky header */}
-      <div className="sticky top-0 bg-background z-10 px-5 pt-10 pb-5">
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => {
-              if (step === 1) onNavigate('welcome')
-              else if (step === 2) setStep(1)
-              else setStep(2)
-            }}
-            className="w-11 h-11 flex items-center justify-center text-on-surface-variant cursor-pointer -ml-1"
-            aria-label="Volver"
-          >
-            <span className="material-symbols-outlined text-xl">arrow_back</span>
-          </button>
-          <span className="font-headline font-black text-sm text-on-surface/20 tracking-[-0.02em]">ZITEO</span>
-        </div>
+    <div
+      className="fixed inset-0 flex flex-col overflow-hidden"
+      style={{ background: Z.bg }}
+    >
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '58px 16px 12px', position: 'relative', zIndex: 5,
+        }}
+      >
+        <button
+          type="button"
+          onClick={goBack}
+          aria-label="Volver"
+          style={{
+            width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.04)',
+          }}
+        >
+          <ArrowLeftIcon />
+        </button>
+        <div style={{ width: 40 }} />
+      </div>
 
-        {/* Progress bar */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="font-body text-xs text-on-surface-variant/45 tracking-wide">
-              Paso {step} de 3
-            </span>
-            <span className="font-body text-xs text-on-surface-variant/45">
-              {currentMeta.label}
-            </span>
-          </div>
-          <div className="w-full h-0.5 bg-outline-variant/20 rounded-full overflow-hidden">
+      <div style={{ padding: '0 24px 8px' }}>
+        <div style={{ display: 'flex', gap: 6, padding: '0 4px' }}>
+          {[0, 1, 2].map((i) => (
             <div
-              className="h-full bg-primary rounded-full transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
-              style={{ width: `${(step / 3) * 100}%` }}
-            />
-          </div>
+              key={i}
+              style={{
+                flex: 1, height: 4, borderRadius: 2,
+                background: i < step ? Z.orange : i === step ? Z.orangePastel : Z.divider,
+                transition: 'background 0.3s',
+                overflow: 'hidden', position: 'relative',
+              }}
+            >
+              {i === step && (
+                <div
+                  style={{
+                    position: 'absolute', left: 0, top: 0, bottom: 0,
+                    width: '50%', background: Z.orange, borderRadius: 2,
+                  }}
+                />
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Step heading */}
-      <div className="px-6 mt-8 mb-8">
-        <h1 className="font-headline font-black text-[42px] text-on-surface leading-[0.94] tracking-[-0.03em] whitespace-pre-line">
-          {currentMeta.heading}
-        </h1>
-        <p className="font-body text-sm text-on-surface-variant/60 mt-3">{currentMeta.sub}</p>
-      </div>
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{ padding: '16px 24px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}
+      >
+        {step === 0 && (
+          <div
+            key="step0"
+            style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'zFadeSlideIn 0.3s ease' }}
+          >
+            <div>
+              <h2 style={{ fontFamily: Z.font, fontWeight: 800, fontSize: 26, color: Z.text, margin: 0 }}>
+                Crea tu cuenta
+              </h2>
+              <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: '6px 0 0', lineHeight: 1.5 }}>
+                Ingresa tus datos para comenzar
+              </p>
+            </div>
 
-      {/* Step 1: Tu información */}
-      {step === 1 && (
-        <div className="flex flex-col gap-6 px-6 pb-10 max-w-sm mx-auto w-full">
-          {/* OAuth quick-start */}
-          <OAuthButtons />
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-outline-variant/30" />
-            <span className="font-body text-xs text-on-surface-variant/40">o con teléfono</span>
-            <div className="flex-1 h-px bg-outline-variant/30" />
-          </div>
+            <OAuthButtons />
 
-          {/* Phone */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="reg-phone" className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">
-              Teléfono de contacto
-            </label>
-            <div className="flex items-center rounded-xl border border-outline-variant/60 bg-surface-container-low overflow-hidden focus-within:border-primary/70">
-              <span className="px-3 py-4 font-body text-sm text-on-surface-variant/60 border-r border-outline-variant/40 bg-surface-container select-none">
-                +591
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, height: 1, background: Z.border }} />
+              <span style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textMuted, whiteSpace: 'nowrap' }}>
+                o con teléfono
               </span>
-              <input
-                id="reg-phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                placeholder="70000000"
-                required
-                className="flex-1 px-3 py-4 bg-transparent text-on-surface font-body text-sm focus:outline-none"
-              />
+              <div style={{ flex: 1, height: 1, background: Z.border }} />
             </div>
-            <div aria-live="polite" className="min-h-[1rem]">
-              {errors.phone && <span className="text-error text-xs">{errors.phone}</span>}
-            </div>
-          </div>
 
-          {/* Full name */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="reg-name" className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">
-              Nombre completo
-            </label>
-            <input
-              id="reg-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej. Alejandro Mendoza"
-              required
-              className="px-4 py-4 rounded-xl border border-outline-variant/60 bg-surface-container-low text-on-surface font-body text-sm focus:outline-none focus:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20"
-            />
-            <div aria-live="polite" className="min-h-[1rem]">
-              {errors.name && <span className="text-error text-xs">{errors.name}</span>}
-            </div>
-          </div>
-
-          {/* Email (optional) */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="reg-email" className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">
-              Correo electrónico <span className="normal-case font-normal text-on-surface-variant/40">(opcional)</span>
-            </label>
-            <input
-              id="reg-email"
-              type="email"
-              inputMode="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@correo.com"
-              className="px-4 py-4 rounded-xl border border-outline-variant/60 bg-surface-container-low text-on-surface font-body text-sm focus:outline-none focus:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20"
-            />
-            <div aria-live="polite" className="min-h-[1rem]">
-              {errors.email && <span className="text-error text-xs">{errors.email}</span>}
-            </div>
-          </div>
-
-          {/* City */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="reg-city" className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">
-              Ciudad
-            </label>
-            <select
-              id="reg-city"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              required
-              className="px-4 py-4 rounded-xl border border-outline-variant/60 bg-surface-container-low text-on-surface font-body text-sm focus:outline-none focus:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20 appearance-none"
-            >
-              <option value="">Selecciona tu ciudad</option>
-              {CITIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <div aria-live="polite" className="min-h-[1rem]">
-              {errors.city && <span className="text-error text-xs">{errors.city}</span>}
-            </div>
-          </div>
-
-          {/* Contraseña */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="reg-pin" className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">
-              Contraseña (8 dígitos)
-            </label>
-            <input
-              id="reg-pin"
-              type="password"
-              inputMode="numeric"
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_DIGITS))}
-              placeholder="········"
-              maxLength={PIN_DIGITS}
-              aria-required="true"
-              className="px-4 py-4 rounded-xl border border-outline-variant/60 bg-surface-container-low text-on-surface font-body text-sm focus:outline-none focus:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20"
-            />
-            <div className="flex gap-2 mt-1">
-              {Array.from({ length: PIN_DIGITS }, (_, i) => (
-                <span
-                  key={i}
-                  className={`w-3 h-3 rounded-full border-2 border-primary transition-colors duration-150 ${
-                    i < pin.length ? 'bg-primary' : 'bg-transparent opacity-35'
-                  }`}
-                />
-              ))}
-            </div>
-            <span className="font-body text-xs text-on-surface-variant/45 mt-0.5">Solo números, 8 dígitos</span>
-            <div aria-live="polite" className="min-h-[1rem]">
-              {errors.pin && <span className="text-error text-xs">{errors.pin}</span>}
-            </div>
-          </div>
-
-          {/* Confirmar contraseña */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="reg-confirm-pin" className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">
-              Confirmar contraseña
-            </label>
-            <input
-              id="reg-confirm-pin"
-              type="password"
-              inputMode="numeric"
-              value={confirmPin}
-              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, PIN_DIGITS))}
-              placeholder="········"
-              maxLength={PIN_DIGITS}
-              aria-required="true"
-              className="px-4 py-4 rounded-xl border border-outline-variant/60 bg-surface-container-low text-on-surface font-body text-sm focus:outline-none focus:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20"
-            />
-            <div className="flex gap-2 mt-1">
-              {Array.from({ length: PIN_DIGITS }, (_, i) => (
-                <span
-                  key={i}
-                  className={`w-3 h-3 rounded-full border-2 border-primary transition-colors duration-150 ${
-                    i < confirmPin.length ? 'bg-primary' : 'bg-transparent opacity-35'
-                  }`}
-                />
-              ))}
-            </div>
-            <div aria-live="polite" className="min-h-[1rem]">
-              {errors.confirmPin && <span className="text-error text-xs">{errors.confirmPin}</span>}
-            </div>
-          </div>
-
-          {/* Company toggle */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">¿Registrar empresa?</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isCompany}
-                onClick={() => setIsCompany((v) => !v)}
-                className={`relative inline-flex w-11 h-6 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer ${isCompany ? 'bg-primary' : 'bg-outline-variant/60'}`}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+                Número de teléfono
+              </label>
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center',
+                  border: `1.5px solid ${errors.phone ? Z.error : Z.border}`,
+                  borderRadius: Z.r.sm, background: Z.surface, overflow: 'hidden',
+                }}
               >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-surface shadow transition-transform duration-200 ${isCompany ? 'translate-x-5' : 'translate-x-0'}`}
-                />
-              </button>
-            </div>
-            {isCompany && (
-              <div className="flex flex-col gap-2">
-                <label htmlFor="reg-company-name" className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">
-                  Nombre de la empresa
-                </label>
+                <span style={{ padding: '0 0 0 14px', fontFamily: Z.font, fontSize: 15, fontWeight: 600, color: Z.textSec, whiteSpace: 'nowrap' }}>
+                  +591
+                </span>
                 <input
-                  id="reg-company-name"
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Ej. Constructora Andina S.R.L."
-                  required
-                  className="px-4 py-4 rounded-xl border border-outline-variant/60 bg-surface-container-low text-on-surface font-body text-sm focus:outline-none focus:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="7XX XXX XX"
+                  style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: Z.font, fontSize: 15, fontWeight: 500, color: Z.text, padding: '14px 14px 14px 8px' }}
                 />
-                <div aria-live="polite" className="min-h-[1rem]">
-                  {errors.companyName && <span className="text-error text-xs">{errors.companyName}</span>}
+              </div>
+              {errors.phone && <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>{errors.phone}</span>}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+                Nombre completo
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Juan Carlos Mamani"
+                style={{ ...inputStyle, borderColor: errors.name ? Z.error : Z.border }}
+              />
+              {errors.name && <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>{errors.name}</span>}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+                Correo electrónico{' '}
+                <span style={{ fontWeight: 400, color: Z.textMuted }}>(opcional)</span>
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@correo.com"
+                style={{ ...inputStyle, borderColor: errors.email ? Z.error : Z.border }}
+              />
+              {errors.email && <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>{errors.email}</span>}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+                Ciudad
+              </label>
+              <select
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                style={{
+                  ...inputStyle,
+                  borderColor: errors.city ? Z.error : Z.border,
+                  appearance: 'none',
+                  cursor: 'pointer',
+                  color: city ? Z.text : Z.textMuted,
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394A3B8' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 14px center',
+                }}
+              >
+                <option value="">Selecciona tu ciudad</option>
+                {CITIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              {errors.city && <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>{errors.city}</span>}
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+                  PIN de seguridad ({PIN_DIGITS} dígitos)
+                </label>
+                <div
+                  onClick={() => pinRef.current?.focus()}
+                  style={{ display: 'flex', gap: 8, justifyContent: 'center', cursor: 'text', position: 'relative' }}
+                >
+                  <input
+                    ref={pinRef}
+                    type="tel"
+                    maxLength={PIN_DIGITS}
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_DIGITS))}
+                    style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}
+                    autoComplete="new-password"
+                  />
+                  {Array.from({ length: PIN_DIGITS }, (_, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: 36, height: 44, borderRadius: Z.r.sm,
+                        border: `1.5px solid ${i === pin.length ? Z.orange : i < pin.length ? Z.orange : errors.pin ? Z.error : Z.border}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: i < pin.length ? Z.orangeLight : Z.surface,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {i < pin.length && (
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: Z.orangeDark }} />
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
-          </div>
+              {errors.pin && <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500, display: 'block', marginTop: 6 }}>{errors.pin}</span>}
+            </div>
 
-          <button
-            type="button"
-            onClick={handleStep1Next}
-            className="w-full px-4 py-[18px] bg-primary text-on-primary font-label font-bold rounded-xl text-[15px] tracking-[-0.01em] transition-[transform,opacity] active:scale-[0.98] active:opacity-80 cursor-pointer"
-          >
-            Siguiente →
-          </button>
-        </div>
-      )}
-
-      {/* Step 2: Tu rol en ZITEO */}
-      {step === 2 && (
-        <div className="flex flex-col gap-3 px-6 pb-10 max-w-sm mx-auto w-full">
-          {ROLE_OPTIONS.map((opt) => {
-            const isActive = role === opt.value
-            const isDisabled = !!opt.disabled
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                disabled={isDisabled}
-                onClick={() => { if (!isDisabled) setRole(opt.value) }}
-                className={`relative flex items-start gap-4 p-5 rounded-xl text-left transition-colors ${
-                  isDisabled
-                    ? 'border border-outline-variant/30 bg-surface-container opacity-30 cursor-not-allowed'
-                    : isActive
-                    ? 'border-2 border-primary bg-primary/[0.05] cursor-pointer'
-                    : 'border border-outline-variant/50 bg-surface-container-low hover:border-outline-variant cursor-pointer'
-                }`}
-              >
-                {isDisabled && (
-                  <span className="absolute top-3 right-3 bg-outline-variant/30 text-on-surface-variant/50 text-[9px] font-label font-semibold px-1.5 py-0.5 rounded-full leading-none uppercase tracking-wider">
-                    Próximamente
-                  </span>
-                )}
-                <span
-                  className={`material-symbols-outlined flex-shrink-0 mt-0.5 transition-colors ${
-                    isActive && !isDisabled ? 'text-primary text-[36px]' : 'text-on-surface-variant/60 text-[32px]'
-                  }`}
-                  style={{ fontVariationSettings: "'FILL' 1" }}
+            <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+                  Confirmar PIN
+                </label>
+                <div
+                  onClick={() => confirmPinRef.current?.focus()}
+                  style={{ display: 'flex', gap: 8, justifyContent: 'center', cursor: 'text', position: 'relative' }}
                 >
-                  {opt.icon}
-                </span>
-                <div className="flex flex-col gap-1">
-                  <span className={`font-label font-bold text-[15px] ${isActive && !isDisabled ? 'text-primary' : 'text-on-surface'}`}>
-                    {opt.label}
-                  </span>
-                  <span className="font-body text-sm text-on-surface-variant/60 leading-snug">
-                    {opt.description}
-                  </span>
-                </div>
-              </button>
-            )
-          })}
-
-          <button
-            type="button"
-            onClick={() => setStep(3)}
-            className="w-full px-4 py-[18px] bg-primary text-on-primary font-label font-bold rounded-xl text-[15px] tracking-[-0.01em] transition-[transform,opacity] active:scale-[0.98] active:opacity-80 mt-2 cursor-pointer"
-          >
-            Siguiente →
-          </button>
-        </div>
-      )}
-
-      {/* Step 3: Elige tu plan */}
-      {step === 3 && (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 px-6 pb-10 max-w-sm mx-auto w-full">
-          {PLAN_OPTIONS.map((opt) => {
-            const isActive = plan === opt.value
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                disabled={opt.disabled}
-                onClick={() => { if (!opt.disabled) setPlan(opt.value) }}
-                className={`relative flex flex-col gap-3 p-5 rounded-xl text-left transition-colors ${
-                  opt.disabled
-                    ? 'border border-outline-variant/30 bg-surface-container opacity-30 cursor-not-allowed'
-                    : isActive
-                    ? 'border-2 border-primary bg-primary/[0.05] cursor-pointer'
-                    : 'border border-outline-variant/50 bg-surface-container-low hover:border-outline-variant cursor-pointer'
-                }`}
-              >
-                {opt.disabled && (
-                  <span className="absolute top-3 right-3 bg-outline-variant/30 text-on-surface-variant/50 text-[9px] font-label font-semibold px-1.5 py-0.5 rounded-full leading-none uppercase tracking-wider">
-                    Próximamente
-                  </span>
-                )}
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`material-symbols-outlined text-[28px] ${isActive && !opt.disabled ? 'text-primary' : 'text-on-surface-variant/60'}`}
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    {opt.icon}
-                  </span>
-                  <span className={`font-label text-[15px] font-bold ${isActive && !opt.disabled ? 'text-primary' : 'text-on-surface'}`}>
-                    {opt.label}
-                  </span>
-                </div>
-                <ul className="flex flex-col gap-2">
-                  {opt.benefits.map((benefit) => (
-                    <li key={benefit} className="flex items-center gap-2.5">
-                      <span
-                        className={`material-symbols-outlined text-base flex-shrink-0 ${isActive && !opt.disabled ? 'text-primary' : 'text-on-surface-variant/40'}`}
-                        style={{ fontSize: '16px', fontVariationSettings: "'FILL' 1" }}
-                      >
-                        check_circle
-                      </span>
-                      <span className="font-body text-sm text-on-surface-variant/70">{benefit}</span>
-                    </li>
+                  <input
+                    ref={confirmPinRef}
+                    type="tel"
+                    maxLength={PIN_DIGITS}
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, PIN_DIGITS))}
+                    style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}
+                    autoComplete="new-password"
+                  />
+                  {Array.from({ length: PIN_DIGITS }, (_, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: 36, height: 44, borderRadius: Z.r.sm,
+                        border: `1.5px solid ${i === confirmPin.length ? Z.orange : i < confirmPin.length ? Z.orange : errors.confirmPin ? Z.error : Z.border}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: i < confirmPin.length ? Z.orangeLight : Z.surface,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {i < confirmPin.length && (
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: Z.orangeDark }} />
+                      )}
+                    </div>
                   ))}
-                </ul>
-              </button>
-            )
-          })}
+                </div>
+              </div>
+              {errors.confirmPin && <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500, display: 'block', marginTop: 6 }}>{errors.confirmPin}</span>}
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full px-4 py-[18px] bg-primary text-on-primary font-label font-bold rounded-xl text-[15px] tracking-[-0.01em] transition-[transform,opacity] active:scale-[0.98] active:opacity-80 disabled:opacity-60 mt-2 cursor-pointer"
-          >
-            {loading ? 'Procesando...' : 'Crear cuenta →'}
-          </button>
-          <div aria-live="polite" className="min-h-[1.25rem]">
-            {apiError && <span className="text-error text-sm text-center block">{apiError}</span>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+                  ¿Registrar empresa?
+                </span>
+                <div
+                  onClick={() => setIsCompany((v) => !v)}
+                  style={{
+                    width: 44, height: 26, borderRadius: 13, padding: 2, cursor: 'pointer',
+                    background: isCompany ? Z.orange : Z.border, transition: 'background 0.2s',
+                    display: 'flex', alignItems: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 22, height: 22, borderRadius: '50%', background: '#fff',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                      transition: 'transform 0.2s',
+                      transform: isCompany ? 'translateX(18px)' : 'translateX(0)',
+                    }}
+                  />
+                </div>
+              </div>
+              {isCompany && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+                    Nombre de la empresa
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Ej. Constructora Andina S.R.L."
+                    style={{ ...inputStyle, borderColor: errors.companyName ? Z.error : Z.border }}
+                  />
+                  {errors.companyName && <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>{errors.companyName}</span>}
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleStep0Next}
+              style={{
+                fontFamily: Z.font, fontWeight: 700, fontSize: 14,
+                letterSpacing: '0.3px', textTransform: 'uppercase',
+                padding: '15px 24px', borderRadius: Z.r.md,
+                background: Z.orangeDark, color: '#FFFFFF',
+                border: 'none', cursor: 'pointer', width: '100%',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Siguiente
+            </button>
           </div>
-        </form>
-      )}
-    </main>
+        )}
+
+        {step === 1 && (
+          <div
+            key="step1"
+            style={{ display: 'flex', flexDirection: 'column', gap: 16, animation: 'zFadeSlideIn 0.3s ease' }}
+          >
+            <div>
+              <h2 style={{ fontFamily: Z.font, fontWeight: 800, fontSize: 26, color: Z.text, margin: 0 }}>
+                ¿Cuál es tu rol?
+              </h2>
+              <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: '6px 0 0', lineHeight: 1.5 }}>
+                Puedes seleccionar más de uno
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {ROLE_OPTIONS.map((r) => {
+                const selected = roles.includes(r.value)
+                return (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => toggleRole(r.value)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+                      borderRadius: Z.r.md, cursor: 'pointer', width: '100%', textAlign: 'left',
+                      border: `2px solid ${selected ? Z.orange : Z.border}`,
+                      background: selected ? Z.orangeLight : Z.surface,
+                      transition: 'all 0.2s', boxSizing: 'border-box', outline: 'none',
+                    }}
+                  >
+                    {ROLE_ICONS[r.value]}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: Z.font, fontSize: 15, fontWeight: 700, color: Z.text }}>{r.label}</div>
+                      <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 500, color: Z.textSec, marginTop: 2 }}>{r.description}</div>
+                    </div>
+                    <div
+                      style={{
+                        width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                        border: `2px solid ${selected ? Z.orange : Z.border}`,
+                        background: selected ? Z.orange : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {selected && <CheckIcon />}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              disabled={roles.length === 0}
+              style={{
+                fontFamily: Z.font, fontWeight: 700, fontSize: 14,
+                letterSpacing: '0.3px', textTransform: 'uppercase',
+                padding: '15px 24px', borderRadius: Z.r.md,
+                background: Z.orangeDark, color: '#FFFFFF',
+                border: 'none', cursor: roles.length === 0 ? 'default' : 'pointer', width: '100%',
+                transition: 'all 0.15s ease', opacity: roles.length === 0 ? 0.45 : 1,
+                marginTop: 8,
+              }}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div
+            key="step2"
+            style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'zFadeSlideIn 0.3s ease' }}
+          >
+            <div>
+              <h2 style={{ fontFamily: Z.font, fontWeight: 800, fontSize: 26, color: Z.text, margin: 0 }}>
+                Elige tu plan
+              </h2>
+              <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: '6px 0 0', lineHeight: 1.5 }}>
+                Comienza gratis, actualiza cuando quieras
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: '16px 20px', borderRadius: Z.r.md,
+                border: `2px solid ${Z.orange}`,
+                background: Z.orangeLight,
+              }}
+            >
+              <div style={{ fontFamily: Z.font, fontSize: 16, fontWeight: 700, color: Z.text, marginBottom: 8 }}>
+                Plan Gratuito
+              </div>
+              {['Hasta 3 proyectos activos', 'Acceso a la tienda', 'Perfil básico', 'Chat con otros usuarios'].map((b) => (
+                <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: Z.orange, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <CheckIcon />
+                  </div>
+                  <span style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec }}>{b}</span>
+                </div>
+              ))}
+            </div>
+
+            {apiError && (
+              <div aria-live="polite">
+                <span style={{ fontFamily: Z.font, fontSize: 13, color: Z.error }}>{apiError}</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading}
+              style={{
+                fontFamily: Z.font, fontWeight: 700, fontSize: 14,
+                letterSpacing: '0.3px', textTransform: 'uppercase',
+                padding: '15px 24px', borderRadius: Z.r.md,
+                background: Z.gradOrange, color: '#FFFFFF',
+                border: 'none', cursor: loading ? 'default' : 'pointer', width: '100%',
+                boxShadow: '0 4px 20px rgba(232,115,58,0.38)',
+                transition: 'all 0.15s ease', opacity: loading ? 0.6 : 1,
+              }}
+            >
+              {loading ? 'Procesando...' : 'Crear Cuenta'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

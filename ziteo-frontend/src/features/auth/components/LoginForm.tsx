@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { loginUser, AuthServiceError } from '../services/authService'
 import { AUTH_ERRORS } from '../constants/authConstants'
 import { useAuthStore } from '../store/authStore'
 import { OAuthButtons } from './OAuthButtons'
 import type { AuthUser } from '../types/authTypes'
+import { Z } from '@/shared/design/tokens'
 
 const PIN_DIGITS = 8
 
@@ -19,21 +20,58 @@ interface FormErrors {
   pin?: string
 }
 
+function ArrowLeftIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M15 18l-6-6 6-6" stroke={Z.text} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function EyeIcon({ off, color }: { off?: boolean; color: string }) {
+  if (off) {
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M3 3l18 18M10.5 10.7a2.5 2.5 0 003.3 3.1M6.7 6.7C4.3 8.3 3 12 3 12s4 7 9 7c1.8 0 3.4-.7 4.8-1.7" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+        <path d="M14 5.5C13.4 5.2 12.7 5 12 5c-5 0-9 7-9 7s1.3 3.7 3.7 5.3" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+      </svg>
+    )
+  }
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <ellipse cx="12" cy="12" rx="9" ry="6" stroke={color} strokeWidth="1.8" fill="none"/>
+      <circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.8" fill="none"/>
+    </svg>
+  )
+}
+
+function FingerprintIcon({ color }: { color: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2a10 10 0 00-7.4 16.6M12 2a10 10 0 017.4 16.6" stroke={color} strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+      <path d="M12 8a4 4 0 00-4 4c0 2.2.8 4.2 2 5.6M12 8a4 4 0 014 4c0 2.2-.8 4.2-2 5.6M12 11v4" stroke={color} strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+    </svg>
+  )
+}
+
 export default function LoginForm({ onSuccess, onNavigate }: LoginFormProps) {
   const [phone, setPhone] = useState('')
   const [pin, setPin] = useState('')
+  const [pinVisible, setPinVisible] = useState(false)
+  const [biometrics, setBiometrics] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
   const [apiError, setApiError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const pinRef = useRef<HTMLInputElement>(null)
   const setUser = useAuthStore((s) => s.setUser)
 
   function validate(): FormErrors {
     const errs: FormErrors = {}
     if (!PHONE_REGEX.test(phone)) {
-      errs.phone = 'Ingresa un número válido (8 dígitos, ej. 76543210)'
+      errs.phone = 'Ingresa un número válido (+591)'
     }
-    if (!/^\d{8}$/.test(pin)) {
-      errs.pin = `La contraseña debe tener exactamente ${PIN_DIGITS} dígitos`
+    if (pin.length < 6) {
+      errs.pin = 'El PIN debe tener 6 dígitos'
     }
     return errs
   }
@@ -73,121 +111,201 @@ export default function LoginForm({ onSuccess, onNavigate }: LoginFormProps) {
   }
 
   return (
-    <main className="min-h-dvh w-full flex flex-col bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-12 pb-2">
-        <button
-          onClick={() => onNavigate('welcome')}
-          className="w-11 h-11 flex items-center justify-center text-on-surface-variant cursor-pointer -ml-1"
-          aria-label="Volver"
-        >
-          <span className="material-symbols-outlined text-xl">arrow_back</span>
-        </button>
-        <span className="font-headline font-black text-sm text-on-surface/20 tracking-[-0.02em]">ZITEO</span>
-      </div>
-
-      {/* Headline */}
-      <div className="px-6 mt-14 mb-12">
-        <p className="font-body text-[11px] text-on-surface-variant/45 font-medium tracking-[0.18em] uppercase mb-5">
-          Iniciar sesión
-        </p>
-        <h1 className="font-headline font-black text-[52px] text-on-surface leading-[0.93] tracking-[-0.03em]">
-          Bienvenido<br />de nuevo.
-        </h1>
-      </div>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6 px-6 pb-10 max-w-sm mx-auto w-full">
-        {/* Phone */}
-        <div className="flex flex-col gap-2">
-          <label htmlFor="login-phone" className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">
-            Teléfono
-          </label>
-          <input
-            id="login-phone"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 8))}
-            placeholder="70000000"
-            required
-            className="px-4 py-4 rounded-xl border border-outline-variant/60 bg-surface-container-low text-on-surface font-body text-sm focus:outline-none focus:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20"
-          />
-          <div aria-live="polite" className="min-h-[1rem]">
-            {errors.phone && <span className="text-error text-xs">{errors.phone}</span>}
-          </div>
-        </div>
-
-        {/* Password */}
-        <div className="flex flex-col gap-2">
-          <label htmlFor="login-pin" className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">
-            Contraseña (8 dígitos)
-          </label>
-          <input
-            id="login-pin"
-            type="password"
-            inputMode="numeric"
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_DIGITS))}
-            placeholder="········"
-            maxLength={PIN_DIGITS}
-            aria-required="true"
-            className="px-4 py-4 rounded-xl border border-outline-variant/60 bg-surface-container-low text-on-surface font-body text-sm focus:outline-none focus:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20"
-          />
-          <div className="flex gap-2 mt-1">
-            {Array.from({ length: PIN_DIGITS }, (_, i) => (
-              <span
-                key={i}
-                className={`w-3 h-3 rounded-full border-2 border-primary transition-colors duration-150 ${
-                  i < pin.length ? 'bg-primary' : 'bg-transparent opacity-35'
-                }`}
-              />
-            ))}
-          </div>
-          <div aria-live="polite" className="min-h-[1rem]">
-            {errors.pin && <span className="text-error text-xs">{errors.pin}</span>}
-          </div>
-        </div>
-
-        {/* Forgot password */}
+    <div
+      className="fixed inset-0 flex flex-col overflow-hidden"
+      style={{ background: Z.bg }}
+    >
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '58px 16px 12px', position: 'relative', zIndex: 5,
+        }}
+      >
         <button
           type="button"
-          onClick={() => onNavigate('forgot-pin')}
-          className="-mt-2 self-start font-label text-sm text-on-surface-variant/50 cursor-pointer hover:text-primary transition-colors"
+          onClick={() => onNavigate('welcome')}
+          aria-label="Volver"
+          style={{
+            width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.04)',
+          }}
         >
-          ¿Olvidaste tu contraseña?
+          <ArrowLeftIcon />
         </button>
+        <div style={{ width: 40 }} />
+      </div>
 
-        {/* Submit */}
+      <form
+        onSubmit={handleSubmit}
+        className="flex-1 overflow-y-auto"
+        style={{ padding: '8px 24px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}
+      >
+        <div>
+          <h2 style={{ fontFamily: Z.font, fontWeight: 800, fontSize: 28, color: Z.text, margin: 0 }}>
+            Inicia Sesión
+          </h2>
+          <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: '6px 0 0', lineHeight: 1.5 }}>
+            Ingresa tus credenciales para continuar
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+            Número de teléfono
+          </label>
+          <div
+            style={{
+              display: 'flex', alignItems: 'center',
+              border: `1.5px solid ${errors.phone ? Z.error : Z.border}`,
+              borderRadius: Z.r.sm, background: Z.surface, overflow: 'hidden',
+              transition: 'border-color 0.2s',
+            }}
+          >
+            <span style={{ padding: '0 0 0 14px', fontFamily: Z.font, fontSize: 15, fontWeight: 600, color: Z.textSec, whiteSpace: 'nowrap' }}>
+              +591
+            </span>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              placeholder="7XX XXX XX"
+              style={{
+                flex: 1, border: 'none', outline: 'none', background: 'transparent',
+                fontFamily: Z.font, fontSize: 15, fontWeight: 500, color: Z.text,
+                padding: '14px 14px 14px 8px', width: '100%', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          {errors.phone && (
+            <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>{errors.phone}</span>
+          )}
+        </div>
+
+        <div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+                PIN de seguridad
+              </label>
+              <button
+                type="button"
+                onClick={() => setPinVisible((v) => !v)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+              >
+                <EyeIcon off={pinVisible} color={Z.textMuted} />
+              </button>
+            </div>
+            <div
+              onClick={() => pinRef.current?.focus()}
+              style={{ display: 'flex', gap: 10, justifyContent: 'center', cursor: 'text', position: 'relative' }}
+            >
+              <input
+                ref={pinRef}
+                type="tel"
+                maxLength={PIN_DIGITS}
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_DIGITS))}
+                style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}
+                autoComplete="off"
+              />
+              {Array.from({ length: 6 }, (_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 46, height: 50, borderRadius: Z.r.sm,
+                    border: `1.5px solid ${i === pin.length ? Z.orange : i < pin.length ? Z.orange : Z.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: i < pin.length ? Z.orangeLight : Z.surface,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {i < pin.length && (
+                    pinVisible
+                      ? <span style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 700, color: Z.text }}>{pin[i]}</span>
+                      : <div style={{ width: 12, height: 12, borderRadius: '50%', background: Z.orangeDark }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          {errors.pin && (
+            <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500, display: 'block', marginTop: 6 }}>{errors.pin}</span>
+          )}
+        </div>
+
+        <label
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+            fontFamily: Z.font, fontSize: 14, fontWeight: 500, color: Z.textSec,
+          }}
+        >
+          <div
+            onClick={(e) => { e.preventDefault(); setBiometrics((v) => !v) }}
+            style={{
+              width: 44, height: 26, borderRadius: 13, padding: 2, cursor: 'pointer',
+              background: biometrics ? Z.orange : Z.border, transition: 'background 0.2s',
+              display: 'flex', alignItems: 'center', flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: 22, height: 22, borderRadius: '50%', background: '#fff',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                transition: 'transform 0.2s',
+                transform: biometrics ? 'translateX(18px)' : 'translateX(0)',
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FingerprintIcon color={Z.textSec} />
+            Activar biometría
+          </div>
+        </label>
+
+        {apiError && (
+          <div aria-live="polite">
+            <span style={{ fontFamily: Z.font, fontSize: 13, color: Z.error }}>{apiError}</span>
+          </div>
+        )}
+
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-4 py-[18px] bg-primary text-on-primary font-label font-bold rounded-xl text-[15px] tracking-[-0.01em] transition-[transform,opacity] active:scale-[0.98] active:opacity-80 disabled:opacity-60 cursor-pointer"
+          style={{
+            fontFamily: Z.font, fontWeight: 700, fontSize: 14,
+            letterSpacing: '0.3px', textTransform: 'uppercase',
+            padding: '15px 24px', borderRadius: Z.r.md,
+            background: Z.orangeDark, color: '#FFFFFF',
+            border: 'none', cursor: loading ? 'default' : 'pointer', width: '100%',
+            transition: 'all 0.15s ease', opacity: loading ? 0.6 : 1,
+          }}
         >
-          {loading ? 'Procesando...' : 'Iniciar sesión →'}
+          {loading ? 'Procesando...' : 'Ingresar'}
         </button>
-        <div aria-live="polite" className="min-h-[1.25rem]">
-          {apiError && <span className="text-error text-sm text-center block">{apiError}</span>}
-        </div>
 
-        {/* OAuth divider */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-outline-variant/30" />
-          <span className="font-body text-xs text-on-surface-variant/40">o continuar con</span>
-          <div className="flex-1 h-px bg-outline-variant/30" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0' }}>
+          <div style={{ flex: 1, height: 1, background: Z.border }} />
+          <span style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textMuted, whiteSpace: 'nowrap' }}>
+            o continúa con
+          </span>
+          <div style={{ flex: 1, height: 1, background: Z.border }} />
         </div>
 
         <OAuthButtons />
 
-        <p className="text-center font-body text-sm text-on-surface-variant/60">
-          ¿No tienes cuenta?{' '}
-          <button
-            type="button"
-            onClick={() => onNavigate('register')}
-            className="text-primary font-semibold cursor-pointer hover:underline transition-colors"
-          >
-            Crear una
-          </button>
-        </p>
+        <div style={{ textAlign: 'center', marginTop: 'auto', paddingBottom: 16 }}>
+          <span style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec }}>
+            ¿No tienes cuenta?{' '}
+            <span
+              onClick={() => onNavigate('register')}
+              style={{ color: Z.orange, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Regístrate
+            </span>
+          </span>
+        </div>
       </form>
-    </main>
+    </div>
   )
 }

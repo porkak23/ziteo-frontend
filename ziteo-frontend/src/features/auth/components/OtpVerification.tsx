@@ -3,6 +3,7 @@ import { verifyOtp, loginUser, resendOtp, AuthServiceError } from '../services/a
 import { useAuthStore } from '../store/authStore'
 import { AUTH_ERRORS } from '../constants/authConstants'
 import type { AuthUser } from '../types/authTypes'
+import { Z } from '@/shared/design/tokens'
 
 interface OtpVerificationProps {
   phone: string
@@ -15,6 +16,14 @@ interface OtpVerificationProps {
 const OTP_LENGTH = 6
 const RESEND_COOLDOWN = 60
 
+function ArrowLeftIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M15 18l-6-6 6-6" stroke={Z.text} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
 export default function OtpVerification({ phone, pin, debugOtp, onSuccess, onNavigate }: OtpVerificationProps) {
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''))
   const [loading, setLoading] = useState(false)
@@ -25,7 +34,6 @@ export default function OtpVerification({ phone, pin, debugOtp, onSuccess, onNav
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
   const setUser = useAuthStore((s) => s.setUser)
 
-  // Countdown timer for resend button
   useEffect(() => {
     if (countdown <= 0) { setCanResend(true); return }
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000)
@@ -33,18 +41,15 @@ export default function OtpVerification({ phone, pin, debugOtp, onSuccess, onNav
   }, [countdown])
 
   function handleChange(index: number, value: string) {
-    // Accept only a single digit
     const digit = value.replace(/\D/g, '').slice(-1)
     const next = [...digits]
     next[index] = digit
     setDigits(next)
 
-    // Auto-advance focus
     if (digit && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus()
     }
 
-    // Auto-submit when all digits are filled
     if (digit && index === OTP_LENGTH - 1) {
       const completed = [...next]
       if (completed.every((d) => d !== '')) {
@@ -68,7 +73,6 @@ export default function OtpVerification({ phone, pin, debugOtp, onSuccess, onNav
       next[i] = pasted[i]
     }
     setDigits(next)
-    // Focus the next empty slot or last slot
     const focusIndex = Math.min(pasted.length, OTP_LENGTH - 1)
     inputRefs.current[focusIndex]?.focus()
     if (pasted.length === OTP_LENGTH) {
@@ -76,7 +80,6 @@ export default function OtpVerification({ phone, pin, debugOtp, onSuccess, onNav
     }
   }
 
-  // Normalize phone to E.164 format for edge function calls
   const normalizedPhone = phone.startsWith('+') ? phone : `+591${phone}`
 
   async function verify(code: string) {
@@ -86,7 +89,6 @@ export default function OtpVerification({ phone, pin, debugOtp, onSuccess, onNav
     try {
       const data = await verifyOtp({ phone: normalizedPhone, otp: code })
       if (data.phone_confirmed) {
-        // Auto-login after OTP verification to get a real session
         const loginData = await loginUser({ phone: normalizedPhone, pin })
         const authUser: AuthUser = {
           user_id: loginData.user_id,
@@ -116,7 +118,6 @@ export default function OtpVerification({ phone, pin, debugOtp, onSuccess, onNav
     setApiError(null)
     try {
       await resendOtp(phone)
-      // Reset UI on success
       setCountdown(RESEND_COOLDOWN)
       setCanResend(false)
       setDigits(Array(OTP_LENGTH).fill(''))
@@ -129,31 +130,47 @@ export default function OtpVerification({ phone, pin, debugOtp, onSuccess, onNav
   }
 
   return (
-    <main className="min-h-dvh w-full flex flex-col bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-4">
+    <div
+      className="fixed inset-0 flex flex-col overflow-hidden"
+      style={{ background: Z.bg }}
+    >
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '58px 16px 12px', position: 'relative', zIndex: 5,
+        }}
+      >
         <button
+          type="button"
           onClick={() => onNavigate('register')}
-          className="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container text-on-surface cursor-pointer"
           aria-label="Volver"
+          style={{
+            width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.04)',
+          }}
         >
-          <span className="material-symbols-outlined">arrow_back</span>
+          <ArrowLeftIcon />
         </button>
-        <h1 className="font-headline font-extrabold text-xl text-on-surface">Verifica tu número</h1>
+        <div style={{ width: 40 }} />
       </div>
 
-      <div className="flex flex-col gap-8 px-6 max-w-sm mx-auto w-full mt-6">
-        {/* Subtitle */}
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{ padding: '8px 24px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}
+      >
         <div>
-          <p className="font-body text-sm text-on-surface-variant">
-            Enviamos un código de 6 dígitos a
+          <h2 style={{ fontFamily: Z.font, fontWeight: 800, fontSize: 26, color: Z.text, margin: 0 }}>
+            Verifica tu número
+          </h2>
+          <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: '6px 0 0', lineHeight: 1.5 }}>
+            Te enviamos un código de {OTP_LENGTH} dígitos a{' '}
+            <strong style={{ color: Z.text }}>
+              {phone.startsWith('+591') ? phone : '+591 ' + phone}
+            </strong>
           </p>
-          {phone && (
-            <p className="font-semibold text-on-surface text-sm mt-0.5">{phone.startsWith('+591') ? phone : '+591 ' + phone}</p>
-          )}
         </div>
 
-        {/* Dev helper: show OTP inline */}
         {debugOtp && (
           <button
             type="button"
@@ -162,66 +179,89 @@ export default function OtpVerification({ phone, pin, debugOtp, onSuccess, onNav
               setDigits(next)
               verify(debugOtp)
             }}
-            className="flex items-center gap-2 bg-primary-container text-on-primary-container rounded-xl px-4 py-3 font-body text-sm text-left w-full"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '12px 16px', borderRadius: Z.r.md,
+              background: Z.orangeLight, border: `1px solid ${Z.orange}`,
+              fontFamily: Z.font, fontSize: 13, color: Z.orangeDark,
+              cursor: 'pointer', textAlign: 'left', width: '100%',
+            }}
           >
-            <span className="material-symbols-outlined text-base">bug_report</span>
-            <span>Código de prueba: <strong className="font-label tracking-widest">{debugOtp}</strong> — toca para ingresar</span>
+            <span style={{ opacity: 0.7 }}>🐛</span>
+            Código de prueba: <strong style={{ letterSpacing: 4 }}>{debugOtp}</strong> — toca para ingresar
           </button>
         )}
 
-        {/* OTP inputs */}
-        <div className="flex gap-2 justify-center">
-          {digits.map((digit, i) => (
-            <input
-              key={i}
-              ref={(el) => { inputRefs.current[i] = el }}
-              type="tel"
-              inputMode="numeric"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleChange(i, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(i, e)}
-              onPaste={i === 0 ? handlePaste : undefined}
-              autoFocus={i === 0}
-              disabled={loading}
-              aria-label={`Dígito ${i + 1} de ${digits.length}`}
-              className={`w-12 h-14 text-center border-2 rounded-xl font-label text-xl font-semibold bg-surface-container-low text-on-surface focus:outline-none transition-colors ${
-                digit ? 'border-primary' : 'border-outline-variant'
-              } focus:border-primary disabled:opacity-60`}
-            />
-          ))}
+        <div>
+          <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec, display: 'block', marginBottom: 10 }}>
+            Código de verificación
+          </label>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            {digits.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => { inputRefs.current[i] = el }}
+                type="tel"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(i, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(i, e)}
+                onPaste={i === 0 ? handlePaste : undefined}
+                autoFocus={i === 0}
+                disabled={loading}
+                aria-label={`Dígito ${i + 1} de ${OTP_LENGTH}`}
+                style={{
+                  width: 46, height: 54, borderRadius: Z.r.sm, textAlign: 'center',
+                  border: `1.5px solid ${digit ? Z.orange : Z.border}`,
+                  fontFamily: Z.font, fontSize: 22, fontWeight: 700, color: Z.text,
+                  outline: 'none',
+                  background: digit ? Z.orangeLight : Z.surface,
+                  transition: 'all 0.15s', boxSizing: 'border-box',
+                  opacity: loading ? 0.6 : 1,
+                }}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Error */}
         {apiError && (
-          <div className="flex items-center gap-2 bg-error-container text-on-error-container rounded-2xl px-4 py-3 text-sm">
-            <span className="material-symbols-outlined text-base flex-shrink-0">error</span>
-            <span>{apiError}</span>
+          <div
+            aria-live="polite"
+            style={{
+              padding: '12px 16px', borderRadius: Z.r.md,
+              background: Z.errorBg, border: `1px solid ${Z.error}`,
+            }}
+          >
+            <span style={{ fontFamily: Z.font, fontSize: 13, color: Z.error }}>{apiError}</span>
           </div>
         )}
 
         {loading && (
-          <p className="font-body text-sm text-on-surface-variant text-center">Verificando...</p>
+          <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, textAlign: 'center' }}>
+            Verificando...
+          </p>
         )}
 
-        {/* Resend */}
-        <div className="text-center">
+        <div style={{ textAlign: 'center' }}>
           {canResend ? (
-            <button
-              type="button"
+            <span
               onClick={handleResend}
-              disabled={resendLoading}
-              className="text-primary font-semibold text-sm disabled:opacity-60"
+              style={{
+                fontFamily: Z.font, fontSize: 13, color: resendLoading ? Z.textMuted : Z.orange,
+                fontWeight: 700, cursor: resendLoading ? 'default' : 'pointer',
+              }}
             >
               {resendLoading ? 'Enviando...' : 'Reenviar código'}
-            </button>
+            </span>
           ) : (
-            <p className="text-on-surface-variant text-sm">
-              Reenviar código en {countdown}s
-            </p>
+            <span style={{ fontFamily: Z.font, fontSize: 13, color: Z.textMuted }}>
+              Reenviar código en{' '}
+              <span style={{ color: Z.orange, fontWeight: 700 }}>{countdown}s</span>
+            </span>
           )}
         </div>
       </div>
-    </main>
+    </div>
   )
 }

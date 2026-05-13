@@ -7,6 +7,7 @@ import { useUploadPhoto } from '../../../shared/hooks/useUploadPhoto'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
 import { supabase } from '../../../lib/supabaseClient'
+import { Z } from '@/shared/design/tokens'
 
 interface OnboardingScreenProps {
   onComplete: () => void
@@ -24,12 +25,12 @@ const CITIES = [
   'Cobija',
 ]
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  constructor: 'Constructor',
-  proveedor: 'Proveedor',
-  maestro: 'Maestro',
-  chofer: 'Chofer',
-}
+const ROLE_DATA: { role: UserRole; title: string; description: string }[] = [
+  { role: 'constructor', title: 'Constructor', description: 'Compra materiales y gestiona obras' },
+  { role: 'proveedor', title: 'Vendedor', description: 'Vende materiales y gestiona pedidos' },
+  { role: 'maestro', title: 'Trabajador', description: 'Ofrece servicios profesionales' },
+  { role: 'chofer', title: 'Repartidor', description: 'Realiza entregas de materiales' },
+]
 
 const VEHICLE_OPTIONS = [
   { value: 'moto', label: 'Motocicleta', icon: '🛵', subtitle: 'Carga ligera — hasta 5 kg' },
@@ -37,6 +38,63 @@ const VEHICLE_OPTIONS = [
   { value: 'camion', label: 'Camión', icon: '🚛', subtitle: 'Carga pesada — más de 5 kg' },
   { value: 'pickup', label: 'Pickup', icon: '🛻', subtitle: 'Carga pesada — más de 5 kg' },
 ] as const
+
+function RoleIconConstructor() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 48 48" fill="none">
+      <rect x="8" y="28" width="32" height="14" rx="2" fill={Z.orangeDark} opacity="0.15"/>
+      <rect x="12" y="32" width="6" height="6" rx="1" fill={Z.orange} opacity="0.5"/>
+      <rect x="21" y="32" width="6" height="6" rx="1" fill={Z.orange} opacity="0.5"/>
+      <rect x="30" y="32" width="6" height="6" rx="1" fill={Z.orange} opacity="0.5"/>
+      <path d="M6 28h36" stroke={Z.orangeDark} strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M14 28V18l10-8 10 8v10" stroke={Z.orangeDark} strokeWidth="2.5" strokeLinejoin="round" fill="none"/>
+      <rect x="20" y="20" width="8" height="8" rx="1.5" stroke={Z.orange} strokeWidth="2" fill="none"/>
+    </svg>
+  )
+}
+
+function RoleIconVendedor() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 48 48" fill="none">
+      <rect x="8" y="20" width="32" height="22" rx="3" fill={Z.blue} opacity="0.12"/>
+      <path d="M8 20h32" stroke={Z.blueDark} strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M6 20c0 0 4-10 18-10s18 10 18 10" stroke={Z.blue} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+      <rect x="18" y="28" width="12" height="14" rx="2" stroke={Z.blueDark} strokeWidth="2" fill={Z.blue} opacity="0.2"/>
+      <circle cx="24" cy="34" r="1.5" fill={Z.blueDark}/>
+    </svg>
+  )
+}
+
+function RoleIconTrabajador() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 48 48" fill="none">
+      <path d="M18 10l-8 8 3 3 8-8M30 38l8-8-3-3-8 8" stroke={Z.orange} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M14 34l20-20" stroke={Z.orangeDark} strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="14" cy="34" r="3" fill={Z.orange} opacity="0.3" stroke={Z.orangeDark} strokeWidth="2"/>
+      <circle cx="34" cy="14" r="3" fill={Z.orange} opacity="0.3" stroke={Z.orangeDark} strokeWidth="2"/>
+    </svg>
+  )
+}
+
+function RoleIconRepartidor() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 48 48" fill="none">
+      <rect x="4" y="16" width="24" height="18" rx="3" stroke={Z.blueDark} strokeWidth="2.5" fill={Z.blue} opacity="0.1"/>
+      <path d="M28 22h10l6 8v4h-16v-12z" stroke={Z.blueDark} strokeWidth="2.5" strokeLinejoin="round" fill={Z.blue} opacity="0.1"/>
+      <circle cx="14" cy="36" r="4" stroke={Z.blue} strokeWidth="2.5" fill="white"/>
+      <circle cx="38" cy="36" r="4" stroke={Z.blue} strokeWidth="2.5" fill="white"/>
+      <circle cx="14" cy="36" r="1.5" fill={Z.blueDark}/>
+      <circle cx="38" cy="36" r="1.5" fill={Z.blueDark}/>
+    </svg>
+  )
+}
+
+const ROLE_ICONS: Record<string, React.ReactNode> = {
+  constructor: <RoleIconConstructor />,
+  proveedor: <RoleIconVendedor />,
+  maestro: <RoleIconTrabajador />,
+  chofer: <RoleIconRepartidor />,
+}
 
 export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const { user, setUser } = useAuthStore()
@@ -60,11 +118,9 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
     ? 'Mínimo 3 caracteres'
     : null
 
-  const cityError = !city ? 'Selecciona una ciudad' : null
-
   const isChofer = activeRole === 'chofer' || (user?.roles ?? []).includes('chofer')
   const vehicleError = isChofer && !vehicleType ? 'Selecciona tu tipo de vehículo' : null
-  const hasErrors = !!nameError || !!cityError || name.trim().length < 3 || !!vehicleError
+  const hasErrors = !!nameError || !city || name.trim().length < 3 || !!vehicleError
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -96,7 +152,6 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
         ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
       })
 
-      // If chofer and vehicle type selected, persist to user_roles
       if (isChofer && vehicleType) {
         await supabase
           .from('user_roles')
@@ -105,7 +160,6 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
           .eq('role', 'chofer')
       }
 
-      // Update the Zustand store with the new profile data
       if (user) {
         setUser({
           ...user,
@@ -124,180 +178,240 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
     }
   }
 
+  const initials = name.trim().split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'Z'
+
+  const inputStyle: React.CSSProperties = {
+    fontFamily: Z.font, fontSize: 15, fontWeight: 500, color: Z.text,
+    padding: '14px', borderRadius: Z.r.sm, border: `1.5px solid ${Z.border}`,
+    background: Z.surface, outline: 'none', width: '100%', boxSizing: 'border-box',
+  }
+
   return (
-    <main className="min-h-dvh w-full flex flex-col bg-background overflow-y-auto">
+    <div
+      className="fixed inset-0 flex flex-col overflow-hidden"
+      style={{ background: Z.bg }}
+    >
       <Toast toasts={toasts} onRemove={removeToast} />
 
-      {/* Header */}
-      <div className="flex flex-col items-center pt-14 pb-6 px-6">
-        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
-          <span
-            className="material-symbols-outlined text-4xl text-primary"
-            style={{ fontVariationSettings: "'FILL' 1" }}
+      <div
+        style={{
+          padding: '60px 24px 16px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+          background: `linear-gradient(180deg, ${Z.orangeLight} 0%, ${Z.bg} 100%)`,
+        }}
+      >
+        <div style={{ position: 'relative', width: 88, height: 88 }}>
+          <div
+            style={{
+              width: 88, height: 88, borderRadius: '50%',
+              background: Z.gradOrange,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 20px rgba(232,115,58,0.25)',
+              overflow: 'hidden',
+            }}
           >
-            construction
-          </span>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Foto de perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontFamily: Z.font, fontSize: 30, fontWeight: 800, color: '#FFFFFF', letterSpacing: 1 }}>
+                {initials}
+              </span>
+            )}
+            {isUploading && (
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span className="material-symbols-outlined animate-spin text-white text-2xl">progress_activity</span>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => !isUploading && photoInputRef.current?.click()}
+            disabled={isUploading}
+            style={{
+              position: 'absolute', bottom: 0, right: 0,
+              width: 30, height: 30, borderRadius: '50%',
+              background: Z.orangeDark, color: '#fff',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              opacity: isUploading ? 0.5 : 1,
+            }}
+            aria-label="Seleccionar foto de perfil"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <input
+            ref={photoInputRef}
+            id="onboarding-photo"
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handlePhotoChange}
+          />
         </div>
-        <h1 className="font-headline font-extrabold text-3xl text-on-surface text-center leading-tight">
-          Completa tu perfil
-        </h1>
-        <p className="font-body text-sm text-on-surface-variant mt-2 text-center">
-          Solo toma un momento
-        </p>
+
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ fontFamily: Z.font, fontWeight: 800, fontSize: 22, color: Z.text, margin: 0 }}>
+            Completa tu perfil
+          </h2>
+          <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, margin: '4px 0 0' }}>
+            Solo toma un momento
+          </p>
+        </div>
       </div>
 
-      {/* Form */}
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-4 px-6 pb-10 max-w-sm mx-auto w-full animate-[fadeSlideUp_0.4s_ease-out]"
+        className="flex-1 overflow-y-auto"
+        style={{ padding: '8px 24px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}
       >
-        {/* Foto de perfil opcional */}
-        <div className="flex flex-col items-center gap-2">
-          <label htmlFor="onboarding-photo" className="font-label text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
-            Foto de perfil (opcional)
-          </label>
-          <div className="relative w-20 h-20">
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-surface-container flex items-center justify-center">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
-              ) : (
-                <span className="font-headline text-3xl text-on-surface-variant font-medium">
-                  {name.trim().charAt(0).toUpperCase() || 'Z'}
-                </span>
-              )}
-              {isUploading && (
-                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                  <span className="material-symbols-outlined animate-spin text-white text-2xl">progress_activity</span>
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => !isUploading && photoInputRef.current?.click()}
-              disabled={isUploading}
-              className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-md active:opacity-80 transition-opacity disabled:opacity-50"
-              aria-label="Seleccionar foto de perfil"
-            >
-              <span className="material-symbols-outlined text-sm">photo_camera</span>
-            </button>
-            <input
-              ref={photoInputRef}
-              id="onboarding-photo"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handlePhotoChange}
-            />
-          </div>
-        </div>
-
-        {/* Nombre completo */}
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="onboarding-name" className="font-label text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
             Nombre completo
           </label>
           <input
-            id="onboarding-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onBlur={() => setNameTouched(true)}
             placeholder="Ej. Alejandro Mendoza"
-            className={`px-4 py-3.5 rounded-2xl border bg-surface text-on-surface font-body text-sm focus:outline-none transition-colors ${
-              nameError ? 'border-error focus:border-error' : 'border-outline-variant focus:border-primary'
-            }`}
+            style={{ ...inputStyle, borderColor: nameError ? Z.error : Z.border }}
           />
           {nameError && (
-            <span className="text-error text-xs">{nameError}</span>
+            <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>{nameError}</span>
           )}
         </div>
 
-        {/* Ciudad */}
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="onboarding-city" className="font-label text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
             Ciudad
           </label>
           <select
-            id="onboarding-city"
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            className={`px-4 py-3.5 rounded-2xl border bg-surface text-on-surface font-body text-sm focus:outline-none appearance-none transition-colors ${
-              nameTouched && cityError ? 'border-error focus:border-error' : 'border-outline-variant focus:border-primary'
-            }`}
+            style={{
+              ...inputStyle,
+              borderColor: nameTouched && !city ? Z.error : Z.border,
+              appearance: 'none',
+              cursor: 'pointer',
+              color: city ? Z.text : Z.textMuted,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394A3B8' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 14px center',
+            }}
           >
             <option value="">Selecciona tu ciudad</option>
             {CITIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
-          {nameTouched && cityError && (
-            <span className="text-error text-xs">{cityError}</span>
+          {nameTouched && !city && (
+            <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>Selecciona una ciudad</span>
           )}
         </div>
 
-        {/* Rol activo */}
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="onboarding-role" className="font-label text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
+        <div>
+          <label
+            style={{
+              fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.textMuted,
+              letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, display: 'block',
+            }}
+          >
             Rol activo
           </label>
 
           {hasMultipleRoles ? (
-            /* Multiple roles — let the user choose */
-            <div className="flex flex-col gap-2">
-              {roles.map((r) => {
-                const isSelected = activeRole === r
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {ROLE_DATA.filter((r) => roles.includes(r.role)).map((r) => {
+                const isSelected = activeRole === r.role
                 return (
                   <button
-                    key={r}
+                    key={r.role}
                     type="button"
-                    onClick={() => setActiveRole(r)}
-                    className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 transition-all text-left ${
-                      isSelected
-                        ? 'border-primary bg-primary/5'
-                        : 'border-outline-variant bg-surface'
-                    }`}
+                    onClick={() => setActiveRole(r.role)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                      borderRadius: Z.r.md, cursor: 'pointer', width: '100%', textAlign: 'left',
+                      border: isSelected ? `2px solid ${Z.orange}` : `1.5px solid ${Z.border}`,
+                      background: isSelected ? Z.orangeLight : Z.surface,
+                      transition: 'all 0.2s', boxSizing: 'border-box', outline: 'none',
+                    }}
                   >
-                    <span
-                      className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
-                        isSelected ? 'border-primary bg-primary' : 'border-outline-variant bg-transparent'
-                      }`}
-                    />
-                    <span
-                      className={`font-label text-sm font-semibold ${
-                        isSelected ? 'text-primary' : 'text-on-surface-variant'
-                      }`}
+                    {ROLE_ICONS[r.role]}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>{r.title}</div>
+                      <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 1 }}>{r.description}</div>
+                    </div>
+                    <div
+                      style={{
+                        width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                        border: `2px solid ${isSelected ? Z.orange : Z.border}`,
+                        background: isSelected ? Z.orange : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
                     >
-                      {ROLE_LABELS[r]}
-                    </span>
+                      {isSelected && (
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />
+                      )}
+                    </div>
                   </button>
                 )
               })}
             </div>
           ) : (
-            /* Single role — informative, non-editable */
-            <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-outline-variant bg-surface-container text-on-surface-variant font-body text-sm">
-              <span
-                className="material-symbols-outlined text-base text-on-surface-variant"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                badge
-              </span>
-              <span className="font-label text-sm font-semibold text-on-surface">
-                {ROLE_LABELS[activeRole]}
-              </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {ROLE_DATA.map((r) => {
+                const isSelected = activeRole === r.role
+                return (
+                  <button
+                    key={r.role}
+                    type="button"
+                    onClick={() => setActiveRole(r.role)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                      borderRadius: Z.r.md, cursor: 'pointer', width: '100%', textAlign: 'left',
+                      border: isSelected ? `2px solid ${Z.orange}` : `1.5px solid ${Z.border}`,
+                      background: isSelected ? Z.orangeLight : Z.surface,
+                      transition: 'all 0.2s', boxSizing: 'border-box', outline: 'none',
+                    }}
+                  >
+                    {ROLE_ICONS[r.role]}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>{r.title}</div>
+                      <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 1 }}>{r.description}</div>
+                    </div>
+                    <div
+                      style={{
+                        width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                        border: `2px solid ${isSelected ? Z.orange : Z.border}`,
+                        background: isSelected ? Z.orange : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      {isSelected && (
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
 
-        {/* Tipo de vehículo — solo para choferes */}
         {isChofer && (
-          <div className="flex flex-col gap-1.5">
-            <label className="font-label text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label
+              style={{
+                fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.textMuted,
+                letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4, display: 'block',
+              }}
+            >
               Tipo de vehículo
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {VEHICLE_OPTIONS.map((v) => {
                 const isSelected = vehicleType === v.value
                 return (
@@ -305,44 +419,67 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
                     key={v.value}
                     type="button"
                     onClick={() => setVehicleType(v.value)}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all text-center ${
-                      isSelected
-                        ? 'border-primary bg-primary/5'
-                        : 'border-outline-variant bg-surface'
-                    }`}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                      padding: '12px 8px',
+                      borderRadius: Z.r.md,
+                      border: isSelected ? `2px solid ${Z.orange}` : `1.5px solid ${Z.border}`,
+                      background: isSelected ? Z.orangeLight : Z.surface,
+                      cursor: 'pointer', textAlign: 'center', outline: 'none',
+                      transition: 'all 0.15s',
+                    }}
                   >
-                    <span className="text-2xl leading-none">{v.icon}</span>
-                    <span className={`font-label text-sm font-semibold ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
-                      {v.label}
-                    </span>
-                    <span className="font-body text-[10px] text-on-surface-variant leading-tight">{v.subtitle}</span>
+                    <span style={{ fontSize: 24, lineHeight: 1 }}>{v.icon}</span>
+                    <span style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: isSelected ? Z.orangeDark : Z.text }}>{v.label}</span>
+                    <span style={{ fontFamily: Z.font, fontSize: 10, color: Z.textSec, lineHeight: 1.3 }}>{v.subtitle}</span>
                   </button>
                 )
               })}
             </div>
             {nameTouched && vehicleError && (
-              <span className="text-error text-xs">{vehicleError}</span>
+              <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>{vehicleError}</span>
             )}
           </div>
         )}
 
-        {/* Error API */}
         {apiError && (
-          <div className="flex items-center gap-2 bg-error-container text-on-error-container rounded-2xl px-4 py-3 text-sm">
-            <span className="material-symbols-outlined text-base flex-shrink-0">error</span>
-            <span>{apiError}</span>
+          <div
+            style={{
+              padding: '12px 16px', borderRadius: Z.r.md,
+              background: Z.errorBg, border: `1px solid ${Z.error}`,
+            }}
+          >
+            <span style={{ fontFamily: Z.font, fontSize: 13, color: Z.error }}>{apiError}</span>
           </div>
         )}
 
-        {/* CTA */}
         <button
           type="submit"
           disabled={loading || (nameTouched && hasErrors)}
-          className="w-full px-4 py-4 bg-primary text-on-primary font-label font-semibold rounded-2xl text-base transition-opacity active:opacity-80 disabled:opacity-60 mt-2"
+          style={{
+            fontFamily: Z.font, fontWeight: 700, fontSize: 15,
+            letterSpacing: '0.2px',
+            padding: '16px 24px', borderRadius: Z.r.md,
+            background: Z.gradOrange, color: '#fff',
+            border: 'none', cursor: loading ? 'default' : 'pointer', width: '100%',
+            boxShadow: '0 4px 20px rgba(232,115,58,0.38)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            transition: 'opacity 0.15s',
+            opacity: loading || (nameTouched && hasErrors) ? 0.6 : 1,
+          }}
         >
-          {loading ? 'Guardando...' : 'Empezar'}
+          {loading ? 'Guardando...' : (
+            <>
+              Ingresar como {ROLE_DATA.find((r) => r.role === activeRole)?.title}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </>
+          )}
         </button>
+
+        <div style={{ height: 8 }} />
       </form>
-    </main>
+    </div>
   )
 }
