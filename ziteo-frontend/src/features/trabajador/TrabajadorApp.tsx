@@ -8,8 +8,10 @@ import {
   ChatFab,
   DashHeader,
 } from '../../shared/design/shell'
+import { RoleDashNav } from '../../shared/design/shell/RoleDashNav'
 import { useNavStore } from '../../shared/store/navStore'
 import { useAuthStore } from '../auth/store/authStore'
+import AvatarMenu from '../../shared/components/AvatarMenu'
 
 const HomeTabTrabajador = lazy(() =>
   import('./HomeTabTrabajador').then((m) => ({ default: m.HomeTabTrabajador }))
@@ -32,9 +34,9 @@ const TABS: {
   Icon: (props: { color?: string; size?: number }) => React.ReactElement
 }[] = [
   { key: 'home', label: 'Home', Icon: NavIconHome },
-  { key: 'licitaciones', label: 'Licitar', Icon: NavIconBids },
+  { key: 'licitaciones', label: 'Trabajos', Icon: NavIconBids },
   { key: 'proyectos', label: 'Proyectos', Icon: NavIconProjects },
-  { key: 'perfil', label: 'Perfil', Icon: NavIconUsers },
+  { key: 'perfil', label: 'Mi Perfil', Icon: NavIconUsers },
 ]
 
 function TabSkeleton() {
@@ -47,74 +49,6 @@ function TabSkeleton() {
   )
 }
 
-function TrabajadorDashNav({
-  activeTab,
-  onTabChange,
-}: {
-  activeTab: TrabajadorTab
-  onTabChange: (tab: TrabajadorTab) => void
-}) {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 24,
-        left: 14,
-        right: 14,
-        height: 58,
-        borderRadius: 29,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        background: 'rgba(255,255,255,0.88)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        boxShadow: '0 2px 20px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.04)',
-        zIndex: 30,
-        padding: '0 4px',
-      }}
-    >
-      {TABS.map(({ key, label, Icon }) => {
-        const active = activeTab === key
-        return (
-          <button
-            key={key}
-            onClick={() => onTabChange(key)}
-            aria-label={label}
-            aria-pressed={active}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 2,
-              background: active ? Z.orangeLight : 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              outline: 'none',
-              padding: '7px 14px',
-              borderRadius: 16,
-              transition: 'all 0.2s ease',
-              minWidth: 0,
-            }}
-          >
-            <Icon color={active ? Z.orangeDark : Z.textMuted} size={21} />
-            <span
-              style={{
-                fontFamily: Z.font,
-                fontSize: 9.5,
-                fontWeight: active ? 700 : 500,
-                color: active ? Z.orangeDark : Z.textMuted,
-                letterSpacing: 0.2,
-              }}
-            >
-              {label}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
 
 export function TrabajadorApp() {
   const globalTab = useNavStore((s) => s.activeTab)
@@ -129,6 +63,7 @@ export function TrabajadorApp() {
   }
 
   const [localTab, setLocalTab] = useState<TrabajadorTab>(toTrabajadorTab(globalTab))
+  const [showAccount, setShowAccount] = useState(false)
 
   const activeTab: TrabajadorTab =
     globalTab === 'licitaciones' || globalTab === 'proyectos' || globalTab === 'perfil'
@@ -149,11 +84,11 @@ export function TrabajadorApp() {
     }
   }
 
-  const handleProfile = () => handleTabChange('perfil')
-
   return (
     <div style={{ position: 'relative', minHeight: '100%', paddingBottom: 92, background: Z.bg }}>
-      <DashHeader onProfile={handleProfile} notifCount={currentUser ? 3 : 0} />
+      <DashHeader onProfile={() => setShowAccount(true)} notifCount={currentUser ? 3 : 0} />
+
+      <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
 
       <div style={{ overflowY: 'auto' }}>
         <Suspense fallback={<TabSkeleton />}>
@@ -167,7 +102,7 @@ export function TrabajadorApp() {
       </div>
 
       <ChatFab onClick={() => setGlobalTab('chat')} />
-      <TrabajadorDashNav activeTab={activeTab} onTabChange={handleTabChange} />
+      <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => handleTabChange(k as TrabajadorTab)} />
     </div>
   )
 }

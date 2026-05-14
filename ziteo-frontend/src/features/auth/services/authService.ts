@@ -42,7 +42,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export async function registerUser(payload: RegisterPayload): Promise<RegisterApiResponse> {
-  const res = await fetch(`${BASE_URL}/auth-register`, {
+  const res = await fetch(`${BASE_URL}/auth/register`, {
     method: 'POST',
     headers: DEFAULT_HEADERS,
     body: JSON.stringify(payload),
@@ -51,7 +51,7 @@ export async function registerUser(payload: RegisterPayload): Promise<RegisterAp
 }
 
 export async function loginUser(payload: LoginPayload): Promise<AuthApiResponse> {
-  const res = await fetch(`${BASE_URL}/auth-login`, {
+  const res = await fetch(`${BASE_URL}/auth/login`, {
     method: 'POST',
     headers: DEFAULT_HEADERS,
     body: JSON.stringify(payload),
@@ -60,7 +60,7 @@ export async function loginUser(payload: LoginPayload): Promise<AuthApiResponse>
 }
 
 export async function verifyOtp(payload: OtpVerifyPayload): Promise<{ phone_confirmed: boolean }> {
-  const res = await fetch(`${BASE_URL}/auth-otp-verify`, {
+  const res = await fetch(`${BASE_URL}/auth/otp-verify`, {
     method: 'POST',
     headers: DEFAULT_HEADERS,
     body: JSON.stringify(payload),
@@ -69,7 +69,7 @@ export async function verifyOtp(payload: OtpVerifyPayload): Promise<{ phone_conf
 }
 
 export async function resendOtp(phone: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/auth-otp-resend`, {
+  const res = await fetch(`${BASE_URL}/auth/otp-resend`, {
     method: 'POST',
     headers: DEFAULT_HEADERS,
     body: JSON.stringify({ phone }),
@@ -78,7 +78,7 @@ export async function resendOtp(phone: string): Promise<void> {
 }
 
 export async function forgotPin(phone: string): Promise<{ sent: boolean; debug_otp?: string }> {
-  const res = await fetch(`${BASE_URL}/auth-forgot-pin`, {
+  const res = await fetch(`${BASE_URL}/auth/forgot-pin`, {
     method: 'POST',
     headers: DEFAULT_HEADERS,
     body: JSON.stringify({ phone }),
@@ -87,7 +87,7 @@ export async function forgotPin(phone: string): Promise<{ sent: boolean; debug_o
 }
 
 export async function resetPin(payload: { phone: string; otp: string; new_pin: string }): Promise<void> {
-  const res = await fetch(`${BASE_URL}/auth-reset-pin`, {
+  const res = await fetch(`${BASE_URL}/auth/reset-pin`, {
     method: 'POST',
     headers: DEFAULT_HEADERS,
     body: JSON.stringify(payload),
@@ -99,7 +99,7 @@ export async function setupOAuthProfile(
   accessToken: string,
   payload: OAuthSetupPayload
 ): Promise<void> {
-  const res = await fetch(`${BASE_URL}/auth-oauth-setup`, {
+  const res = await fetch(`${BASE_URL}/auth/oauth-setup`, {
     method: 'POST',
     headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(payload),

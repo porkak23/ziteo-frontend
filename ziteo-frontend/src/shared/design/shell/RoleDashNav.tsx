@@ -3,7 +3,7 @@ import { Z } from '../tokens';
 interface Tab {
   key: string;
   label: string;
-  Icon: React.FC<{ color?: string; size?: number }>;
+  Icon: (props: { color?: string; size?: number }) => React.ReactElement;
 }
 
 interface RoleDashNavProps {
@@ -16,7 +16,7 @@ export function RoleDashNav({ tabs, activeTab, onTabChange }: RoleDashNavProps) 
   return (
     <div
       style={{
-        position: 'absolute',
+        position: 'fixed',
         bottom: 24,
         left: 14,
         right: 14,
@@ -39,6 +39,8 @@ export function RoleDashNav({ tabs, activeTab, onTabChange }: RoleDashNavProps) 
           <button
             key={key}
             onClick={() => onTabChange(key)}
+            aria-label={label}
+            aria-pressed={active}
             style={{
               display: 'flex',
               flexDirection: 'column',

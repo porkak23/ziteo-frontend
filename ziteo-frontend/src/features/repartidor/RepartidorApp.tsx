@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Z } from '@/shared/design/tokens'
+import { RoleDashNav } from '@/shared/design/shell/RoleDashNav'
 import { ZAvatar } from '@/shared/design/components/ZAvatar'
-import { ZIcon } from '@/shared/design/components/ZIcon'
 import { SectionTitle } from '@/shared/design/shell/SectionTitle'
-import { useNavStore } from '@/shared/store/navStore'
+import { DashHeader } from '@/shared/design/shell'
 import { useAuthStore } from '@/features/auth/store/authStore'
+import AvatarMenu from '@/shared/components/AvatarMenu'
 import { RadarScreen } from './RadarScreen'
 import { GananciasScreen } from './GananciasScreen'
+
+interface JobAlert { title: string; pay: number; dist: string; type: 'heavy' | 'light' }
 
 type RepartidorTab = 'radar' | 'pedidos' | 'ganancias' | 'perfil'
 
@@ -268,83 +271,6 @@ function PerfilTab() {
   )
 }
 
-function RepartidorHeader({ onProfile }: { onProfile: () => void }) {
-  const setTab = useNavStore((s) => s.setTab)
-
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '54px 20px 10px', background: Z.bg,
-      position: 'relative', zIndex: 10, flexShrink: 0,
-    }}>
-      <span style={{
-        fontFamily: Z.font, fontWeight: 800, fontSize: 22, letterSpacing: 2,
-        background: Z.gradMixed, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-      }}>
-        ZITEO
-      </span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <button
-          onClick={() => setTab('notificaciones')}
-          style={{
-            position: 'relative', width: 38, height: 38, borderRadius: 12, border: 'none',
-            background: Z.surface, cursor: 'pointer', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-          }}
-          aria-label="Notificaciones"
-        >
-          <ZIcon name="bell" size={20} color={Z.textSec} />
-        </button>
-        <div onClick={onProfile} style={{ cursor: 'pointer' }} role="button" tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && onProfile()} aria-label="Perfil">
-          <ZAvatar name="CC" size={38} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function RepartidorNav({ activeTab, onTabChange }: {
-  activeTab: RepartidorTab
-  onTabChange: (tab: RepartidorTab) => void
-}) {
-  return (
-    <div style={{
-      position: 'fixed', bottom: 24, left: 14, right: 14, height: 58,
-      borderRadius: 29, display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-      background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-      boxShadow: '0 2px 20px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.04)',
-      zIndex: 30, padding: '0 4px',
-    }}>
-      {TABS.map(({ key, label, Icon }) => {
-        const active = activeTab === key
-        return (
-          <button
-            key={key}
-            onClick={() => onTabChange(key)}
-            aria-label={label}
-            aria-pressed={active}
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-              background: active ? Z.orangeLight : 'transparent',
-              border: 'none', cursor: 'pointer', outline: 'none',
-              padding: '7px 14px', borderRadius: 16, transition: 'all 0.2s ease', minWidth: 0,
-            }}
-          >
-            <Icon color={active ? Z.orangeDark : Z.textMuted} size={21} />
-            <span style={{
-              fontFamily: Z.font, fontSize: 9.5, fontWeight: active ? 700 : 500,
-              color: active ? Z.orangeDark : Z.textMuted, letterSpacing: 0.2,
-            }}>
-              {label}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
 
 function RepartidorChatFab() {
   return (
@@ -367,11 +293,65 @@ function RepartidorChatFab() {
   )
 }
 
+function JobAlertToast({ alert, onDismiss }: { alert: JobAlert; onDismiss: () => void }) {
+  return (
+    <div style={{
+      position: 'fixed', top: 70, left: 12, right: 12, zIndex: 300,
+      background: Z.surface, borderRadius: Z.r.md,
+      boxShadow: '0 6px 24px rgba(0,0,0,0.16)', border: `1px solid ${Z.orangePastel}`,
+      padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
+      animation: 'alertDrop 0.3s cubic-bezier(0.22,1,0.36,1)',
+      transformOrigin: 'top right',
+    }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: 12, flexShrink: 0, fontSize: 18,
+        background: alert.type === 'heavy' ? Z.orangeLight : Z.blueLight,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {alert.type === 'heavy' ? '🏗' : '⚡'}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {alert.title}
+        </div>
+        <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 2 }}>
+          📍 {alert.dist} · <span style={{ color: Z.orangeDark, fontWeight: 700 }}>Bs {alert.pay}</span>
+        </div>
+      </div>
+      <button
+        onClick={onDismiss}
+        style={{
+          width: 28, height: 28, borderRadius: 8, border: 'none', background: Z.divider,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: Z.textMuted, fontFamily: Z.font, fontSize: 14, flexShrink: 0,
+        }}
+        aria-label="Cerrar alerta"
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
 export function RepartidorApp() {
   const [activeTab, setActiveTab] = useState<RepartidorTab>('radar')
-  const setGlobalTab = useNavStore((s) => s.setTab)
+  const [showAccount, setShowAccount] = useState(false)
+  const [alertCount, setAlertCount] = useState(0)
+  const [activeAlert, setActiveAlert] = useState<JobAlert | null>(null)
+  const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleProfile = () => setActiveTab('perfil')
+  const handleNewJobOffer = useCallback((alert: JobAlert) => {
+    setAlertCount(c => c + 1)
+    setActiveAlert(alert)
+    if (alertTimerRef.current) clearTimeout(alertTimerRef.current)
+    alertTimerRef.current = setTimeout(() => setActiveAlert(null), 5000)
+  }, [])
+
+  const handleBellClick = () => {
+    setAlertCount(0)
+    setActiveAlert(null)
+    setActiveTab('radar')
+  }
 
   const isRadar = activeTab === 'radar'
 
@@ -380,63 +360,33 @@ export function RepartidorApp() {
       position: 'fixed', inset: 0, background: Z.bg,
       display: 'flex', flexDirection: 'column', overflow: 'hidden',
     }}>
-      {!isRadar && <RepartidorHeader onProfile={handleProfile} />}
+      <style>{`@keyframes alertDrop { from { opacity:0; transform:scale(0.88) translateY(-10px); transform-origin: top right; } to { opacity:1; transform:scale(1) translateY(0); transform-origin: top right; } }`}</style>
 
-      <main style={{ flex: 1, overflowY: 'auto', paddingBottom: isRadar ? 0 : 96 }}>
-        {activeTab === 'radar' && (
-          <div style={{ position: 'relative', minHeight: '100%' }}>
-            <div style={{
-              position: 'fixed', top: 0, left: 0, right: 0, zIndex: 20,
-              pointerEvents: 'none',
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '54px 20px 10px', pointerEvents: 'none',
-              }}>
-                <span style={{
-                  fontFamily: Z.font, fontWeight: 800, fontSize: 22, letterSpacing: 2,
-                  background: Z.gradMixed, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                  pointerEvents: 'auto',
-                }}>
-                  ZITEO
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, pointerEvents: 'auto' }}>
-                  <button
-                    onClick={() => setGlobalTab('notificaciones')}
-                    style={{
-                      position: 'relative', width: 38, height: 38, borderRadius: 12, border: 'none',
-                      background: 'rgba(255,255,255,0.9)', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                    }}
-                    aria-label="Notificaciones"
-                  >
-                    <ZIcon name="bell" size={20} color={Z.textSec} />
-                  </button>
-                  <div
-                    onClick={handleProfile}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && handleProfile()}
-                    aria-label="Perfil"
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <ZAvatar name="CC" size={38} />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div style={{ paddingTop: 54 }}>
-              <RadarScreen />
-            </div>
-          </div>
-        )}
-        {activeTab === 'pedidos'   && <PedidosTab />}
+      <DashHeader
+        onProfile={() => setShowAccount(true)}
+        onNotif={handleBellClick}
+        notifCount={alertCount}
+      />
+      <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
+
+      {activeAlert && (
+        <JobAlertToast alert={activeAlert} onDismiss={() => setActiveAlert(null)} />
+      )}
+
+      <main style={{
+        flex: 1,
+        overflow: isRadar ? 'hidden' : 'auto',
+        display: isRadar ? 'flex' : 'block',
+        flexDirection: isRadar ? 'column' : undefined,
+        paddingBottom: isRadar ? 0 : 96,
+      }}>
+        {activeTab === 'radar'    && <RadarScreen onNewJobOffer={handleNewJobOffer} />}
+        {activeTab === 'pedidos'  && <PedidosTab />}
         {activeTab === 'ganancias' && <GananciasScreen />}
-        {activeTab === 'perfil'    && <PerfilTab />}
+        {activeTab === 'perfil'   && <PerfilTab />}
       </main>
 
-      <RepartidorNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => setActiveTab(k as RepartidorTab)} />
       <RepartidorChatFab />
     </div>
   )
