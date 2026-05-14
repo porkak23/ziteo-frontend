@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useRef, lazy, Suspense } from 'react'
 import { Z } from '@/shared/design/tokens'
 import { RoleDashNav } from '@/shared/design/shell/RoleDashNav'
 import { ZAvatar } from '@/shared/design/components/ZAvatar'
@@ -6,8 +6,13 @@ import { SectionTitle } from '@/shared/design/shell/SectionTitle'
 import { DashHeader } from '@/shared/design/shell'
 import { useAuthStore } from '@/features/auth/store/authStore'
 import AvatarMenu from '@/shared/components/AvatarMenu'
-import { RadarScreen } from './RadarScreen'
-import { GananciasScreen } from './GananciasScreen'
+
+const RadarScreen = lazy(() =>
+  import('./RadarScreen').then((m) => ({ default: m.RadarScreen }))
+)
+const GananciasScreen = lazy(() =>
+  import('./GananciasScreen').then((m) => ({ default: m.GananciasScreen }))
+)
 
 interface JobAlert { title: string; pay: number; dist: string; type: 'heavy' | 'light' }
 
@@ -56,6 +61,16 @@ function IconStar({ color = '#F59E0B', size = 13 }: { color?: string; size?: num
     <svg width={size} height={size} viewBox="0 0 24 24">
       <path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 18l-6.2 3.1L7 14.2l-5-4.9 6.9-1L12 2z" fill={color} />
     </svg>
+  )
+}
+
+function TabSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      <div className="bg-surface-container animate-pulse rounded-2xl h-32" />
+      <div className="bg-surface-container animate-pulse rounded-2xl h-32" />
+      <div className="bg-surface-container animate-pulse rounded-2xl h-32" />
+    </div>
   )
 }
 
@@ -380,10 +395,12 @@ export function RepartidorApp() {
         flexDirection: isRadar ? 'column' : undefined,
         paddingBottom: isRadar ? 0 : 96,
       }}>
-        {activeTab === 'radar'    && <RadarScreen onNewJobOffer={handleNewJobOffer} />}
-        {activeTab === 'pedidos'  && <PedidosTab />}
-        {activeTab === 'ganancias' && <GananciasScreen />}
-        {activeTab === 'perfil'   && <PerfilTab />}
+        <Suspense fallback={<TabSkeleton />}>
+          {activeTab === 'radar'    && <RadarScreen onNewJobOffer={handleNewJobOffer} />}
+          {activeTab === 'pedidos'  && <PedidosTab />}
+          {activeTab === 'ganancias' && <GananciasScreen />}
+          {activeTab === 'perfil'   && <PerfilTab />}
+        </Suspense>
       </main>
 
       <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => setActiveTab(k as RepartidorTab)} />

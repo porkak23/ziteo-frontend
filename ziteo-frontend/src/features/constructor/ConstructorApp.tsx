@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { lazy, Suspense, useState } from 'react'
 import { Z } from '../../shared/design/tokens'
 import {
   NavIconHome,
@@ -10,10 +10,29 @@ import { DashHeader } from '../../shared/design/shell'
 import { RoleDashNav } from '../../shared/design/shell/RoleDashNav'
 import { useNavStore } from '../../shared/store/navStore'
 import AvatarMenu from '../../shared/components/AvatarMenu'
-import { ConstructorHomeTab } from './ConstructorHomeTab'
-import { ConstructorTiendaTab } from './ConstructorTiendaTab'
-import { ConstructorProyectosTab } from './ConstructorProyectosTab'
-import { ConstructorLicitacionesTab } from './ConstructorLicitacionesTab'
+
+const ConstructorHomeTab = lazy(() =>
+  import('./ConstructorHomeTab').then((m) => ({ default: m.ConstructorHomeTab }))
+)
+const ConstructorTiendaTab = lazy(() =>
+  import('./ConstructorTiendaTab').then((m) => ({ default: m.ConstructorTiendaTab }))
+)
+const ConstructorProyectosTab = lazy(() =>
+  import('./ConstructorProyectosTab').then((m) => ({ default: m.ConstructorProyectosTab }))
+)
+const ConstructorLicitacionesTab = lazy(() =>
+  import('./ConstructorLicitacionesTab').then((m) => ({ default: m.ConstructorLicitacionesTab }))
+)
+
+function TabSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      <div className="bg-surface-container animate-pulse rounded-2xl h-32" />
+      <div className="bg-surface-container animate-pulse rounded-2xl h-32" />
+      <div className="bg-surface-container animate-pulse rounded-2xl h-32" />
+    </div>
+  )
+}
 
 type ConstructorTab = 'home' | 'tienda' | 'proyectos' | 'licitaciones'
 
@@ -69,10 +88,12 @@ export function ConstructorApp() {
       <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
 
       <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 96 }}>
-        {activeTab === 'home'         && <ConstructorHomeTab onNavigate={handleNavigate} />}
-        {activeTab === 'tienda'       && <ConstructorTiendaTab />}
-        {activeTab === 'proyectos'    && <ConstructorProyectosTab />}
-        {activeTab === 'licitaciones' && <ConstructorLicitacionesTab />}
+        <Suspense fallback={<TabSkeleton />}>
+          {activeTab === 'home'         && <ConstructorHomeTab onNavigate={handleNavigate} />}
+          {activeTab === 'tienda'       && <ConstructorTiendaTab />}
+          {activeTab === 'proyectos'    && <ConstructorProyectosTab />}
+          {activeTab === 'licitaciones' && <ConstructorLicitacionesTab />}
+        </Suspense>
       </main>
 
       <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => handleTabChange(k as ConstructorTab)} />
