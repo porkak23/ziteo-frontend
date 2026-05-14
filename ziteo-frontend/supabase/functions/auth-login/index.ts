@@ -48,6 +48,16 @@ serve(async (req) => {
       return jsonResponse({ error: 'INVALID_PIN_FORMAT' }, 400)
     }
 
+    // Rate-limit: max 5 login attempts per phone per 15 min
+    const { data: throttled, error: throttleErr } = await supabaseAdmin.rpc('check_throttle', {
+      p_identifier: phone,
+      p_max_attempts: 5,
+      p_window_minutes: 15,
+    })
+    if (!throttleErr && throttled === true) {
+      return jsonResponse({ error: 'RATE_LIMITED' }, 429)
+    }
+
     // Check if user exists in profiles
     const { data: profileCheck } = await supabaseAdmin
       .from('profiles')

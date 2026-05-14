@@ -9,12 +9,7 @@ const CITIES = [
   'Potosí', 'Tarija', 'Trinidad', 'Cobija', 'El Alto', 'Sacaba',
 ]
 
-const ROLE_OPTIONS: { value: UserRole; label: string; icon: string; description: string }[] = [
-  { value: 'constructor', label: 'Constructor', icon: 'engineering', description: 'Gestiona proyectos, compra materiales y contrata personal.' },
-  { value: 'proveedor',   label: 'Vendedor',    icon: 'storefront',  description: 'Vende y alquila materiales, herramientas y maquinaria.' },
-  { value: 'maestro',     label: 'Trabajador',  icon: 'construction',description: 'Encuentra trabajo en proyectos de construcción.' },
-  { value: 'chofer',      label: 'Transportista',icon: 'local_shipping', description: 'Transporta materiales entre vendedores y constructores.' },
-]
+// TODO Fase 2: add "Solicitar cambio de rol" screen post-registro that calls RPC promote_user_role
 
 interface Props {
   oauthUser: OAuthUserData
@@ -24,7 +19,7 @@ interface Props {
 export default function OAuthProfileSetup({ oauthUser, onComplete }: Props) {
   const [name, setName]   = useState(oauthUser.name)
   const [city, setCity]   = useState('')
-  const [role, setRole]   = useState<UserRole>('constructor')
+  const initialRole: UserRole = 'constructor'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const setUser = useAuthStore((s) => s.setUser)
@@ -36,7 +31,7 @@ export default function OAuthProfileSetup({ oauthUser, onComplete }: Props) {
     setError(null)
     setLoading(true)
     try {
-      await setupOAuthProfile(oauthUser.accessToken, { name: name.trim(), city, initial_role: role })
+      await setupOAuthProfile(oauthUser.accessToken, { name: name.trim(), city, initial_role: initialRole })
 
       // Fetch the freshly created profile to build the authUser
       const { data: profile } = await supabase
@@ -57,7 +52,7 @@ export default function OAuthProfileSetup({ oauthUser, onComplete }: Props) {
           phone: profile.phone ?? '',
           email: oauthUser.email,
           active_role: profile.active_role,
-          roles: rolesData?.map((r: { role: UserRole }) => r.role) ?? [role],
+          roles: rolesData?.map((r: { role: UserRole }) => r.role) ?? [initialRole],
           access_token: oauthUser.accessToken,
           refresh_token: oauthUser.refreshToken,
           avatar_url: oauthUser.avatarUrl ?? undefined,
@@ -119,41 +114,6 @@ export default function OAuthProfileSetup({ oauthUser, onComplete }: Props) {
             <option value="">Selecciona tu ciudad</option>
             {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
-        </div>
-
-        {/* Role */}
-        <div className="flex flex-col gap-2">
-          <span className="font-label text-xs font-semibold text-on-surface-variant/60 uppercase tracking-widest">
-            Tu rol en Ziteo
-          </span>
-          <div className="flex flex-col gap-2">
-            {ROLE_OPTIONS.map((opt) => {
-              const isActive = role === opt.value
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setRole(opt.value)}
-                  className={`flex items-start gap-4 p-4 rounded-xl text-left transition-colors ${
-                    isActive
-                      ? 'border-2 border-primary bg-primary/[0.05]'
-                      : 'border border-outline-variant/50 bg-surface-container-low hover:border-outline-variant'
-                  }`}
-                >
-                  <span
-                    className={`material-symbols-outlined flex-shrink-0 mt-0.5 ${isActive ? 'text-primary text-[28px]' : 'text-on-surface-variant/60 text-[24px]'}`}
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    {opt.icon}
-                  </span>
-                  <div>
-                    <span className={`font-label font-bold text-[14px] block ${isActive ? 'text-primary' : 'text-on-surface'}`}>{opt.label}</span>
-                    <span className="font-body text-xs text-on-surface-variant/60 leading-snug">{opt.description}</span>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
         </div>
 
         {error && (

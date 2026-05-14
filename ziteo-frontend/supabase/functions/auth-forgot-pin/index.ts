@@ -39,6 +39,16 @@ serve(async (req) => {
       return jsonResponse({ error: 'INVALID_PHONE_FORMAT' }, 400)
     }
 
+    // Rate-limit: max 5 reset attempts per phone per 15 min
+    const { data: throttled, error: throttleErr } = await supabase.rpc('check_throttle', {
+      p_identifier: phone,
+      p_max_attempts: 5,
+      p_window_minutes: 15,
+    })
+    if (!throttleErr && throttled === true) {
+      return jsonResponse({ error: 'RATE_LIMITED' }, 429)
+    }
+
     // Verify the phone belongs to a registered account
     const { data: profile } = await supabase
       .from('profiles')

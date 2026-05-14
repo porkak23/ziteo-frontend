@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabaseClient'
+import { queryKeys } from '../../../shared/query/keys'
 import { useEffect } from 'react'
 
 export interface OrderItem {
@@ -43,7 +44,7 @@ export function useIncomingOrders(providerId: string, onNewOrder?: () => void) {
           filter: `provider_id=eq.${providerId}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['incoming-orders', providerId] })
+          queryClient.invalidateQueries({ queryKey: queryKeys.incomingOrders(providerId) })
           if (onNewOrder) {
             onNewOrder()
           }
@@ -57,7 +58,7 @@ export function useIncomingOrders(providerId: string, onNewOrder?: () => void) {
   }, [providerId, queryClient, onNewOrder])
 
   return useQuery({
-    queryKey: ['incoming-orders', providerId],
+    queryKey: queryKeys.incomingOrders(providerId),
     enabled: !!providerId,
     queryFn: async () => {
       const { data: ordersData, error: ordersError } = await supabase
@@ -132,7 +133,7 @@ export function useUpdateOrderStatus() {
       if (error) throw error
     },
     onSuccess: (_, { providerId }) => {
-      queryClient.invalidateQueries({ queryKey: ['incoming-orders', providerId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.incomingOrders(providerId) })
     }
   })
 }

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
+import { queryKeys } from '../../../shared/query/keys'
 
 export interface Licitacion {
   id: string
@@ -42,7 +43,7 @@ export interface CreateLicitacionPayload {
 export function useLicitacionesAbiertas(filters?: { city?: string; specialty?: string }) {
   const user = useAuthStore((s) => s.user)
   return useQuery<Licitacion[]>({
-    queryKey: ['licitaciones-abiertas', filters],
+    queryKey: queryKeys.licitacionesAbiertas(filters),
     enabled: !!user?.user_id,
     queryFn: async () => {
       let q = supabase
@@ -71,7 +72,7 @@ export function useLicitacionesAbiertas(filters?: { city?: string; specialty?: s
 export function useMisLicitaciones() {
   const user = useAuthStore((s) => s.user)
   return useQuery<Licitacion[]>({
-    queryKey: ['mis-licitaciones', user?.user_id],
+    queryKey: queryKeys.misLicitaciones(user?.user_id),
     enabled: !!user?.user_id && user.active_role === 'constructor',
     queryFn: async () => {
       const { data, error } = await supabase
@@ -90,7 +91,7 @@ export function useMisLicitaciones() {
 // Constructor: ver postulantes de una licitación
 export function usePostulantesDeLicitacion(licitacionId: string) {
   return useQuery<LicitacionPostulacion[]>({
-    queryKey: ['postulantes-licitacion', licitacionId],
+    queryKey: queryKeys.postulantesDeLicitacion(licitacionId),
     enabled: !!licitacionId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -117,7 +118,7 @@ export function useCrearLicitacion() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mis-licitaciones'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.misLicitaciones() })
     },
   })
 }
@@ -131,7 +132,7 @@ export function useCerrarLicitacion() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mis-licitaciones'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.misLicitaciones() })
     },
   })
 }
@@ -153,7 +154,7 @@ export function usePostularse() {
       return { licitacion }
     },
     onSuccess: async (res) => {
-      queryClient.invalidateQueries({ queryKey: ['licitaciones-abiertas'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.licitacionesAbiertas() })
 
       if (res.licitacion?.constructor_id) {
         await supabase.rpc('send_notification', {
@@ -176,7 +177,7 @@ export function useActualizarPostulacion() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['postulantes-licitacion'] })
+      queryClient.invalidateQueries({ queryKey: ['postulantes-licitacion'] }) // prefix invalidation intentional
     },
   })
 }

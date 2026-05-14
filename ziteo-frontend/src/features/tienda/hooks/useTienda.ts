@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabaseClient'
+import { queryKeys } from '../../../shared/query/keys'
 import type { Category, ProductCard, TiendaFilters } from '../types/tiendaTypes'
 
 export const TIENDA_PAGE_SIZE = 15
 
 export function useCategories() {
   return useQuery<Category[]>({
-    queryKey: ['categories'],
+    queryKey: queryKeys.categories(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
@@ -20,7 +21,7 @@ export function useCategories() {
 
 export function useProducts(filters: TiendaFilters, offset: number) {
   return useQuery<ProductCard[]>({
-    queryKey: ['products', filters, offset],
+    queryKey: queryKeys.products(filters, offset),
     queryFn: async () => {
       let query = supabase
         .from('products')

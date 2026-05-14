@@ -54,6 +54,16 @@ serve(async (req) => {
       return jsonResponse({ error: 'INVALID_ROLE' }, 400)
     }
 
+    // Rate-limit: max 5 registration attempts per phone per 15 min
+    const { data: throttled, error: throttleErr } = await supabase.rpc('check_throttle', {
+      p_identifier: phone,
+      p_max_attempts: 5,
+      p_window_minutes: 15,
+    })
+    if (!throttleErr && throttled === true) {
+      return jsonResponse(safeError('RATE_LIMITED'), 429)
+    }
+
     // Check if phone already registered
     const { data: existingProfile } = await supabase
       .from('profiles')
