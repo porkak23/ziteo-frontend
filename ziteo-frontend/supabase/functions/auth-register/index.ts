@@ -1,9 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendWhatsAppOtp } from '../_shared/whatsapp.ts'
+import { safeError } from '../_shared/safeError.ts'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? 'https://ziteo-frontend.vercel.app',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -74,7 +75,7 @@ serve(async (req) => {
 
     if (authError || !authData.user) {
       console.error('Auth createUser error:', authError)
-      return jsonResponse({ error: 'AUTH_CREATE_FAILED', details: authError?.message }, 500)
+      return jsonResponse(safeError('REGISTRATION_FAILED'), 500)
     }
 
     const user_id = authData.user.id
@@ -96,7 +97,7 @@ serve(async (req) => {
       console.error('Profile insert error:', profileError)
       // Rollback: delete auth user
       await supabase.auth.admin.deleteUser(user_id)
-      return jsonResponse({ error: 'PROFILE_CREATE_FAILED', details: profileError.message }, 500)
+      return jsonResponse(safeError('PROFILE_CREATION_FAILED'), 500)
     }
 
     // Insert into user_roles
@@ -109,7 +110,7 @@ serve(async (req) => {
     if (roleError) {
       console.error('User role insert error:', roleError)
       await supabase.auth.admin.deleteUser(user_id)
-      return jsonResponse({ error: 'ROLE_CREATE_FAILED', details: roleError.message }, 500)
+      return jsonResponse(safeError('ROLE_CREATION_FAILED'), 500)
     }
 
     // Generate OTP
@@ -125,7 +126,7 @@ serve(async (req) => {
 
     if (otpError) {
       console.error('OTP insert error:', otpError)
-      return jsonResponse({ error: 'OTP_CREATE_FAILED', details: otpError.message }, 500)
+      return jsonResponse(safeError('OTP_CREATE_FAILED'), 500)
     }
 
     // Send OTP via WhatsApp

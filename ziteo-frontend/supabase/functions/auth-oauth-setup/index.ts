@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? 'https://ziteo-frontend.vercel.app',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -73,7 +73,7 @@ serve(async (req) => {
 
     if (profileError) {
       console.error('Profile insert error:', profileError)
-      return jsonResponse({ error: 'PROFILE_CREATE_FAILED', details: profileError.message }, 500)
+      return jsonResponse({ error: 'PROFILE_CREATE_FAILED' }, 500)
     }
 
     // Create user_role
@@ -86,7 +86,7 @@ serve(async (req) => {
     if (roleError) {
       console.error('Role insert error:', roleError)
       await supabaseAdmin.from('profiles').delete().eq('user_id', user.id)
-      return jsonResponse({ error: 'ROLE_CREATE_FAILED', details: roleError.message }, 500)
+      return jsonResponse({ error: 'ROLE_CREATE_FAILED' }, 500)
     }
 
     return jsonResponse({ success: true, user_id: user.id })

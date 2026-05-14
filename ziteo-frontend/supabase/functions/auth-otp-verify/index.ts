@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? 'https://ziteo-frontend.vercel.app',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -116,7 +116,7 @@ serve(async (req) => {
 
     if (confirmError) {
       console.error('Phone confirm error:', confirmError)
-      return jsonResponse({ error: 'PHONE_CONFIRM_FAILED', details: confirmError.message }, 500)
+      return jsonResponse({ error: 'PHONE_CONFIRM_FAILED' }, 500)
     }
 
     // Fetch profile data

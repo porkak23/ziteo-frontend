@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendWhatsAppOtp } from '../_shared/whatsapp.ts'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? 'https://ziteo-frontend.vercel.app',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -66,7 +66,7 @@ serve(async (req) => {
 
     if (otpError) {
       console.error('OTP insert error:', otpError)
-      return jsonResponse({ error: 'OTP_CREATE_FAILED', details: otpError.message }, 500)
+      return jsonResponse({ error: 'OTP_CREATE_FAILED' }, 500)
     }
 
     try {

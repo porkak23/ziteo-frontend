@@ -1,8 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { safeError } from '../_shared/safeError.ts'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? 'https://ziteo-frontend.vercel.app',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -88,17 +89,26 @@ serve(async (req) => {
       return jsonResponse({ error: 'INVALID_OTP' }, 400)
     }
 
-    // Mark OTP as used
-    await supabase.from('otps').update({ used: true }).eq('id', otpRecord.id)
+    // Mark OTP as used FIRST — prevents replay even if password update fails
+    const { data: otpUpdateData, error: otpUpdateError } = await supabase
+      .from('otps')
+      .update({ used: true })
+      .eq('id', otpRecord.id)
+      .select()
 
-    // Update the password in Supabase Auth
+    if (otpUpdateError || !otpUpdateData || otpUpdateData.length === 0) {
+      console.error('OTP mark-used error:', otpUpdateError)
+      return jsonResponse({ error: 'INVALID_OTP' }, 400)
+    }
+
+    // Update the password in Supabase Auth only after OTP is consumed
     const { error: updateError } = await supabase.auth.admin.updateUserById(profile.user_id, {
       password: new_pin,
     })
 
     if (updateError) {
       console.error('Password update error:', updateError)
-      return jsonResponse({ error: 'RESET_FAILED', details: updateError.message }, 500)
+      return jsonResponse(safeError('RESET_FAILED'), 500)
     }
 
     return jsonResponse({ reset: true })

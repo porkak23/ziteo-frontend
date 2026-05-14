@@ -3,6 +3,7 @@ import { useAuthStore } from './features/auth/store/authStore'
 import type { UserRole } from './features/auth/store/authStore'
 import { useNavStore } from './shared/store/navStore'
 import { supabase } from './lib/supabaseClient'
+import { useAuthSession } from './shared/hooks/useAuthSession'
 import { InstallPWA } from './shared/components/InstallPWA'
 import SplashScreen from './features/auth/components/SplashScreen'
 import WelcomeScreen from './features/auth/components/WelcomeScreen'
@@ -17,10 +18,6 @@ import AppLayout from './shared/components/AppLayout'
 import { ThemeInitializer } from './shared/components/ThemeInitializer'
 import { ChatScreen } from './shared/components/ChatScreen'
 
-const ConstructorApp    = lazy(() => import('./features/constructor/ConstructorApp').then(m => ({ default: m.ConstructorApp })))
-const VendedorApp       = lazy(() => import('./features/vendedor/VendedorApp').then(m => ({ default: m.VendedorApp })))
-const TrabajadorApp     = lazy(() => import('./features/trabajador/TrabajadorApp').then(m => ({ default: m.TrabajadorApp })))
-const RepartidorApp     = lazy(() => import('./features/repartidor/RepartidorApp').then(m => ({ default: m.RepartidorApp })))
 const HomeScreen        = lazy(() => import('./features/app/HomeScreen'))
 const TiendaScreen      = lazy(() => import('./features/tienda').then(m => ({ default: m.TiendaScreen })))
 const ProyectosScreen   = lazy(() => import('./features/proyectos').then(m => ({ default: m.ProyectosScreen })))
@@ -70,17 +67,11 @@ export default function App() {
   const setActiveTab = useNavStore((s) => s.setTab)
   const { isAuthenticated } = useAuthStore()
   const isAuth = useAuthStore((s) => s.user !== null)
-  const accessToken = useAuthStore((s) => s.user?.access_token)
-  const refreshToken = useAuthStore((s) => s.user?.refresh_token)
   const currentUser = useAuthStore((s) => s.user)
   const isMaestro = currentUser?.roles?.includes('maestro') ?? false
 
-  // Restore Supabase session from persisted token so RLS-protected queries work
-  useEffect(() => {
-    if (accessToken) {
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken ?? '' }).catch(() => {})
-    }
-  }, [accessToken, refreshToken])
+  // Restore Supabase session on mount and keep tokens in sync with token refreshes
+  useAuthSession()
 
   useEffect(() => {
     if (!isAuth && screen === 'app') {
@@ -88,7 +79,7 @@ export default function App() {
       setScreen('welcome')
       setActiveTab('home')
     }
-  }, [isAuth, screen])
+  }, [isAuth, screen, setScreen, setActiveTab])
 
   // Chofer has no 'home' tab — land them on 'viajes' instead.
   useEffect(() => {
@@ -238,60 +229,14 @@ export default function App() {
     )
   }
 
-  const VENDEDOR_TABS = ['home', 'inventario', 'pedidos', 'cotizaciones']
-  const isVendedorTab = currentUser?.active_role === 'proveedor' && VENDEDOR_TABS.includes(activeTab)
-
-  if (isVendedorTab) {
-    return (
-      <>
-        <ThemeInitializer />
-        <Suspense fallback={<TabSkeleton />}>
-          <VendedorApp />
-        </Suspense>
-        <InstallPWA />
-      </>
-    )
-  }
-
-  if (currentUser?.active_role === 'chofer') {
-    return (
-      <>
-        <ThemeInitializer />
-        <Suspense fallback={<TabSkeleton />}>
-          <RepartidorApp />
-        </Suspense>
-        <InstallPWA />
-      </>
-    )
-  }
-
-  const TRABAJADOR_TABS = ['home', 'licitaciones', 'proyectos', 'perfil']
-  const isTrabajadorTab = currentUser?.active_role === 'maestro' && TRABAJADOR_TABS.includes(activeTab)
-
-  if (isTrabajadorTab) {
-    return (
-      <>
-        <ThemeInitializer />
-        <Suspense fallback={<TabSkeleton />}>
-          <TrabajadorApp />
-        </Suspense>
-        <InstallPWA />
-      </>
-    )
-  }
-
   return (
     <>
       <ThemeInitializer />
       <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
         <Suspense fallback={<TabSkeleton />}>
-          {/* ── Constructor role: 4-tab dashboard ──────────────────────────── */}
-          {currentUser?.active_role === 'constructor' && (
-            activeTab === 'home' || activeTab === 'tienda' || activeTab === 'proyectos' || activeTab === 'licitaciones'
-          ) && <ConstructorApp />}
-
-          {/* ── Constructor sub-screens (non-tab) ──────────────────────────── */}
-          {currentUser?.active_role === 'constructor' && activeTab === 'contratar' && (
+          {activeTab === 'home'        && <HomeScreen onNavigate={setActiveTab} />}
+          {activeTab === 'proyectos'  && <ProyectosScreen />}
+          {activeTab === 'contratar'  && (
             <>
               {chatWith && (
                 <ChatScreen
@@ -315,44 +260,7 @@ export default function App() {
               }
             </>
           )}
-          {activeTab === 'transporte-pesado' && <SolicitarTransporteScreen type="pesado" onBack={() => setActiveTab('home')} />}
-          {activeTab === 'transporte-ligero' && <SolicitarTransporteScreen type="ligero" onBack={() => setActiveTab('home')} />}
-
-          {/* ── Non-constructor roles ──────────────────────────────────────── */}
-          {currentUser?.active_role !== 'constructor' && activeTab === 'home' && (
-            <HomeScreen onNavigate={setActiveTab} />
-          )}
-          {currentUser?.active_role !== 'constructor' && activeTab === 'proyectos' && <ProyectosScreen />}
-          {currentUser?.active_role !== 'constructor' && activeTab === 'contratar' && (
-            <>
-              {chatWith && (
-                <ChatScreen
-                  otherUserId={chatWith.userId}
-                  otherUserName={chatWith.name}
-                  onClose={() => setChatWith(null)}
-                />
-              )}
-              {viewingMaestroId
-                ? <MaestroProfileScreen
-                    maestroId={viewingMaestroId}
-                    isOwn={false}
-                    onBack={() => setViewingMaestroId(null)}
-                    onChat={(id, name) => { setViewingMaestroId(null); setChatWith({ userId: id, name }) }}
-                    onHire={(id) => { setHireTargetId(id); setViewingMaestroId(null) }}
-                  />
-                : <ContratarScreen
-                    onViewProfile={(id) => setViewingMaestroId(id)}
-                    initialHireMaestroId={hireTargetId}
-                  />
-              }
-            </>
-          )}
-          {currentUser?.active_role !== 'constructor' && activeTab === 'tienda' && <TiendaScreen />}
-          {currentUser?.active_role !== 'constructor' && activeTab === 'licitaciones' && (
-            currentUser?.active_role === 'maestro' ? <LicitacionFeed /> : <MisLicitacionesScreen />
-          )}
-
-          {/* ── Shared screens (all roles) ─────────────────────────────────── */}
+          {activeTab === 'tienda'     && <TiendaScreen />}
           {activeTab === 'pedidos'     && <PedidosProveedorScreen />}
           {activeTab === 'mis-pedidos' && <MisPedidosScreen />}
           {activeTab === 'intel'        && <IntelScreen />}
@@ -361,6 +269,8 @@ export default function App() {
           {activeTab === 'trabajos'   && <TrabajosScreen />}
           {activeTab === 'inventario' && <InventarioScreen />}
           {activeTab === 'viajes'     && <TransportistaScreen />}
+          {activeTab === 'transporte-pesado' && <SolicitarTransporteScreen type="pesado" onBack={() => setActiveTab('home')} />}
+          {activeTab === 'transporte-ligero' && <SolicitarTransporteScreen type="ligero" onBack={() => setActiveTab('home')} />}
           {activeTab === 'historial'  && <HistorialTransportistaScreen />}
           {activeTab === 'billetera'  && <BilleteraTransportistaScreen />}
           {activeTab === 'mi-perfil'  && (isMaestro && currentUser
@@ -371,6 +281,7 @@ export default function App() {
           {activeTab === 'habilidades'     && <HabilidadesScreen />}
           {activeTab === 'settings'        && <SettingsScreen onLogout={() => { setScreen('welcome'); setActiveTab('home') }} />}
           {activeTab === 'notificaciones'  && <NotificationsScreen />}
+          {activeTab === 'licitaciones'    && (currentUser?.active_role === 'maestro' ? <LicitacionFeed /> : <MisLicitacionesScreen />)}
         </Suspense>
         <InstallPWA />
       </AppLayout>

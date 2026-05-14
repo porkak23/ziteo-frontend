@@ -22,6 +22,8 @@ interface AuthStore {
   setActiveRole: (role: UserRole) => void
   addRole: (role: UserRole) => void
   logout: () => void
+  clearSession: () => void
+  updateTokens: (accessToken: string, refreshToken: string) => void
   isAuthenticated: () => boolean
 }
 
@@ -45,6 +47,15 @@ export const useAuthStore = create<AuthStore>()(
         }),
 
       logout: () => set({ user: null }),
+
+      clearSession: () => set({ user: null }),
+
+      updateTokens: (accessToken, refreshToken) =>
+        set((state) => ({
+          user: state.user
+            ? { ...state.user, access_token: accessToken, refresh_token: refreshToken }
+            : null,
+        })),
 
       isAuthenticated: () => get().user !== null,
     }),
