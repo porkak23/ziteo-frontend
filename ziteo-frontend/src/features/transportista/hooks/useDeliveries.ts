@@ -48,11 +48,17 @@ export function usePendingDeliveries(cargoCapability?: CargoCapability | null) {
 
   // Realtime: listen for new pending deliveries and deletions/updates
   useEffect(() => {
+    const channelName = `deliveries:pool${cargoCapability ? `:${cargoCapability}` : ''}`
     const channel = supabase
-      .channel(`deliveries:pool-${Math.random()}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'deliveries' },
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'deliveries',
+          filter: 'status=eq.pending',
+        },
         () => {
           queryClientRef.current.invalidateQueries({ queryKey: POOL_KEY(cargoCapability) })
         },
@@ -100,7 +106,7 @@ export function useMyDeliveries() {
   useEffect(() => {
     if (!driverId) return
     const channel = supabase
-      .channel(`deliveries:driver:${driverId}-${Math.random()}`)
+      .channel(`deliveries:driver:${driverId}`)
       .on(
         'postgres_changes',
         {

@@ -7,6 +7,7 @@ import { get, set, del } from 'idb-keyval'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './shared/components/ErrorBoundary'
+import * as Sentry from '@sentry/react'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,6 +23,16 @@ const idbPersister: Persister = {
   persistClient: (client: PersistedClient) => set('__rq_cache', client),
   restoreClient: () => get<PersistedClient>('__rq_cache'),
   removeClient: () => del('__rq_cache'),
+}
+
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: import.meta.env.MODE,
+    tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
+    integrations: [Sentry.browserTracingIntegration()],
+  })
 }
 
 createRoot(document.getElementById('root')!).render(

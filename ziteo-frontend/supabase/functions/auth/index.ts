@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendWhatsAppOtp } from '../_shared/whatsapp.ts'
 import { safeError } from '../_shared/safeError.ts'
+import { log } from '../_shared/logger.ts'
 
 // ─── Shared constants ───────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ async function handleLogin(req: Request, supabaseAdmin: SupabaseClient): Promise
   })
 
   if (signInError || !signInData.session || !signInData.user) {
-    console.error('Sign in error:', signInError)
+    log('error', 'auth.login.signin_failed', { message: signInError?.message })
     return jsonResponse({ error: 'INVALID_PIN' }, 401)
   }
 
@@ -97,7 +98,7 @@ async function handleLogin(req: Request, supabaseAdmin: SupabaseClient): Promise
     .single()
 
   if (profileError || !profile) {
-    console.error('Profile fetch error:', profileError)
+    log('error', 'auth.login.profile_not_found', { message: profileError?.message })
     return jsonResponse({ error: 'PROFILE_NOT_FOUND' }, 404)
   }
 
@@ -108,7 +109,7 @@ async function handleLogin(req: Request, supabaseAdmin: SupabaseClient): Promise
     .eq('user_id', user_id)
 
   if (rolesError) {
-    console.error('Roles fetch error:', rolesError)
+    log('error', 'auth.login.roles_failed', { message: rolesError?.message })
     return jsonResponse({ error: 'ROLES_FETCH_FAILED' }, 500)
   }
 
@@ -180,7 +181,7 @@ async function handleRegister(req: Request, supabase: SupabaseClient): Promise<R
   })
 
   if (authError || !authData.user) {
-    console.error('Auth createUser error:', authError)
+    log('error', 'auth.register.create_user_failed', { message: authError?.message })
     return jsonResponse(safeError('REGISTRATION_FAILED'), 500)
   }
 
@@ -200,7 +201,7 @@ async function handleRegister(req: Request, supabase: SupabaseClient): Promise<R
   const { error: profileError } = await supabase.from('profiles').insert(profileData)
 
   if (profileError) {
-    console.error('Profile insert error:', profileError)
+    log('error', 'auth.register.profile_insert_failed', { message: profileError?.message })
     await supabase.auth.admin.deleteUser(user_id)
     return jsonResponse(safeError('PROFILE_CREATION_FAILED'), 500)
   }
@@ -213,7 +214,7 @@ async function handleRegister(req: Request, supabase: SupabaseClient): Promise<R
   })
 
   if (roleError) {
-    console.error('User role insert error:', roleError)
+    log('error', 'auth.register.role_insert_failed', { message: roleError?.message })
     await supabase.auth.admin.deleteUser(user_id)
     return jsonResponse(safeError('ROLE_CREATION_FAILED'), 500)
   }
@@ -230,7 +231,7 @@ async function handleRegister(req: Request, supabase: SupabaseClient): Promise<R
   })
 
   if (otpError) {
-    console.error('OTP insert error:', otpError)
+    log('error', 'auth.register.otp_insert_failed', { message: otpError?.message })
     return jsonResponse(safeError('OTP_CREATE_FAILED'), 500)
   }
 
@@ -238,7 +239,7 @@ async function handleRegister(req: Request, supabase: SupabaseClient): Promise<R
   try {
     await sendWhatsAppOtp(phone, otp_code)
   } catch (waErr) {
-    console.error('WhatsApp send error:', waErr)
+    log('error', 'auth.register.whatsapp_send_failed', { message: String(waErr) })
     const isNotConfigured = String(waErr).includes('WHATSAPP_NOT_CONFIGURED')
     if (!isNotConfigured) {
       return jsonResponse({ error: 'WHATSAPP_SEND_FAILED' }, 500)
@@ -292,7 +293,7 @@ async function handleOtpVerify(req: Request, supabase: SupabaseClient): Promise<
     .maybeSingle()
 
   if (otpFetchError) {
-    console.error('OTP fetch error:', otpFetchError)
+    log('error', 'auth.otp_verify.otp_fetch_failed', { message: otpFetchError?.message })
     return jsonResponse({ error: 'INTERNAL_SERVER_ERROR' }, 500)
   }
 
@@ -325,7 +326,7 @@ async function handleOtpVerify(req: Request, supabase: SupabaseClient): Promise<
     .eq('id', otpRecord.id)
 
   if (otpUpdateError) {
-    console.error('OTP update error:', otpUpdateError)
+    log('error', 'auth.otp_verify.otp_update_failed', { message: otpUpdateError?.message })
     return jsonResponse({ error: 'INTERNAL_SERVER_ERROR' }, 500)
   }
 
@@ -335,7 +336,7 @@ async function handleOtpVerify(req: Request, supabase: SupabaseClient): Promise<
   })
 
   if (confirmError) {
-    console.error('Phone confirm error:', confirmError)
+    log('error', 'auth.otp_verify.phone_confirm_failed', { message: confirmError?.message })
     return jsonResponse({ error: 'PHONE_CONFIRM_FAILED' }, 500)
   }
 
@@ -347,7 +348,7 @@ async function handleOtpVerify(req: Request, supabase: SupabaseClient): Promise<
     .single()
 
   if (profileError || !profile) {
-    console.error('Profile fetch error:', profileError)
+    log('error', 'auth.otp_verify.profile_not_found', { message: profileError?.message })
     return jsonResponse({ error: 'PROFILE_NOT_FOUND' }, 404)
   }
 
@@ -358,7 +359,7 @@ async function handleOtpVerify(req: Request, supabase: SupabaseClient): Promise<
     .eq('user_id', user_id)
 
   if (rolesError) {
-    console.error('Roles fetch error:', rolesError)
+    log('error', 'auth.otp_verify.roles_failed', { message: rolesError?.message })
     return jsonResponse({ error: 'ROLES_FETCH_FAILED' }, 500)
   }
 
@@ -426,14 +427,14 @@ async function handleOtpResend(req: Request, supabase: SupabaseClient): Promise<
   })
 
   if (otpError) {
-    console.error('OTP insert error:', otpError)
+    log('error', 'auth.otp_resend.otp_insert_failed', { message: otpError?.message })
     return jsonResponse({ error: 'OTP_CREATE_FAILED' }, 500)
   }
 
   try {
     await sendWhatsAppOtp(phone, otp_code)
   } catch (waErr) {
-    console.error('WhatsApp send error:', waErr)
+    log('error', 'auth.otp_resend.whatsapp_send_failed', { message: String(waErr) })
     const isNotConfigured = String(waErr).includes('WHATSAPP_NOT_CONFIGURED')
     if (!isNotConfigured) {
       return jsonResponse({ error: 'WHATSAPP_SEND_FAILED' }, 500)
@@ -493,14 +494,14 @@ async function handleForgotPin(req: Request, supabase: SupabaseClient): Promise<
   })
 
   if (otpError) {
-    console.error('OTP insert error:', otpError)
+    log('error', 'auth.forgot_pin.otp_insert_failed', { message: otpError?.message })
     return jsonResponse({ error: 'OTP_CREATE_FAILED' }, 500)
   }
 
   try {
     await sendWhatsAppOtp(phone, otp_code)
   } catch (waErr) {
-    console.error('WhatsApp send error:', waErr)
+    log('error', 'auth.forgot_pin.whatsapp_send_failed', { message: String(waErr) })
     const isNotConfigured = String(waErr).includes('WHATSAPP_NOT_CONFIGURED')
     if (!isNotConfigured) {
       return jsonResponse({ error: 'WHATSAPP_SEND_FAILED' }, 500)
@@ -579,7 +580,7 @@ async function handleResetPin(req: Request, supabase: SupabaseClient): Promise<R
     .select()
 
   if (otpUpdateError || !otpUpdateData || otpUpdateData.length === 0) {
-    console.error('OTP mark-used error:', otpUpdateError)
+    log('error', 'auth.reset_pin.otp_mark_used_failed', { message: otpUpdateError?.message })
     return jsonResponse({ error: 'INVALID_OTP' }, 400)
   }
 
@@ -589,7 +590,7 @@ async function handleResetPin(req: Request, supabase: SupabaseClient): Promise<R
   })
 
   if (updateError) {
-    console.error('Password update error:', updateError)
+    log('error', 'auth.reset_pin.password_update_failed', { message: updateError?.message })
     return jsonResponse(safeError('RESET_FAILED'), 500)
   }
 
@@ -642,7 +643,7 @@ async function handleOAuthSetup(req: Request, supabaseAdmin: SupabaseClient): Pr
   })
 
   if (profileError) {
-    console.error('Profile insert error:', profileError)
+    log('error', 'auth.oauth_setup.profile_insert_failed', { message: profileError?.message })
     return jsonResponse({ error: 'PROFILE_CREATE_FAILED' }, 500)
   }
 
@@ -654,7 +655,7 @@ async function handleOAuthSetup(req: Request, supabaseAdmin: SupabaseClient): Pr
   })
 
   if (roleError) {
-    console.error('Role insert error:', roleError)
+    log('error', 'auth.oauth_setup.role_insert_failed', { message: roleError?.message })
     await supabaseAdmin.from('profiles').delete().eq('user_id', user.id)
     return jsonResponse({ error: 'ROLE_CREATE_FAILED' }, 500)
   }
@@ -704,7 +705,7 @@ serve(async (req) => {
         return jsonResponse({ error: 'NOT_FOUND' }, 404)
     }
   } catch (err) {
-    console.error('Unexpected error:', err)
+    log('error', 'auth.router.unexpected_error', { message: String(err) })
     return jsonResponse({ error: 'INTERNAL_SERVER_ERROR' }, 500)
   }
 })
