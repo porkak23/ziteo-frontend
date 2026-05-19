@@ -17,7 +17,6 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'pwa-icon.svg', 'icons/*.png'],
-      // MANUAL CONFIG: replace .placeholder files in public/icons/ with real PNGs before production deploy
       manifest: {
         name: 'Ziteo',
         short_name: 'Ziteo',
