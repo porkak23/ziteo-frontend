@@ -18,25 +18,32 @@ export function useMaestroProfile(maestroId: string) {
   return useQuery<MaestroProfile>({
     queryKey: ['maestroProfile', maestroId],
     enabled: !!maestroId,
-    retry: false,
+    retry: 1,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`*, user_roles!inner(*)`)
-        .eq('user_id', maestroId)
-        .eq('user_roles.role', 'maestro')
-        .single()
+      // Ensure session is fresh before querying — access tokens expire in 1h
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData.session) {
+        await supabase.auth.refreshSession()
+      }
 
-      if (error) throw error
+      // Two independent queries so a missing user_roles row doesn't kill the fetch
+      const [profileRes, roleRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('user_id', maestroId).maybeSingle(),
+        supabase.from('user_roles').select('*').eq('user_id', maestroId).eq('role', 'maestro').maybeSingle(),
+      ])
 
-      const role = Array.isArray(data.user_roles) ? data.user_roles[0] : data.user_roles
+      if (profileRes.error) throw profileRes.error
+      if (!profileRes.data) throw new Error('PROFILE_NOT_FOUND')
+
+      const profile = profileRes.data
+      const role = roleRes.data ?? null
 
       return {
-        user_id: data.user_id,
-        name: data.name,
-        city: data.city ?? '',
-        avatar_url: data.avatar_url ?? null,
-        bio: data.bio ?? null,
+        user_id: profile.user_id,
+        name: profile.name ?? '',
+        city: profile.city ?? '',
+        avatar_url: profile.avatar_url ?? null,
+        bio: profile.bio ?? null,
         specialty: role?.specialty ?? null,
         years_experience: role?.years_experience ?? null,
         hourly_rate: role?.hourly_rate ?? null,
@@ -75,16 +82,30 @@ export function useUpdateMaestroProfile() {
       if (is_available !== undefined) roleUpdate.is_available = is_available
 
       if (Object.keys(roleUpdate).length > 0) {
+        // Upsert so the row is created if it didn't exist yet
         const { error } = await supabase
           .from('user_roles')
-          .update(roleUpdate)
-          .eq('user_id', maestroId)
-          .eq('role', 'maestro')
+          .upsert({ user_id: maestroId, role: 'maestro', ...roleUpdate }, { onConflict: 'user_id,role' })
         if (error) throw error
       }
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['maestroProfile', vars.maestroId] })
+    },
+  })
+}
+
+export function useBootstrapMaestroRole() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (maestroId: string) => {
+      const { error } = await supabase
+        .from('user_roles')
+        .upsert({ user_id: maestroId, role: 'maestro', is_available: false }, { onConflict: 'user_id,role' })
+      if (error) throw error
+    },
+    onSuccess: (_, maestroId) => {
+      queryClient.invalidateQueries({ queryKey: ['maestroProfile', maestroId] })
     },
   })
 }

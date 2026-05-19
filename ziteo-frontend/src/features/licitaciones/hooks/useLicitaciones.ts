@@ -157,12 +157,23 @@ export function usePostularse() {
       queryClient.invalidateQueries({ queryKey: queryKeys.licitacionesAbiertas() })
 
       if (res.licitacion?.constructor_id) {
+        const notifTitle = 'Nueva postulacion'
+        const notifBody  = `Un maestro ha postulado a tu licitacion "${res.licitacion.title}".`
         await supabase.rpc('send_notification', {
           p_user_id: res.licitacion.constructor_id,
           p_type:    'contract',
-          p_title:   'Nueva postulación',
-          p_message: `Un maestro ha postulado a tu licitación "${res.licitacion.title}".`,
+          p_title:   notifTitle,
+          p_message: notifBody,
         })
+        // Also deliver as Web Push if the constructor has an active subscription
+        supabase.functions.invoke('notifications/send-push', {
+          body: {
+            user_id: res.licitacion.constructor_id,
+            title:   notifTitle,
+            body:    notifBody,
+            url:     '/',
+          },
+        }).catch((err: unknown) => console.warn('[send-push] licitacion push failed:', err))
       }
     },
   })

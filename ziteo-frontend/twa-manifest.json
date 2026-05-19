@@ -1,0 +1,43 @@
+{
+  "packageId": "bo.ziteo.app",
+  "host": "ziteo.bo",
+  "name": "Ziteo",
+  "launcherName": "Ziteo",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#D94F00",
+  "navigationColor": "#D94F00",
+  "navigationColorDark": "#D94F00",
+  "navigationDividerColor": "#D94F00",
+  "navigationDividerColorDark": "#D94F00",
+  "backgroundColor": "#f9f9f9",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://ziteo.bo/icons/icon-512.png",
+  "maskableIconUrl": "https://ziteo.bo/icons/icon-512-maskable.png",
+  "monochromeIconUrl": "https://ziteo.bo/icons/icon-192.png",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://ziteo.bo/manifest.webmanifest",
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://ziteo.bo/",
+  "minSdkVersion": 21,
+  "fingerprints": [],
+  "features": {
+    "locationDelegation": { "enabled": false },
+    "playBilling": { "enabled": false }
+  },
+  "alphaDependencies": { "enabled": false },
+  "enableSiteSettingsShortcut": true,
+  "retainedBundles": [],
+  "serviceAccountJsonFile": "./service-account.json",
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "additionalTrustedOrigins": [],
+  "rotatedKeys": []
+}

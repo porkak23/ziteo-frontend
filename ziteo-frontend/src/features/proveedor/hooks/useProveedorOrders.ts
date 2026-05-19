@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabaseClient'
 import { queryKeys } from '../../../shared/query/keys'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export interface OrderItem {
   id: string
@@ -22,19 +22,22 @@ export interface ProveedorOrder {
   status: string
   total: number
   created_at: string
-  payment_confirmed_at?: string | null
   items: OrderItem[]
   buyer_name?: string
+  cargo_type?: 'light' | 'heavy'
+  payment_evidence_url?: string | null
 }
 
 export function useIncomingOrders(providerId: string, onNewOrder?: () => void) {
   const queryClient = useQueryClient()
+  const [channelSuffix] = useState(() => Math.random().toString(36).slice(2))
+  const channelKey = useRef(`incoming_orders_${providerId}_${channelSuffix}`)
 
   useEffect(() => {
     if (!providerId) return
 
     const channel = supabase
-      .channel(`incoming_orders_${providerId}`)
+      .channel(channelKey.current)
       .on(
         'postgres_changes',
         {
@@ -70,7 +73,8 @@ export function useIncomingOrders(providerId: string, onNewOrder?: () => void) {
           status,
           total,
           created_at,
-          payment_confirmed_at,
+          cargo_type,
+          payment_evidence_url,
           buyer:profiles!orders_constructor_id_fkey(name)
         `)
         .eq('provider_id', providerId)

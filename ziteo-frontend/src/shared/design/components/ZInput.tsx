@@ -73,6 +73,7 @@ export function ZInput({
           placeholder={placeholder}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          className="z-input-inner"
           style={{
             flex: 1,
             border: 'none',

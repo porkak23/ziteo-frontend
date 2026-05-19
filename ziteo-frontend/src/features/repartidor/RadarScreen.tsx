@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { useAvailableDeliveries, useAcceptDelivery } from './hooks/useDeliveries'
+import { track } from '@/lib/analytics'
 import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -32,6 +34,8 @@ interface MapJob {
   weight: string
   pay: number
   time: string
+  deliveryId?: string
+  orderId?: string
 }
 
 const MAP_JOBS: MapJob[] = [
@@ -175,6 +179,9 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
   const [showOfferPop, setShowOfferPop] = useState(false)
   const [sheetCollapsed, setSheetCollapsed] = useState(false)
 
+  const { data: pendingDeliveries = [] } = useAvailableDeliveries(vehicleType)
+  const { mutate: acceptDelivery } = useAcceptDelivery()
+
   useEffect(() => {
     if (mode === 'online') {
       const t = setTimeout(() => {
@@ -192,15 +199,33 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setSheetCollapsed(false) }, [mode])
 
-  const visibleJobs = MAP_JOBS.filter(j => j.type === vehicleType)
+  const realJobs: MapJob[] = useMemo(() => pendingDeliveries.map((d, i) => ({
+    id: i + 100,
+    lat: d.pickup_lat ?? DRIVER_POS[0] + (i * 0.007 - 0.02),
+    lng: d.pickup_lng ?? DRIVER_POS[1] + (i * 0.007 - 0.02),
+    type: d.cargo_type,
+    title: d.order?.provider_name ? `Retiro: ${d.order.provider_name}` : 'Entrega disponible',
+    from: d.pickup_address ?? 'Dirección de retiro',
+    to: d.dropoff_address ?? 'Dirección de entrega',
+    dist: '–',
+    weight: d.cargo_type === 'heavy' ? 'Carga pesada' : 'Carga liviana',
+    pay: d.estimated_fee ?? (d.order?.total ? Math.round(d.order.total * 0.05) : 50),
+    time: '–',
+    deliveryId: d.id,
+    orderId: d.order_id,
+  })), [pendingDeliveries])
+  const visibleJobs = realJobs.length > 0 ? realJobs : MAP_JOBS.filter(j => j.type === vehicleType)
   const currentOffer = selectedJob ?? MAP_JOBS[0]
 
-  const handleGoOnline = () => { setMode('online'); setActiveJob(null); setDeliveryStep(0) }
+  const handleGoOnline = () => { track.radarActivated(); setMode('online'); setActiveJob(null); setDeliveryStep(0) }
   const handleAccept = (job: MapJob) => {
     setSelectedJob(null)
     setShowOfferPop(false)
     setActiveJob(job)
     setMode('active')
+    if (job.deliveryId && job.orderId) {
+      acceptDelivery({ deliveryId: job.deliveryId, orderId: job.orderId })
+    }
   }
 
   const isFullscreen = mode !== 'offline'
@@ -214,7 +239,7 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
       pointerEvents: 'none',
     }}>
       <div style={{ display: 'flex', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.15)', pointerEvents: 'auto' }}>
-        {([{ key: 'heavy' as const, label: '🚛 Camión' }, { key: 'light' as const, label: '🏍 Moto' }]).map(v => (
+        {([{ key: 'heavy' as const, label: 'Camión' }, { key: 'light' as const, label: 'Moto' }]).map(v => (
           <button key={v.key} onClick={() => setVehicleType(v.key)} style={{
             padding: '7px 12px', border: 'none', cursor: 'pointer', outline: 'none',
             background: vehicleType === v.key ? Z.orangeDark : 'rgba(255,255,255,0.95)',
@@ -377,7 +402,7 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
             <div style={{ width: 36, height: 4, borderRadius: 2, background: Z.border, margin: '0 auto' }} />
             <span style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>
               {mode === 'online'
-                ? `${visibleJobs.length} solicitudes disponibles`
+                ? `${visibleJobs.length} solicitud${visibleJobs.length !== 1 ? 'es' : ''} disponible${visibleJobs.length !== 1 ? 's' : ''}`
                 : activeJob?.title ?? 'Entrega activa'
               }
             </span>
@@ -401,9 +426,11 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
                   <div style={{
                     width: 40, height: 40, borderRadius: 12, flexShrink: 0,
                     background: job.type === 'heavy' ? Z.orangeLight : Z.blueLight,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    {job.type === 'heavy' ? '🏗' : '⚡'}
+                    <span style={{ fontFamily: Z.font, fontSize: 9, fontWeight: 800, color: job.type === 'heavy' ? Z.orangeDark : Z.blueDark }}>
+                      {job.type === 'heavy' ? 'PESADO' : 'LIVIANO'}
+                    </span>
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>{job.title}</div>
@@ -506,7 +533,14 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
             width: '100%', paddingBottom: NAV_CLEARANCE + 20,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ fontSize: 28 }}>{currentOffer.type === 'heavy' ? '🏗' : '⚡'}</div>
+              <div style={{
+                padding: '6px 12px', borderRadius: 8,
+                background: currentOffer.type === 'heavy' ? Z.orangeLight : Z.blueLight,
+                fontFamily: Z.font, fontSize: 11, fontWeight: 800,
+                color: currentOffer.type === 'heavy' ? Z.orangeDark : Z.blueDark,
+              }}>
+                {currentOffer.type === 'heavy' ? 'CARGA PESADA' : 'CARGA LIVIANA'}
+              </div>
               <div>
                 <div style={{ fontFamily: Z.font, fontSize: 16, fontWeight: 800, color: Z.text }}>
                   {currentOffer.title}

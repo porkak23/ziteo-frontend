@@ -3,18 +3,9 @@ import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
+import { CIUDADES_ACTIVAS } from '../../../shared/constants/geography'
 
-const CITIES = [
-  'La Paz',
-  'Cochabamba',
-  'Santa Cruz',
-  'Oruro',
-  'Potosí',
-  'Sucre',
-  'Tarija',
-  'Trinidad',
-  'Cobija',
-]
+const CITIES = CIUDADES_ACTIVAS
 
 const NOTIF_KEY = 'ziteo_notif_enabled'
 

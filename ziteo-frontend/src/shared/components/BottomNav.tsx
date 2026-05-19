@@ -47,7 +47,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const tabs = TAB_CONFIG[role]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-outline-variant hidden md:flex h-16 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-outline-variant flex h-16 px-2">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id
         return (

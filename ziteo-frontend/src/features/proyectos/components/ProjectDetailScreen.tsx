@@ -79,7 +79,8 @@ function useActiveContracts(projectId: string) {
       if (error) throw error
       if (!contracts || contracts.length === 0) return []
 
-      const maestroIds = contracts.map((c: Contract) => c.maestro_id)
+      const typedContracts = contracts as unknown as Contract[]
+      const maestroIds = typedContracts.map((c) => c.maestro_id)
 
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
@@ -93,7 +94,7 @@ function useActiveContracts(projectId: string) {
         nameMap[p.user_id] = p.name
       })
 
-      return (contracts as Contract[]).map((c) => ({
+      return typedContracts.map((c) => ({
         ...c,
         maestro_name: nameMap[c.maestro_id] ?? 'Maestro desconocido',
       }))

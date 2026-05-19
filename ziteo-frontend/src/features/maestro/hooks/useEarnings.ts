@@ -43,7 +43,8 @@ export function useEarnings(maestroId: string) {
           const mName = monthNames[d.getMonth()]
           
           // Sumar el budget para el mes y año en curso del ciclo
-          const amount = contracts.filter(c => {
+          const amount = contracts.filter((c: { budget: number | null; created_at: string | null }) => {
+            if (!c.created_at) return false
             const cd = new Date(c.created_at)
             return cd.getMonth() === d.getMonth() && cd.getFullYear() === d.getFullYear()
           }).reduce((sum, c) => sum + (c.budget || 0), 0)

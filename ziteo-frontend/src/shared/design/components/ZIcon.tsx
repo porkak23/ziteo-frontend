@@ -14,7 +14,9 @@ type IconName =
   | 'fingerprint'
   | 'close'
   | 'bell'
-  | 'map-pin';
+  | 'map-pin'
+  | 'add'
+  | 'hourglass_empty';
 
 type RoleName = 'constructor' | 'vendedor' | 'trabajador' | 'repartidor';
 
@@ -46,6 +48,8 @@ export function ZIcon({ name, size = 24, color = Z.text, style = {} }: ZIconProp
     'close': <path d="M18 6L6 18M6 6l12 12" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none"/>,
     'bell': <><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/></>,
     'map-pin': <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke={color} strokeWidth="1.8" fill="none"/><circle cx="12" cy="10" r="3" stroke={color} strokeWidth="1.8" fill="none"/></>,
+    'add': <path d="M12 5v14M5 12h14" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
+    'hourglass_empty': <path d="M18 4H6v4l4 4-4 4v4h12v-4l-4-4 4-4V4z" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
   };
 
   return (

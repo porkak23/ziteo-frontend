@@ -7,7 +7,7 @@ import { log } from '../_shared/logger.ts'
 // ─── Shared constants ───────────────────────────────────────────────────────
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? 'https://ziteo-frontend.vercel.app',
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -663,6 +663,46 @@ async function handleOAuthSetup(req: Request, supabaseAdmin: SupabaseClient): Pr
   return jsonResponse({ success: true, user_id: user.id })
 }
 
+async function handleAddRole(req: Request, supabaseAdmin: SupabaseClient): Promise<Response> {
+  const authHeader = req.headers.get('authorization') ?? ''
+  const token = authHeader.replace('Bearer ', '').trim()
+  if (!token) return jsonResponse({ error: 'UNAUTHORIZED' }, 401)
+
+  // Verify the caller's JWT to get their user_id
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+  if (authError || !user) return jsonResponse({ error: 'UNAUTHORIZED' }, 401)
+
+  let body: { role?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return jsonResponse({ error: 'INVALID_JSON' }, 400)
+  }
+
+  const { role } = body
+
+  if (!role || !VALID_ROLES.includes(role as Role)) {
+    return jsonResponse({ error: 'INVALID_ROLE' }, 400)
+  }
+
+  // Insert into user_roles
+  const { error: roleError } = await supabaseAdmin.from('user_roles').insert({
+    user_id: user.id,
+    role: role,
+    onboarding_completed: false,
+  })
+
+  if (roleError) {
+    if (roleError.code === '23505') {
+      return jsonResponse({ error: 'ROLE_ALREADY_EXISTS' }, 409)
+    }
+    log('error', 'auth.add_role.role_insert_failed', { message: roleError?.message })
+    return jsonResponse({ error: 'ROLE_CREATE_FAILED' }, 500)
+  }
+
+  return jsonResponse({ success: true, role })
+}
+
 // ─── Router ──────────────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -701,6 +741,8 @@ serve(async (req) => {
         return await handleResetPin(req, supabase)
       case 'oauth-setup':
         return await handleOAuthSetup(req, supabase)
+      case 'add-role':
+        return await handleAddRole(req, supabase)
       default:
         return jsonResponse({ error: 'NOT_FOUND' }, 404)
     }

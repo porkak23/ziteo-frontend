@@ -45,7 +45,7 @@ ORDEN · PRECISIÓN · FUTURO
 ```
 
 ### Mercado Target
-- **Geografía:** Bolivia (inicio), LatAm post-MVP
+- **Geografía:** Bolivia (inicio: solo Sucre, Potosí y Santa Cruz; el resto de las ciudades están desactivadas hasta que lleguemos a ellas), LatAm post-MVP
 - **Constructor promedio:** 40-60 años, móvil, requiere rapidez
 - **Ferretero:** PYME (5-20 empleados), quiere más clientes
 - **Maestro:** Especialista independiente, necesita visibilidad

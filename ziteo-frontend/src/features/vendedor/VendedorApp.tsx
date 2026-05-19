@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Z } from '@/shared/design/tokens'
+import { DashHeader } from '@/shared/design/shell/DashHeader'
+// AvatarMenu available for future use
+import { usePaymentQr } from '@/features/proveedor/hooks/usePaymentQr'
 import { RoleDashNav } from '@/shared/design/shell/RoleDashNav'
 import type { Tab } from '@/shared/design/shell/RoleDashNav'
 import { SummaryCard } from '@/shared/design/shell/SummaryCard'
@@ -10,16 +13,17 @@ import { ZButton } from '@/shared/design/components/ZButton'
 import { ZInput } from '@/shared/design/components/ZInput'
 import { ZHeader } from '@/shared/design/components/ZHeader'
 import { ZScreen } from '@/shared/design/components/ZScreen'
-import { ZAvatar } from '@/shared/design/components/ZAvatar'
 import { useAuthStore } from '@/features/auth/store/authStore'
-import { useNavStore } from '@/shared/store/navStore'
 import { useIncomingOrders, useUpdateOrderStatus } from '@/features/proveedor/hooks/useProveedorOrders'
-import { useInventario, useToggleProductoActivo, INVENTARIO_PAGE_SIZE } from '@/features/proveedor/hooks/useInventario'
+import { useProviderPaymentConfirmation } from '@/features/proveedor/hooks/useProviderPaymentConfirmation'
+import { queryKeys } from '@/shared/query/keys'
+import { useInventario, useToggleProductoActivo, INVENTARIO_PAGE_SIZE, uploadProductImage, validateProductoForm, CATEGORIAS_CONSTRUCCION } from '@/features/proveedor/hooks/useInventario'
 import type { ProductoInventario } from '@/features/proveedor/hooks/useInventario'
 import { useToast } from '@/shared/hooks/useToast'
 import { Toast } from '@/shared/components/Toast'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabaseClient'
+import { ProveedorOnboardingWizard } from '@/features/proveedor/components/ProveedorOnboardingWizard'
 
 type VendedorTab = 'home' | 'inventario' | 'pedidos' | 'cotizaciones'
 
@@ -73,63 +77,6 @@ const VENDEDOR_TABS: Tab[] = [
   { key: 'cotizaciones', label: 'Cotizaciones', Icon: VNavIconQuotes },
 ]
 
-// ─── Dash Header ─────────────────────────────────────────────────────────────
-
-function VendedorHeader({ onProfile }: { onProfile: () => void }) {
-  const setTab = useNavStore((s) => s.setTab)
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '54px 20px 10px',
-        background: Z.bg,
-        position: 'relative',
-        zIndex: 10,
-        flexShrink: 0,
-      }}
-    >
-      <span
-        style={{
-          fontFamily: Z.font,
-          fontWeight: 800,
-          fontSize: 22,
-          letterSpacing: 2,
-          background: Z.gradMixed,
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}
-      >
-        ZITEO
-      </span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <button
-          onClick={() => setTab('notificaciones')}
-          style={{
-            position: 'relative',
-            width: 38,
-            height: 38,
-            borderRadius: 12,
-            border: 'none',
-            background: Z.surface,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-          }}
-          aria-label="Notificaciones"
-        >
-          <ZIcon name="bell" size={20} color={Z.textSec} />
-        </button>
-        <div onClick={onProfile} style={{ cursor: 'pointer' }}>
-          <ZAvatar name="V" size={38} />
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ─── Activity item ───────────────────────────────────────────────────────────
 
@@ -181,11 +128,13 @@ const STATUS_COLOR: Record<string, string> = {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  pending:    'Pendiente',
-  processing: 'En proceso',
-  shipped:    'Enviado',
+  pending:    'Pendiente de pago',
+  confirmed:  'Pago confirmado',
+  processing: 'Preparando envío',
+  shipped:    'En camino',
   delivered:  'Entregado',
   cancelled:  'Cancelado',
+  expired:    'Expirado',
 }
 
 function timeAgo(dateStr: string): string {
@@ -202,7 +151,13 @@ function timeAgo(dateStr: string): string {
 
 // ─── HOME TAB ────────────────────────────────────────────────────────────────
 
-function HomeTab({ onNavigate }: { onNavigate: (tab: VendedorTab) => void }) {
+function HomeTab({
+  onNavigate,
+  onShowEnvios,
+}: {
+  onNavigate: (tab: VendedorTab) => void
+  onShowEnvios: () => void
+}) {
   const user = useAuthStore((s) => s.user)
   const firstName = user?.name ? user.name.split(' ')[0] : 'Proveedor'
   const city = user?.city ?? 'Bolivia'
@@ -258,7 +213,7 @@ function HomeTab({ onNavigate }: { onNavigate: (tab: VendedorTab) => void }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button
-          onClick={() => onNavigate('pedidos')}
+          onClick={onShowEnvios}
           style={{
             display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px',
             borderRadius: Z.r.lg, border: 'none', cursor: 'pointer', width: '100%',
@@ -272,17 +227,17 @@ function HomeTab({ onNavigate }: { onNavigate: (tab: VendedorTab) => void }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9l-6-6zm0 0v6h6"
-                stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
-              <path d="M8 13h4M8 17h8" stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" />
+              <rect x="2" y="7" width="20" height="14" rx="2" stroke="#fff" strokeWidth="2" />
+              <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+              <path d="M12 12v4M10 14h4" stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
           <div>
             <div style={{ fontFamily: Z.font, fontSize: 16, fontWeight: 800, color: '#fff' }}>
-              Gestionar Pedidos
+              Gestión de Envíos
             </div>
             <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
-              {pendingCount} pendientes de despacho
+              {pendingCount > 0 ? `${pendingCount} pedido${pendingCount !== 1 ? 's' : ''} pendiente${pendingCount !== 1 ? 's' : ''} de despacho` : 'Sin pedidos pendientes'}
             </div>
           </div>
           <svg width="20" height="20" viewBox="0 0 24 24" style={{ marginLeft: 'auto' }}>
@@ -376,8 +331,8 @@ interface ProductForm {
   price: string
   unit: string
   stock: string
-  category_id: string
-  image_url: string
+  // category_name is one of CATEGORIAS_CONSTRUCCION — we resolve to a DB id on save
+  category_name: string
   listing_type: 'sell' | 'rent'
   weight_kg: string
 }
@@ -388,27 +343,9 @@ const EMPTY_FORM: ProductForm = {
   price: '',
   unit: 'unidad',
   stock: '',
-  category_id: '',
-  image_url: '',
+  category_name: '',
   listing_type: 'sell',
   weight_kg: '',
-}
-
-interface Category {
-  id: string
-  name: string
-}
-
-function useCategories() {
-  return useQuery<Category[]>({
-    queryKey: ['categories'],
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('categories').select('id, name').order('name')
-      if (error) throw error
-      return data ?? []
-    },
-  })
 }
 
 function InventarioTab() {
@@ -420,12 +357,15 @@ function InventarioTab() {
   const [allProducts, setAllProducts] = useState<ProductoInventario[]>([])
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM)
+  const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [manualQty, setManualQty] = useState<Record<string, number>>({})
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const { data: page = [], isLoading, isFetching } = useInventario(offset)
   const { mutate: toggleActivo } = useToggleProductoActivo()
-  const { data: categories = [] } = useCategories()
 
   useEffect(() => {
     if (page.length === 0 && offset === 0) {
@@ -450,32 +390,110 @@ function InventarioTab() {
 
   const handleSave = async () => {
     if (!user) return
+
+    // Client-side validation
+    const validationError = validateProductoForm(form.price, form.stock)
+    if (validationError) {
+      setFormError(validationError)
+      return
+    }
+    if (!form.name.trim()) {
+      setFormError('El nombre del producto es obligatorio')
+      return
+    }
+    if (!form.category_name) {
+      setFormError('Selecciona una categoría')
+      return
+    }
+    setFormError(null)
     setSaving(true)
-    const { error } = await supabase.from('products').insert({
-      name: form.name,
-      description: form.description,
-      price_unit: parseFloat(form.price),
-      unit_type: form.unit,
-      stock_quantity: parseInt(form.stock, 10),
-      category_id: form.category_id || null,
-      provider_id: user.user_id,
-      image_url: form.image_url || null,
-      listing_type: form.listing_type,
-      active: true,
-      weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
-    setSaving(false)
-    if (error) {
-      showToast('Error al guardar el producto', 'error')
-    } else {
+
+    try {
+      // Resolve category_id by matching the canonical name in the DB
+      let categoryId: string | null = null
+      if (form.category_name) {
+        const { data: catRows } = await supabase
+          .from('categories')
+          .select('id')
+          .ilike('name', form.category_name)
+          .limit(1)
+          .maybeSingle()
+        categoryId = catRows?.id ?? null
+
+        // If not found, insert it so canonical categories are always available
+        if (!categoryId) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: newCat } = await (supabase as any)
+            .from('categories')
+            .insert({ name: form.category_name })
+            .select('id')
+            .single()
+          categoryId = newCat?.id ?? null
+        }
+      }
+
+      // Insert the product first to get the id for the image path
+      const { data: insertedRows, error } = await supabase.from('products').insert({
+        name: form.name.trim(),
+        description: form.description.trim() || null,
+        price_unit: parseFloat(form.price),
+        unit_type: form.unit,
+        stock_quantity: parseInt(form.stock, 10),
+        category_id: categoryId,
+        provider_id: user.user_id,
+        image_url: null, // filled below if an image was selected
+        listing_type: form.listing_type,
+        active: true,
+        weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any).select('id')
+
+      if (error) {
+        showToast('Error al guardar el producto', 'error')
+        return
+      }
+
+      const newProductId = (insertedRows as { id: string }[] | null)?.[0]?.id ?? ''
+
+      // Upload image if provided
+      if (imageFile && newProductId) {
+        try {
+          const imageUrl = await uploadProductImage(imageFile, newProductId, user.user_id)
+          await supabase.from('products').update({ image_url: imageUrl }).eq('id', newProductId)
+        } catch (imgErr) {
+          // Non-fatal: product was saved, image upload failed
+          const msg = imgErr instanceof Error ? imgErr.message : 'Error al subir la imagen'
+          showToast(`Producto guardado, pero: ${msg}`, 'info')
+        }
+      }
+
       setOffset(0)
       setAllProducts([])
       queryClient.invalidateQueries({ queryKey: ['inventario', user.user_id] })
       setForm(EMPTY_FORM)
+      setImageFile(null)
+      setImagePreview(null)
       setShowForm(false)
       showToast('Producto guardado', 'success')
+    } finally {
+      setSaving(false)
     }
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      showToast('El archivo debe ser una imagen', 'error')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('La imagen no debe superar los 5 MB', 'error')
+      return
+    }
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+    e.target.value = ''
   }
 
   return (
@@ -639,7 +657,10 @@ function InventarioTab() {
                       </span>
                     </div>
                     <button
-                      onClick={() => toggleActivo({ product_id: p.id, active: !p.active })}
+                      onClick={() => toggleActivo(
+                        { product_id: p.id, active: !p.active },
+                        { onError: (err) => showToast(err instanceof Error ? err.message : 'Error al cambiar estado', 'error') }
+                      )}
                       style={{
                         position: 'relative', width: 36, height: 20, borderRadius: 10,
                         border: 'none', cursor: 'pointer',
@@ -761,12 +782,24 @@ function InventarioTab() {
 
       {showForm && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: Z.bg, display: 'flex', flexDirection: 'column' }}>
-          <ZHeader title="Agregar producto" onBack={() => { setShowForm(false); setForm(EMPTY_FORM) }} />
+          <ZHeader title="Agregar producto" onBack={() => { setShowForm(false); setForm(EMPTY_FORM); setFormError(null); setImageFile(null); setImagePreview(null) }} />
           <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Validation error banner */}
+            {formError && (
+              <div style={{
+                padding: '12px 14px', borderRadius: Z.r.sm,
+                background: Z.errorBg, border: '1px solid #FECACA',
+                fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.error,
+              }}>
+                {formError}
+              </div>
+            )}
+
             <ZInput
               label="Nombre"
               value={form.name}
-              onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+              onChange={(v) => { setFormError(null); setForm((f) => ({ ...f, name: v })) }}
               placeholder="Ej: Cemento IP-30"
             />
             <div style={{ display: 'flex', gap: 10 }}>
@@ -775,7 +808,7 @@ function InventarioTab() {
                   label="Precio (Bs.)"
                   type="number"
                   value={form.price}
-                  onChange={(v) => setForm((f) => ({ ...f, price: v }))}
+                  onChange={(v) => { setFormError(null); setForm((f) => ({ ...f, price: v })) }}
                   placeholder="58"
                 />
               </div>
@@ -784,11 +817,31 @@ function InventarioTab() {
                   label="Stock"
                   type="number"
                   value={form.stock}
-                  onChange={(v) => setForm((f) => ({ ...f, stock: v }))}
+                  onChange={(v) => { setFormError(null); setForm((f) => ({ ...f, stock: v })) }}
                   placeholder="100"
                 />
               </div>
             </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>Categoría</label>
+              <select
+                value={form.category_name}
+                onChange={(e) => { setFormError(null); setForm((f) => ({ ...f, category_name: e.target.value })) }}
+                style={{
+                  fontFamily: Z.font, fontSize: 15, fontWeight: 500,
+                  color: form.category_name ? Z.text : Z.textMuted,
+                  padding: '14px', borderRadius: Z.r.sm, border: `1.5px solid ${Z.border}`,
+                  background: Z.surface, outline: 'none',
+                }}
+              >
+                <option value="">Selecciona una categoría</option>
+                {CATEGORIAS_CONSTRUCCION.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>Unidad</label>
               <select
@@ -805,23 +858,51 @@ function InventarioTab() {
                 ))}
               </select>
             </div>
+
+            {/* Image upload */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>Categoría</label>
-              <select
-                value={form.category_id}
-                onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
-                style={{
-                  fontFamily: Z.font, fontSize: 15, fontWeight: 500, color: form.category_id ? Z.text : Z.textMuted,
-                  padding: '14px', borderRadius: Z.r.sm, border: `1.5px solid ${Z.border}`,
-                  background: Z.surface, outline: 'none',
-                }}
-              >
-                <option value="">Selecciona una categoría</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec }}>
+                Imagen del producto (opcional, máx. 5 MB)
+              </label>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                style={{ display: 'none' }}
+                onChange={handleImageChange}
+              />
+              {imagePreview ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <img
+                    src={imagePreview}
+                    alt="Vista previa"
+                    style={{ width: 64, height: 64, borderRadius: Z.r.sm, objectFit: 'cover', border: `1px solid ${Z.border}` }}
+                  />
+                  <button
+                    onClick={() => { setImageFile(null); setImagePreview(null) }}
+                    style={{
+                      padding: '6px 14px', borderRadius: 20, border: `1px solid ${Z.border}`,
+                      background: Z.surface, color: Z.textSec,
+                      fontFamily: Z.font, fontSize: 12, fontWeight: 600, cursor: 'pointer', outline: 'none',
+                    }}
+                  >
+                    Quitar imagen
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  style={{
+                    padding: '12px', borderRadius: Z.r.sm, border: `1.5px dashed ${Z.border}`,
+                    background: Z.surface, color: Z.textSec, cursor: 'pointer', outline: 'none',
+                    fontFamily: Z.font, fontSize: 13, fontWeight: 600, textAlign: 'center',
+                  }}
+                >
+                  Seleccionar imagen
+                </button>
+              )}
             </div>
+
             <ZInput
               label="Peso unitario (kg, opcional)"
               type="number"
@@ -833,7 +914,7 @@ function InventarioTab() {
           <div style={{ padding: '16px 20px', borderTop: `1px solid ${Z.border}`, flexShrink: 0 }}>
             <ZButton
               onClick={handleSave}
-              disabled={saving || !form.name || !form.price || !form.stock || !form.category_id}
+              disabled={saving || !form.name || !form.price || !form.stock || !form.category_name}
             >
               {saving ? 'Guardando...' : 'Guardar producto'}
             </ZButton>
@@ -866,11 +947,12 @@ const DISPLAY_STATUS_COLOR: Record<string, string> = {
   Entregado:    Z.textMuted,
 }
 
-interface LogisticaOrderInfo {
+interface EnvioOrderInfo {
   id: string
   buyer_name: string | undefined
   items: string
   total: number
+  cargo_type?: 'light' | 'heavy'
 }
 
 function PedidosFilterDropdown({
@@ -955,12 +1037,21 @@ function PedidosTab() {
   const providerId = user?.user_id ?? ''
   const { toasts, showToast, removeToast } = useToast()
   const [filter, setFilter] = useState<PedidosFilter>('Pendiente')
-  const [logisticaOrder, setLogisticaOrder] = useState<LogisticaOrderInfo | null>(null)
+  const [logisticaOrder, setLogisticaOrder] = useState<EnvioOrderInfo | null>(null)
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
 
   const { data: orders = [], isLoading } = useIncomingOrders(providerId, () => {
     showToast('¡Nuevo pedido recibido!', 'info')
   })
   const { mutate: updateStatus } = useUpdateOrderStatus()
+  const {
+    pendingCount: awaitingPaymentCount,
+    confirmOrderPayment,
+    rejectOrderPayment,
+    isConfirming,
+    isRejecting,
+  } = useProviderPaymentConfirmation(providerId)
 
   const statusFilter = FILTER_STATUS_MAP[filter]
   const filtered = statusFilter === null
@@ -969,8 +1060,9 @@ function PedidosTab() {
 
   if (logisticaOrder) {
     return (
-      <LogisticaSubScreen
+      <GestionEnvioScreen
         order={logisticaOrder}
+        providerId={providerId}
         onBack={() => setLogisticaOrder(null)}
       />
     )
@@ -979,12 +1071,88 @@ function PedidosTab() {
   return (
     <>
       <Toast toasts={toasts} onRemove={removeToast} />
+
+      {/* Reject reason dialog */}
+      {rejectingId && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px',
+        }}>
+          <div style={{
+            background: Z.surface, borderRadius: Z.r.lg, padding: '24px 20px',
+            width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 14,
+          }}>
+            <div style={{ fontFamily: Z.font, fontSize: 16, fontWeight: 800, color: Z.text }}>
+              Rechazar comprobante
+            </div>
+            <div style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec }}>
+              Indica el motivo para que el constructor pueda corregirlo.
+            </div>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Ej: imagen borrosa, monto incorrecto..."
+              rows={3}
+              style={{
+                fontFamily: Z.font, fontSize: 13, color: Z.text,
+                background: Z.bg, border: `1.5px solid ${Z.border}`, borderRadius: Z.r.sm,
+                padding: '10px 12px', resize: 'none', outline: 'none', width: '100%',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => { setRejectingId(null); setRejectReason('') }}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: Z.r.sm, border: `1.5px solid ${Z.border}`,
+                  background: Z.surface, fontFamily: Z.font, fontSize: 13, fontWeight: 600,
+                  color: Z.textSec, cursor: 'pointer', outline: 'none',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={!rejectReason.trim() || isRejecting}
+                onClick={async () => {
+                  try {
+                    await rejectOrderPayment(rejectingId, rejectReason.trim())
+                    showToast('Comprobante rechazado', 'info')
+                    setRejectingId(null)
+                    setRejectReason('')
+                  } catch {
+                    showToast('Error al rechazar el comprobante', 'error')
+                  }
+                }}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: Z.r.sm, border: 'none',
+                  background: isRejecting ? Z.divider : Z.error,
+                  fontFamily: Z.font, fontSize: 13, fontWeight: 700,
+                  color: isRejecting ? Z.textMuted : '#fff', cursor: 'pointer', outline: 'none',
+                }}
+              >
+                {isRejecting ? 'Rechazando...' : 'Rechazar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: 0 }}>Pedidos</h2>
-          <span style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textMuted }}>
-            {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {awaitingPaymentCount > 0 && (
+              <span style={{
+                background: Z.orange, color: '#fff',
+                fontFamily: Z.font, fontSize: 11, fontWeight: 700,
+                padding: '3px 10px', borderRadius: 20,
+              }}>
+                {awaitingPaymentCount} por verificar
+              </span>
+            )}
+            <span style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textMuted }}>
+              {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
 
         <PedidosFilterDropdown
@@ -1069,6 +1237,7 @@ function PedidosTab() {
                             buyer_name: order.buyer_name,
                             items: itemsSummary,
                             total: order.total,
+                            cargo_type: order.cargo_type,
                           })}
                           style={{
                             padding: '8px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
@@ -1097,6 +1266,55 @@ function PedidosTab() {
                     </div>
                   </div>
 
+                  {/* Evidence indicator + confirm/reject (only when comprobante uploaded) */}
+                  {order.status === 'pending' && (order as { payment_evidence_url?: string | null }).payment_evidence_url && (
+                    <div style={{
+                      marginTop: 10, padding: '10px 12px',
+                      borderRadius: Z.r.sm, background: Z.orangeLight,
+                      border: `1px solid ${Z.orangePastel}`,
+                      display: 'flex', flexDirection: 'column', gap: 8,
+                    }}>
+                      <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.orangeDark }}>
+                        Comprobante subido — pendiente de verificacion
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          disabled={isConfirming}
+                          onClick={async () => {
+                            try {
+                              await confirmOrderPayment(order.id)
+                              showToast('Pago confirmado correctamente', 'success')
+                            } catch (err) {
+                              showToast(err instanceof Error ? err.message : 'Error al confirmar', 'error')
+                            }
+                          }}
+                          style={{
+                            flex: 1, padding: '9px', borderRadius: 20, border: 'none',
+                            background: isConfirming ? Z.divider : Z.success,
+                            color: isConfirming ? Z.textMuted : '#fff',
+                            fontFamily: Z.font, fontSize: 11, fontWeight: 700,
+                            cursor: isConfirming ? 'default' : 'pointer', outline: 'none',
+                          }}
+                        >
+                          {isConfirming ? 'Confirmando...' : 'Confirmar pago'}
+                        </button>
+                        <button
+                          disabled={isRejecting}
+                          onClick={() => setRejectingId(order.id)}
+                          style={{
+                            flex: 1, padding: '9px', borderRadius: 20,
+                            border: `1.5px solid ${Z.error}`, background: 'transparent',
+                            color: Z.error,
+                            fontFamily: Z.font, fontSize: 11, fontWeight: 700,
+                            cursor: 'pointer', outline: 'none',
+                          }}
+                        >
+                          Rechazar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{
                     marginTop: 8, fontFamily: Z.font, fontSize: 10, color: Z.textMuted,
                   }}>
@@ -1112,29 +1330,302 @@ function PedidosTab() {
   )
 }
 
-// ─── LOGÍSTICA SUB-SCREEN ────────────────────────────────────────────────────
+// ─── ENVÍOS SCREEN (overlay desde home) ──────────────────────────────────────
 
-function LogisticaSubScreen({
-  order,
-  onBack,
-}: {
-  order: LogisticaOrderInfo
-  onBack: () => void
-}) {
-  const [mode, setMode] = useState<'retiro' | 'flota' | 'app' | null>(null)
-  const [driver, setDriver] = useState('')
-  const [plate, setPlate] = useState('')
+function EnviosScreen({ onClose }: { onClose: () => void }) {
+  const user = useAuthStore((s) => s.user)
+  const providerId = user?.user_id ?? ''
+  const { toasts, showToast, removeToast } = useToast()
+  const queryClient = useQueryClient()
+  const { data: orders = [], isLoading } = useIncomingOrders(providerId)
+  const { mutate: updateStatus } = useUpdateOrderStatus()
+  usePaymentQr()
+  const [envioOrder, setEnvioOrder] = useState<EnvioOrderInfo | null>(null)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+
+  const dispatchable = orders.filter(
+    (o) => o.status === 'pending' || o.status === 'processing'
+  )
+
+  if (envioOrder) {
+    return (
+      <GestionEnvioScreen
+        order={envioOrder}
+        providerId={providerId}
+        onBack={() => setEnvioOrder(null)}
+        onDone={() => {
+          setEnvioOrder(null)
+          showToast('Envío gestionado correctamente', 'success')
+        }}
+      />
+    )
+  }
 
   return (
     <ZScreen bg={Z.bg} style={{ position: 'fixed' }}>
-      <ZHeader title="Gestionar Logística" onBack={onBack} />
+      <Toast toasts={toasts} onRemove={removeToast} />
+      <ZHeader title="Gestión de Envíos" onBack={onClose} />
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        <div style={{
+          padding: '14px 16px', borderRadius: Z.r.md,
+          background: Z.orangeLight, border: `1px solid ${Z.orangePastel}`,
+        }}>
+          <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.orangeDark }}>
+            {dispatchable.length} pedido{dispatchable.length !== 1 ? 's' : ''} pendiente{dispatchable.length !== 1 ? 's' : ''} de despacho
+          </div>
+          <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, marginTop: 2 }}>
+            Confirma recepción y elige cómo entregar cada pedido
+          </div>
+        </div>
+
+        <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.textMuted, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+          Modalidades disponibles
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          {([
+            { label: 'Retiro en Tienda', sub: 'Cliente recoge', color: Z.blue },
+            { label: 'Flota Propia', sub: 'Tu conductor', color: Z.orange },
+            { label: 'Transportista', sub: 'Via ZITEO', color: Z.orangeDark },
+          ] as const).map((m) => (
+            <div key={m.label} style={{
+              flex: 1, padding: '10px 8px', borderRadius: Z.r.sm,
+              background: Z.surface, border: `1px solid ${Z.border}`, textAlign: 'center',
+            }}>
+              <div style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 700, color: m.color }}>{m.label}</div>
+              <div style={{ fontFamily: Z.font, fontSize: 9, color: Z.textMuted, marginTop: 2 }}>{m.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 4 }}>
+          Pedidos a despachar
+        </div>
+
+        {isLoading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{ height: 110, borderRadius: Z.r.md, background: Z.divider }} />
+            ))}
+          </div>
+        ) : dispatchable.length === 0 ? (
+          <div style={{ padding: '64px 0', textAlign: 'center' }}>
+            <div style={{ fontFamily: Z.font, fontSize: 13, color: Z.textMuted }}>
+              Todos los pedidos están despachados
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {dispatchable.map((order) => {
+              const isPending = order.status === 'pending'
+              const itemsSummary = order.items
+                .map((i) => `${i.quantity}x ${i.product?.name ?? 'Producto'}`)
+                .join(', ')
+
+              return (
+                <div
+                  key={order.id}
+                  style={{
+                    padding: '14px 16px', borderRadius: Z.r.md,
+                    background: Z.surface, border: `1px solid ${Z.border}`,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>
+                      {order.buyer_name ?? 'Comprador'}
+                    </span>
+                    <span style={{
+                      fontFamily: Z.font, fontSize: 10, fontWeight: 700, padding: '3px 10px',
+                      borderRadius: 20,
+                      background: isPending ? Z.orange + '18' : Z.blue + '18',
+                      color: isPending ? Z.orange : Z.blue,
+                    }}>
+                      {isPending ? 'Por confirmar' : 'Listo para despachar'}
+                    </span>
+                  </div>
+
+                  <div style={{
+                    fontFamily: Z.font, fontSize: 12, color: Z.textSec, marginBottom: 10,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {itemsSummary}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontFamily: Z.font, fontSize: 16, fontWeight: 800, color: Z.orangeDark }}>
+                      Bs {order.total.toLocaleString('es-BO')}
+                    </span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {isPending && (
+                        <button
+                          onClick={() => updateStatus(
+                            { orderId: order.id, status: 'processing', providerId },
+                            { onError: () => showToast('No se pudo confirmar el pedido', 'error') }
+                          )}
+                          style={{
+                            padding: '8px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                            background: Z.blue, color: '#fff',
+                            fontFamily: Z.font, fontSize: 11, fontWeight: 700, outline: 'none',
+                          }}
+                        >
+                          Confirmar
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setEnvioOrder({
+                          id: order.id,
+                          buyer_name: order.buyer_name,
+                          items: itemsSummary,
+                          total: order.total,
+                          cargo_type: order.cargo_type,
+                        })}
+                        style={{
+                          padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
+                          background: Z.surface, color: Z.text,
+                          fontFamily: Z.font, fontSize: 11, fontWeight: 700, outline: 'none',
+                        }}
+                      >
+                        Gestionar Envío
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Show confirm-payment button only when the constructor uploaded evidence */}
+                  {isPending && (order as { payment_evidence_url?: string | null }).payment_evidence_url && (
+                    <button
+                      disabled={confirmingId === order.id}
+                      onClick={async () => {
+                        setConfirmingId(order.id)
+                        try {
+                          // Use the SECURITY DEFINER RPC — only callable by the provider
+                          const { error } = await supabase.rpc('confirm_payment_by_provider', {
+                            p_order_id: order.id,
+                          })
+                          if (error) throw new Error(error.message)
+                          await queryClient.invalidateQueries({ queryKey: queryKeys.incomingOrders(providerId) })
+                          showToast('Pago confirmado correctamente', 'success')
+                        } catch (err) {
+                          showToast(err instanceof Error ? err.message : 'Error al confirmar el pago', 'error')
+                        } finally {
+                          setConfirmingId(null)
+                        }
+                      }}
+                      style={{
+                        marginTop: 6, width: '100%', padding: '10px 16px',
+                        borderRadius: 20, border: 'none', cursor: 'pointer',
+                        background: confirmingId === order.id ? Z.divider : Z.orangeDark,
+                        color: confirmingId === order.id ? Z.textMuted : '#fff',
+                        fontFamily: Z.font, fontSize: 12, fontWeight: 700, outline: 'none',
+                      }}
+                    >
+                      {confirmingId === order.id ? 'Confirmando...' : 'Confirmar pago recibido'}
+                    </button>
+                  )}
+                  {isPending && !(order as { payment_evidence_url?: string | null }).payment_evidence_url && (
+                    <div style={{
+                      marginTop: 6, padding: '8px 12px', borderRadius: Z.r.sm,
+                      background: Z.divider, fontFamily: Z.font, fontSize: 11,
+                      color: Z.textMuted, textAlign: 'center',
+                    }}>
+                      Esperando comprobante del constructor
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: 8, fontFamily: Z.font, fontSize: 10, color: Z.textMuted }}>
+                    {timeAgo(order.created_at)}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </ZScreen>
+  )
+}
+
+// ─── GESTIÓN ENVÍO SCREEN ────────────────────────────────────────────────────
+
+function GestionEnvioScreen({
+  order,
+  providerId,
+  onBack,
+  onDone,
+}: {
+  order: EnvioOrderInfo
+  providerId: string
+  onBack: () => void
+  onDone?: () => void
+}) {
+  const [mode, setMode] = useState<'retiro' | 'flota' | 'repartidor' | null>(null)
+  const [driver, setDriver] = useState('')
+  const [plate, setPlate] = useState('')
+  const [dispatching, setDispatching] = useState(false)
+  const { mutate: updateStatus } = useUpdateOrderStatus()
+
+  const finish = onDone ?? onBack
+
+  const handleFlota = () => {
+    if (!driver || !plate) return
+    setDispatching(true)
+    updateStatus(
+      { orderId: order.id, status: 'shipped', providerId },
+      { onSuccess: finish, onError: () => setDispatching(false) }
+    )
+  }
+
+  const handleRepartidor = async () => {
+    setDispatching(true)
+    await supabase.from('deliveries').insert({
+      order_id: order.id,
+      status: 'pending',
+      cargo_type: order.cargo_type ?? 'light',
+    })
+    updateStatus(
+      { orderId: order.id, status: 'processing', providerId },
+      { onSuccess: finish, onError: () => setDispatching(false) }
+    )
+  }
+
+  const handleRetiro = () => {
+    updateStatus(
+      { orderId: order.id, status: 'processing', providerId },
+      { onSuccess: finish }
+    )
+  }
+
+  const MODES: { key: 'retiro' | 'flota' | 'repartidor'; label: string; desc: string; color: string }[] = [
+    {
+      key: 'retiro',
+      label: 'Retiro en Tienda',
+      desc: 'El cliente viene a recoger desde tu local. Se genera un código de verificación para presentar al retirar.',
+      color: Z.blue,
+    },
+    {
+      key: 'flota',
+      label: 'Flota Propia',
+      desc: 'Asigna un conductor de tu equipo con su vehículo. Para proveedores con delivery propio.',
+      color: Z.orange,
+    },
+    {
+      key: 'repartidor',
+      label: 'Solicitar Transportista',
+      desc: 'ZITEO busca el transportista disponible más cercano. Para carga pesada se excluyen motocicletas automáticamente.',
+      color: Z.orangeDark,
+    },
+  ]
+
+  return (
+    <ZScreen bg={Z.bg} style={{ position: 'fixed' }}>
+      <ZHeader title="Gestionar Envío" onBack={onBack} />
       <div style={{ flex: 1, padding: '8px 20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{
           padding: '14px', borderRadius: Z.r.md,
           background: Z.orangeLight, border: `1px solid ${Z.orangePastel}`,
         }}>
           <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.orangeDark }}>
-            Pedido: {order.buyer_name ?? 'Comprador'}
+            {order.buyer_name ?? 'Comprador'}
           </div>
           <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, marginTop: 2 }}>
             {order.items} · Bs {order.total.toLocaleString('es-BO')}
@@ -1142,32 +1633,10 @@ function LogisticaSubScreen({
         </div>
 
         <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>
-          Selecciona modalidad de entrega:
+          Modalidad de entrega
         </div>
 
-        {([
-          {
-            key: 'retiro' as const,
-            icon: '🏪',
-            title: 'Retiro en Tienda',
-            desc: 'El cliente retira su pedido. Se genera un código QR.',
-            color: Z.blue,
-          },
-          {
-            key: 'flota' as const,
-            icon: '🚚',
-            title: 'Enviar con mi Flota',
-            desc: 'Asigna uno de tus repartidores con nombre y placa.',
-            color: Z.orange,
-          },
-          {
-            key: 'app' as const,
-            icon: '📱',
-            title: 'Solicitar Repartidor App',
-            desc: 'ZITEO busca el conductor más cercano con capacidad de carga.',
-            color: Z.orangeDark,
-          },
-        ]).map((opt) => (
+        {MODES.map((opt) => (
           <button
             key={opt.key}
             onClick={() => setMode(opt.key)}
@@ -1175,17 +1644,21 @@ function LogisticaSubScreen({
               display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px',
               borderRadius: Z.r.md,
               border: `2px solid ${mode === opt.key ? opt.color : Z.border}`,
-              background: mode === opt.key ? opt.color + '12' : Z.surface,
+              background: mode === opt.key ? opt.color + '10' : Z.surface,
               cursor: 'pointer', width: '100%', textAlign: 'left', outline: 'none',
-              transition: 'all 0.2s',
+              transition: 'border-color 0.18s, background 0.18s',
             }}
           >
-            <span style={{ fontSize: 24 }}>{opt.icon}</span>
+            <div style={{
+              width: 10, height: 10, borderRadius: '50%', flexShrink: 0, marginTop: 5,
+              background: mode === opt.key ? opt.color : Z.border,
+              transition: 'background 0.18s',
+            }} />
             <div>
               <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>
-                {opt.title}
+                {opt.label}
               </div>
-              <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, marginTop: 3, lineHeight: 1.4 }}>
+              <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, marginTop: 3, lineHeight: 1.45 }}>
                 {opt.desc}
               </div>
             </div>
@@ -1193,57 +1666,45 @@ function LogisticaSubScreen({
         ))}
 
         {mode === 'retiro' && (
-          <div style={{
-            padding: '20px', borderRadius: Z.r.md, background: Z.blueLight,
-            textAlign: 'center',
-          }}>
-            <div style={{ fontFamily: 'monospace', fontSize: 12, color: Z.blueDark, lineHeight: 1.8 }}>
-              ████ ██ █████<br />
-              █  █ ██ █  █<br />
-              ████ ██ █████<br />
-              <br />
-              Código QR de Retiro<br />
-              Válido por 48hs
+          <div style={{ padding: '20px', borderRadius: Z.r.md, background: Z.blueLight, textAlign: 'center' }}>
+            <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.blueDark, marginBottom: 12 }}>
+              Código de retiro
             </div>
-            <ZButton variant="blue" style={{ marginTop: 12 }} onClick={onBack}>
-              Notificar al Cliente
+            <div style={{ fontFamily: 'monospace', fontSize: 11, color: Z.blueDark, lineHeight: 2, letterSpacing: 2, whiteSpace: 'pre' }}>
+              ████ ██ █████{'\n'}
+              █  █ ██ █  █{'\n'}
+              ████ ██ █████
+            </div>
+            <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 8 }}>
+              Válido 48 horas · Compartir con el cliente
+            </div>
+            <ZButton variant="blue" style={{ marginTop: 16 }} onClick={handleRetiro}>
+              Notificar al cliente
             </ZButton>
           </div>
         )}
 
         {mode === 'flota' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <ZInput
-              label="Nombre del chofer"
-              placeholder="Ej: Carlos Mamani"
-              value={driver}
-              onChange={setDriver}
-            />
-            <ZInput
-              label="Placa del vehículo"
-              placeholder="Ej: 3456-ABC"
-              value={plate}
-              onChange={setPlate}
-            />
-            <ZButton disabled={!driver || !plate} onClick={onBack}>
-              Asignar y Despachar
+            <ZInput label="Nombre del conductor" placeholder="Ej: Carlos Mamani" value={driver} onChange={setDriver} />
+            <ZInput label="Placa del vehículo" placeholder="Ej: 3456-ABC" value={plate} onChange={setPlate} />
+            <ZButton disabled={!driver || !plate || dispatching} onClick={handleFlota}>
+              {dispatching ? 'Despachando...' : 'Asignar y despachar'}
             </ZButton>
           </div>
         )}
 
-        {mode === 'app' && (
-          <div style={{
-            padding: '16px', borderRadius: Z.r.md, background: Z.orangeLight,
-          }}>
+        {mode === 'repartidor' && (
+          <div style={{ padding: '16px', borderRadius: Z.r.md, background: Z.orangeLight }}>
             <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.orangeDark, marginBottom: 6 }}>
-              Filtro automático activo
+              Filtro de carga automático
             </div>
             <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, lineHeight: 1.5 }}>
-              El sistema buscará vehículos pesados con capacidad mínima de carga para este pedido.
-              Los conductores de moto serán excluidos automáticamente.
+              El sistema filtrará transportistas según el tipo de carga. Para materiales pesados
+              (cemento, áridos, estructuras) se excluirán motos automáticamente.
             </div>
-            <ZButton style={{ marginTop: 12 }} onClick={onBack}>
-              Buscar Repartidor Ahora
+            <ZButton style={{ marginTop: 14 }} disabled={dispatching} onClick={handleRepartidor}>
+              {dispatching ? 'Buscando...' : 'Buscar transportista ahora'}
             </ZButton>
           </div>
         )}
@@ -1576,49 +2037,176 @@ function CotizacionesTab() {
   )
 }
 
-// ─── CHAT FAB ─────────────────────────────────────────────────────────────────
+// ─── VENDEDOR CUENTA SCREEN ──────────────────────────────────────────────────
 
-function VendedorChatFab() {
+function VendedorCuentaScreen({ onClose }: { onClose: () => void }) {
+  const user = useAuthStore((s) => s.user)
+  const { toasts, showToast, removeToast } = useToast()
+  const { uploadQr, uploading } = usePaymentQr()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const { data: qrStatus, refetch: refetchQr } = useQuery<{ payment_qr_url: string | null }>({
+    queryKey: ['vendedor-qr-status', user?.user_id],
+    enabled: !!user?.user_id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('payment_qr_url')
+        .eq('user_id', user!.user_id)
+        .eq('role', 'proveedor')
+        .maybeSingle()
+      if (error) throw error
+      return data ?? { payment_qr_url: null }
+    },
+  })
+
+  const hasQr = !!qrStatus?.payment_qr_url
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('El archivo no puede superar 2 MB', 'error')
+      e.target.value = ''
+      return
+    }
+    try {
+      await uploadQr(file)
+      await refetchQr()
+      showToast('QR de cobranza actualizado', 'success')
+    } catch {
+      showToast('Error al subir el QR', 'error')
+    }
+    e.target.value = ''
+  }
+
   return (
-    <button
-      style={{
-        position: 'absolute',
-        bottom: 92,
-        left: 18,
-        width: 48,
-        height: 48,
-        borderRadius: '50%',
-        border: 'none',
-        cursor: 'pointer',
-        background: Z.gradMixed,
-        boxShadow: '0 4px 16px rgba(232,115,58,0.3)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 15,
-      }}
-      aria-label="Chat"
-    >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"
-          stroke="#fff"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      </svg>
-    </button>
+    <ZScreen bg={Z.bg} style={{ position: 'fixed' }}>
+      <Toast toasts={toasts} onRemove={removeToast} />
+      <ZHeader title="Mi cuenta" onBack={onClose} />
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        {/* Sección: info del usuario */}
+        <div style={{
+          padding: '16px', borderRadius: Z.r.md, background: Z.surface, border: `1px solid ${Z.border}`,
+        }}>
+          <div style={{ fontFamily: Z.font, fontSize: 16, fontWeight: 800, color: Z.text }}>
+            {user?.name}
+          </div>
+          <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, marginTop: 4 }}>
+            +591 {user?.phone?.startsWith('+591') ? user.phone.slice(4) : user?.phone}
+            {user?.city ? ` · ${user.city}` : ''}
+          </div>
+        </div>
+
+        {/* Sección: QR de Cobranza */}
+        <div>
+          <div style={{
+            fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.textMuted,
+            letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10,
+          }}>
+            QR de Cobranza
+          </div>
+          <div style={{
+            padding: '16px', borderRadius: Z.r.md, background: Z.surface,
+            border: `1px solid ${Z.border}`, display: 'flex', flexDirection: 'column', gap: 12,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>
+                  {hasQr ? 'QR de cobro activo' : 'Sin QR configurado'}
+                </div>
+                <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 3 }}>
+                  {hasQr
+                    ? 'Se muestra a compradores para facilitar el pago'
+                    : 'Sube tu QR de cobro (Tigo Money, QR BCB, etc.)'}
+                </div>
+              </div>
+              {hasQr && (
+                <div style={{
+                  padding: '4px 10px', borderRadius: 20, background: Z.success + '18',
+                  fontFamily: Z.font, fontSize: 10, fontWeight: 700, color: Z.success,
+                }}>
+                  Activo
+                </div>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              style={{
+                padding: '10px 16px', borderRadius: Z.r.sm, cursor: 'pointer',
+                background: uploading ? Z.divider : (hasQr ? Z.surface : Z.orangeDark),
+                color: uploading ? Z.textMuted : (hasQr ? Z.text : '#fff'),
+                border: hasQr ? `1.5px solid ${Z.border}` : 'none',
+                fontFamily: Z.font, fontSize: 13, fontWeight: 700,
+                width: '100%', outline: 'none',
+              } as React.CSSProperties}
+            >
+              {uploading
+                ? 'Subiendo...'
+                : hasQr
+                  ? 'Reemplazar QR'
+                  : 'Subir QR de cobro'}
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </ZScreen>
   )
 }
 
 // ─── ROOT: VendedorApp ───────────────────────────────────────────────────────
 
+// ─── Onboarding check ────────────────────────────────────────────────────────
+
+function useProveedorOnboardingCheck() {
+  const user = useAuthStore((s) => s.user)
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+    supabase
+      .from('user_roles')
+      .select('onboarding_complete, onboarding_completed')
+      .eq('user_id', user.user_id)
+      .eq('role', 'proveedor')
+      .maybeSingle()
+      .then(({ data }) => {
+        const done = data?.onboarding_complete === true || data?.onboarding_completed === true
+        setNeedsOnboarding(!done)
+      })
+  }, [user])
+
+  return needsOnboarding
+}
+
+// ─── VendedorApp ─────────────────────────────────────────────────────────────
+
 export function VendedorApp() {
   const [activeTab, setActiveTab] = useState<VendedorTab>('home')
-  const setGlobalTab = useNavStore((s) => s.setTab)
+  const [showAccount, setShowAccount] = useState(false)
+  const [showEnvios, setShowEnvios] = useState(false)
+  const needsOnboarding = useProveedorOnboardingCheck()
+  const [onboardingDone, setOnboardingDone] = useState(false)
 
-  const handleProfile = () => setGlobalTab('perfil')
+  // While we check onboarding status, render nothing to avoid flash
+  if (needsOnboarding === null) return null
+
+  if (needsOnboarding && !onboardingDone) {
+    return <ProveedorOnboardingWizard onComplete={() => setOnboardingDone(true)} />
+  }
 
   return (
     <div
@@ -1628,10 +2216,12 @@ export function VendedorApp() {
         background: Z.bg,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
       }}
     >
-      <VendedorHeader onProfile={handleProfile} />
+      <DashHeader onProfile={() => setShowAccount(true)} />
+      {showAccount && <VendedorCuentaScreen onClose={() => setShowAccount(false)} />}
+
+      {showEnvios && <EnviosScreen onClose={() => setShowEnvios(false)} />}
 
       <main
         style={{
@@ -1640,7 +2230,7 @@ export function VendedorApp() {
           paddingBottom: 96,
         }}
       >
-        {activeTab === 'home'         && <HomeTab onNavigate={setActiveTab} />}
+        {activeTab === 'home'         && <HomeTab onNavigate={setActiveTab} onShowEnvios={() => setShowEnvios(true)} />}
         {activeTab === 'inventario'   && <InventarioTab />}
         {activeTab === 'pedidos'      && <PedidosTab />}
         {activeTab === 'cotizaciones' && <CotizacionesTab />}
@@ -1649,10 +2239,9 @@ export function VendedorApp() {
       <RoleDashNav
         tabs={VENDEDOR_TABS}
         activeTab={activeTab}
-        onTabChange={(k) => setActiveTab(k as VendedorTab)}
+        onTabChange={(k) => { setShowEnvios(false); setActiveTab(k as VendedorTab) }}
       />
 
-      <VendedorChatFab />
     </div>
   )
 }

@@ -1,17 +1,18 @@
-import React, { lazy, Suspense, useState } from 'react'
+import React, { lazy, Suspense, useState, useEffect } from 'react'
 import { Z } from '../../shared/design/tokens'
 import {
   NavIconHome,
   NavIconBids,
   NavIconProjects,
   NavIconUsers,
-  ChatFab,
   DashHeader,
 } from '../../shared/design/shell'
 import { RoleDashNav } from '../../shared/design/shell/RoleDashNav'
 import { useNavStore } from '../../shared/store/navStore'
 import { useAuthStore } from '../auth/store/authStore'
 import AvatarMenu from '../../shared/components/AvatarMenu'
+import { supabase } from '../../lib/supabaseClient'
+import { MaestroOnboardingWizard } from '../maestro/components/MaestroOnboardingWizard'
 
 const HomeTabTrabajador = lazy(() =>
   import('./HomeTabTrabajador').then((m) => ({ default: m.HomeTabTrabajador }))
@@ -50,10 +51,37 @@ function TabSkeleton() {
 }
 
 
+// ─── Onboarding check ─────────────────────────────────────────────────────────
+
+function useMaestroOnboardingCheck() {
+  const user = useAuthStore((s) => s.user)
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+    supabase
+      .from('user_roles')
+      .select('onboarding_complete, onboarding_completed')
+      .eq('user_id', user.user_id)
+      .eq('role', 'maestro')
+      .maybeSingle()
+      .then(({ data }) => {
+        const done = data?.onboarding_complete === true || data?.onboarding_completed === true
+        setNeedsOnboarding(!done)
+      })
+  }, [user])
+
+  return needsOnboarding
+}
+
+// ─── TrabajadorApp ────────────────────────────────────────────────────────────
+
 export function TrabajadorApp() {
   const globalTab = useNavStore((s) => s.activeTab)
   const setGlobalTab = useNavStore((s) => s.setTab)
   const currentUser = useAuthStore((s) => s.user)
+  const needsOnboarding = useMaestroOnboardingCheck()
+  const [onboardingDone, setOnboardingDone] = useState(false)
 
   const toTrabajadorTab = (tab: string): TrabajadorTab => {
     if (tab === 'licitaciones' || tab === 'proyectos' || tab === 'perfil') {
@@ -65,14 +93,21 @@ export function TrabajadorApp() {
   const [localTab, setLocalTab] = useState<TrabajadorTab>(toTrabajadorTab(globalTab))
   const [showAccount, setShowAccount] = useState(false)
 
+  // 'perfil' is intentionally excluded from globalTab sync — App.tsx intercepts
+  // that key and shows the generic PerfilScreen. Maestro profile lives inside
+  // TrabajadorApp only, driven by localTab.
   const activeTab: TrabajadorTab =
-    globalTab === 'licitaciones' || globalTab === 'proyectos' || globalTab === 'perfil'
+    globalTab === 'licitaciones' || globalTab === 'proyectos'
       ? (globalTab as TrabajadorTab)
       : localTab
 
   const handleTabChange = (tab: TrabajadorTab) => {
     setLocalTab(tab)
-    setGlobalTab(tab)
+    // Reset globalTab to 'home' when going to perfil so the activeTab
+    // derivation (which prioritises globalTab for licitaciones/proyectos)
+    // doesn't override localTab. 'perfil' itself is never published to
+    // globalTab to avoid App.tsx intercepting it with PerfilScreen.
+    setGlobalTab(tab === 'perfil' ? 'home' : tab)
   }
 
   const handleNavigate = (dest: string) => {
@@ -84,13 +119,23 @@ export function TrabajadorApp() {
     }
   }
 
+  // Show onboarding wizard while check is pending or wizard not yet completed
+  if (needsOnboarding === null) return null
+  if (needsOnboarding && !onboardingDone) {
+    return <MaestroOnboardingWizard onComplete={() => setOnboardingDone(true)} />
+  }
+
   return (
-    <div style={{ position: 'relative', minHeight: '100%', paddingBottom: 92, background: Z.bg }}>
-      <DashHeader onProfile={() => setShowAccount(true)} notifCount={currentUser ? 3 : 0} />
+    <div style={{ minHeight: '100vh', paddingBottom: 92, background: Z.bg }}>
+      <DashHeader
+        onProfile={() => setShowAccount(true)}
+        onChat={() => setGlobalTab('chat')}
+        notifCount={currentUser ? 3 : 0}
+      />
 
       <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
 
-      <div style={{ overflowY: 'auto' }}>
+      <div>
         <Suspense fallback={<TabSkeleton />}>
           {activeTab === 'home' && (
             <HomeTabTrabajador onNavigate={handleNavigate} />
@@ -101,7 +146,6 @@ export function TrabajadorApp() {
         </Suspense>
       </div>
 
-      <ChatFab onClick={() => setGlobalTab('chat')} />
       <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => handleTabChange(k as TrabajadorTab)} />
     </div>
   )

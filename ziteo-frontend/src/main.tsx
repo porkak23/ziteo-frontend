@@ -8,13 +8,23 @@ import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './shared/components/ErrorBoundary'
 import * as Sentry from '@sentry/react'
+import { initAnalytics } from './lib/analytics'
+
+// Initialize PostHog before render (no-ops if VITE_POSTHOG_KEY is empty)
+initAnalytics()
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 60 * 24, // 24h — kept in IDB cache
+      retry: 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 1000 * 60 * 5,        // 5 minutes
+      gcTime: 1000 * 60 * 60,          // 1 hour in memory cache
+      refetchOnWindowFocus: false,      // Don't reload on tab focus
+      refetchOnReconnect: true,         // Reload when connection recovers
+    },
+    mutations: {
+      retry: 1, // 1 retry for mutations (orders, payments)
     },
   },
 })
@@ -30,8 +40,20 @@ if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     environment: import.meta.env.MODE,
+    // Performance tracing: full sampling in dev, 10% in production
     tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
-    integrations: [Sentry.browserTracingIntegration()],
+    // Session Replay: record 10% of sessions in prod, 100% in dev;
+    // always capture the session on error for diagnosis
+    replaysSessionSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
+    replaysOnErrorSampleRate: 1.0,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration({
+        // Mask all text and block all media by default — privacy-first
+        maskAllText: true,
+        blockAllMedia: true,
+      }),
+    ],
   })
 }
 

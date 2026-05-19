@@ -49,6 +49,8 @@ export interface RegisterPayload {
   initial_role: UserRole
   plan?: string
   company_name?: string
+  terms_accepted_at?: string
+  waitlist?: boolean
 }
 
 export interface OAuthSetupPayload {

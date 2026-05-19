@@ -10,6 +10,8 @@ import { DashHeader } from '../../shared/design/shell'
 import { RoleDashNav } from '../../shared/design/shell/RoleDashNav'
 import { useNavStore } from '../../shared/store/navStore'
 import AvatarMenu from '../../shared/components/AvatarMenu'
+import { TransporteSubScreen } from './sub/TransporteSubScreen'
+import { WorkerSearchSubScreen } from './sub/WorkerSearchSubScreen'
 
 const ConstructorHomeTab = lazy(() =>
   import('./ConstructorHomeTab').then((m) => ({ default: m.ConstructorHomeTab }))
@@ -35,6 +37,7 @@ function TabSkeleton() {
 }
 
 type ConstructorTab = 'home' | 'tienda' | 'proyectos' | 'licitaciones'
+type SubScreen = 'transporte' | 'contratar' | null
 
 const TABS: {
   key: ConstructorTab
@@ -51,6 +54,8 @@ export function ConstructorApp() {
   const globalTab = useNavStore((s) => s.activeTab)
   const setGlobalTab = useNavStore((s) => s.setTab)
   const [showAccount, setShowAccount] = useState(false)
+  const [subScreen, setSubScreen] = useState<SubScreen>(null)
+  const [proyectosOpenForm, setProyectosOpenForm] = useState(false)
 
   const resolveTab = (): ConstructorTab => {
     if (globalTab === 'tienda' || globalTab === 'proyectos' || globalTab === 'licitaciones') {
@@ -67,11 +72,15 @@ export function ConstructorApp() {
       : localTab
 
   const handleTabChange = (tab: ConstructorTab) => {
+    setSubScreen(null)
     setLocalTab(tab)
     setGlobalTab(tab)
   }
 
   const handleNavigate = (dest: string) => {
+    if (dest === 'transporte')     { setSubScreen('transporte'); return }
+    if (dest === 'contratar')      { setSubScreen('contratar'); return }
+    if (dest === 'nuevo-proyecto') { setProyectosOpenForm(true); handleTabChange('proyectos'); return }
     if (dest === 'home' || dest === 'tienda' || dest === 'proyectos' || dest === 'licitaciones') {
       handleTabChange(dest as ConstructorTab)
     } else {
@@ -79,19 +88,34 @@ export function ConstructorApp() {
     }
   }
 
+  // Sub-pantallas full-screen: cubren todo, incluso el nav
+  if (subScreen === 'transporte') {
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 30, animation: 'zFadeSlideIn 0.25s ease' }}>
+        <TransporteSubScreen onBack={() => setSubScreen(null)} />
+      </div>
+    )
+  }
+  if (subScreen === 'contratar') {
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 30, animation: 'zFadeSlideIn 0.25s ease' }}>
+        <WorkerSearchSubScreen onBack={() => setSubScreen(null)} />
+      </div>
+    )
+  }
   return (
     <div style={{
       position: 'fixed', inset: 0, background: Z.bg,
-      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
     }}>
-      <DashHeader onProfile={() => setShowAccount(true)} />
+      <DashHeader onProfile={() => setShowAccount(true)} onChat={() => setGlobalTab('chat')} />
       <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
 
       <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 96 }}>
         <Suspense fallback={<TabSkeleton />}>
           {activeTab === 'home'         && <ConstructorHomeTab onNavigate={handleNavigate} />}
           {activeTab === 'tienda'       && <ConstructorTiendaTab />}
-          {activeTab === 'proyectos'    && <ConstructorProyectosTab />}
+          {activeTab === 'proyectos'    && <ConstructorProyectosTab openForm={proyectosOpenForm} onFormOpened={() => setProyectosOpenForm(false)} />}
           {activeTab === 'licitaciones' && <ConstructorLicitacionesTab />}
         </Suspense>
       </main>
@@ -100,4 +124,3 @@ export function ConstructorApp() {
     </div>
   )
 }
-

@@ -1,7 +1,7 @@
 # Ziteo Frontend — Claude Instructions
 
 ## Project
-Ziteo es un marketplace de construcción para Bolivia. PWA mobile-first con React 19 + TypeScript + Tailwind CSS 3.4 + Supabase. 4 roles de usuario: Constructor, Proveedor, Maestro, Chofer.
+Ziteo es un marketplace de construcción para Bolivia (operando inicialmente solo en Sucre, Potosí y Santa Cruz; las demás ciudades están desactivadas hasta llegar a ellas). PWA mobile-first con React 19 + TypeScript + Tailwind CSS 3.4 + Supabase. 4 roles de usuario: Constructor, Proveedor, Maestro, Chofer.
 
 ## Design Context
 
@@ -22,4 +22,4 @@ Empresarios y contratistas independientes del rubro de la construcción en Boliv
 2. **Confianza a través de la precisión**: Espaciado consistente, tipografía clara, estados predecibles.
 3. **El naranja es una herramienta, no decoración**: Solo donde la atención importa: CTAs, estados activos, datos clave.
 4. **Adaptable al contexto**: Light en oficina, dark en obra. Ambos modos first-class.
-5. **Bolivia primero**: UX auténticamente local, no una traducción de Silicon Valley.
+5. **Bolivia primero**: UX auténticamente local (restringido a Sucre, Potosí y Santa Cruz por ahora), no una traducción de Silicon Valley.

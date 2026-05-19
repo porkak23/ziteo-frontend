@@ -31,7 +31,8 @@ export function useGlobalSearch(query: string) {
         ])
 
         if (isMounted) {
-          setProjects(projReq.error ? [] : (projReq.data || []))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setProjects(projReq.error ? [] : ((projReq.data || []) as any))
           setProfiles(profReq.error ? [] : (profReq.data || []))
           setProducts(prodReq.error ? [] : (prodReq.data || []))
         }

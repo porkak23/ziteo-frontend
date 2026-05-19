@@ -3,11 +3,15 @@ import type {
   RegisterApiResponse,
   LoginPayload,
   AuthApiResponse,
-  OtpVerifyPayload,
   OAuthSetupPayload,
   AuthError,
 } from '../types/authTypes'
+import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth'
+import type { ConfirmationResult } from 'firebase/auth'
+import { getFirebaseAuth } from '../../../lib/firebaseClient'
 import { supabase } from '../../../lib/supabaseClient'
+
+// ── REST helpers ─────────────────────────────────────────────────────────────
 
 const BASE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -41,6 +45,8 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// ── Supabase Edge Function auth ───────────────────────────────────────────────
+
 export async function registerUser(payload: RegisterPayload): Promise<RegisterApiResponse> {
   const res = await fetch(`${BASE_URL}/auth/register`, {
     method: 'POST',
@@ -59,13 +65,13 @@ export async function loginUser(payload: LoginPayload): Promise<AuthApiResponse>
   return handleResponse<AuthApiResponse>(res)
 }
 
-export async function verifyOtp(payload: OtpVerifyPayload): Promise<{ phone_confirmed: boolean }> {
+export async function verifyOtp(payload: { phone: string; otp: string }): Promise<{ phone_confirmed: boolean; [key: string]: unknown }> {
   const res = await fetch(`${BASE_URL}/auth/otp-verify`, {
     method: 'POST',
     headers: DEFAULT_HEADERS,
     body: JSON.stringify(payload),
   })
-  return handleResponse<{ phone_confirmed: boolean }>(res)
+  return handleResponse(res)
 }
 
 export async function resendOtp(phone: string): Promise<void> {
@@ -75,15 +81,6 @@ export async function resendOtp(phone: string): Promise<void> {
     body: JSON.stringify({ phone }),
   })
   return handleResponse<void>(res)
-}
-
-export async function forgotPin(phone: string): Promise<{ sent: boolean; debug_otp?: string }> {
-  const res = await fetch(`${BASE_URL}/auth/forgot-pin`, {
-    method: 'POST',
-    headers: DEFAULT_HEADERS,
-    body: JSON.stringify({ phone }),
-  })
-  return handleResponse<{ sent: boolean; debug_otp?: string }>(res)
 }
 
 export async function resetPin(payload: { phone: string; otp: string; new_pin: string }): Promise<void> {
@@ -107,6 +104,18 @@ export async function setupOAuthProfile(
   return handleResponse<void>(res)
 }
 
+export async function addRole(
+  accessToken: string,
+  role: string
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/auth/add-role`, {
+    method: 'POST',
+    headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ role }),
+  })
+  return handleResponse<void>(res)
+}
+
 export async function updateProfile(
   userId: string,
   data: { name: string; city: string; active_role: string; avatar_url?: string }
@@ -121,4 +130,40 @@ export async function updateProfile(
   if (error) {
     throw new AuthServiceError('PROFILE_UPDATE_FAILED', error.message)
   }
+}
+
+// ── Firebase Phone Auth ───────────────────────────────────────────────────────
+
+let _recaptchaVerifier: RecaptchaVerifier | null = null
+
+function getRecaptchaVerifier(): RecaptchaVerifier {
+  if (!_recaptchaVerifier) {
+    _recaptchaVerifier = new RecaptchaVerifier(getFirebaseAuth(), 'recaptcha-container', {
+      size: 'invisible',
+    })
+  }
+  return _recaptchaVerifier
+}
+
+export function clearRecaptcha(): void {
+  if (_recaptchaVerifier) {
+    _recaptchaVerifier.clear()
+    _recaptchaVerifier = null
+  }
+}
+
+export async function sendPhoneOtp(phone: string): Promise<ConfirmationResult> {
+  try {
+    return await signInWithPhoneNumber(getFirebaseAuth(), phone, getRecaptchaVerifier())
+  } catch (err) {
+    clearRecaptcha()
+    throw err
+  }
+}
+
+export async function confirmPhoneOtp(
+  confirmationResult: ConfirmationResult,
+  otp: string
+): Promise<void> {
+  await confirmationResult.confirm(otp)
 }

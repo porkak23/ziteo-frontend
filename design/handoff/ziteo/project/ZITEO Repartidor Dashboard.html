@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZITEO — Repartidor Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      display: flex; align-items: center; justify-content: center;
+      background: #0A0C14; font-family: 'Manrope', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    #app-root { position: relative; }
+    #app-root::before {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); width: 500px; height: 700px;
+      background: radial-gradient(ellipse, rgba(232,115,58,0.07) 0%, rgba(58,123,213,0.04) 40%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    @keyframes zFadeSlideIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes driverPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(164,55,0,0.5); }
+      70%  { box-shadow: 0 0 0 14px rgba(164,55,0,0); }
+      100% { box-shadow: 0 0 0 0 rgba(164,55,0,0); }
+    }
+    @keyframes radarSpin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    ::-webkit-scrollbar { width: 0; }
+  </style>
+</head>
+<body>
+  <div id="app-root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="components/ios-frame.jsx"></script>
+  <script type="text/babel" src="components/tweaks-panel.jsx"></script>
+  <script type="text/babel" src="components/ziteo-ui.jsx"></script>
+  <script type="text/babel" src="components/ziteo-dash-shell.jsx"></script>
+  <script type="text/babel" src="components/ziteo-repartidor-tabs.jsx"></script>
+
+  <script type="text/babel">
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "startOnline": false
+    }/*EDITMODE-END*/;
+
+    function RepartidorHeader({ mode }) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '54px 20px 10px', position: 'absolute', top: 0, left: 0, right: 0,
+          zIndex: 10, pointerEvents: 'none',
+        }}>
+          <span style={{
+            fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: 20,
+            letterSpacing: 2, background: 'linear-gradient(135deg, #E8733A 0%, #3A7BD5 100%)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            pointerEvents: 'auto',
+          }}>ZITEO</span>
+          <div style={{ pointerEvents: 'auto' }}>
+            <ZAvatar name="CC" size={36} />
+          </div>
+        </div>
+      );
+    }
+
+    function RepartidorDashboard() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+      const [activeTab, setActiveTab] = React.useState('radar');
+
+      const tabs = [
+        { key: 'radar',    label: 'Radar',    Icon: RNavIconRadar },
+        { key: 'pedidos',  label: 'Pedidos',  Icon: RNavIconList },
+        { key: 'ganancias',label: 'Ganancias',Icon: RNavIconEarnings },
+        { key: 'perfil',   label: 'Perfil',   Icon: RNavIconUser },
+      ];
+
+      const renderTab = () => {
+        switch (activeTab) {
+          case 'radar':    return <RadarTab />;
+          case 'pedidos':  return <PedidosTabRepartidor />;
+          case 'ganancias':return <GananciasTab />;
+          case 'perfil':   return <PerfilRepartidor />;
+          default:         return <RadarTab />;
+        }
+      };
+
+      return (
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <IOSDevice dark={false} width={402} height={874}>
+            <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+                {/* Radar tab is full-bleed (header overlaid on map) */}
+                {activeTab === 'radar' ? (
+                  <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                    <RepartidorHeader />
+                    <RadarTab />
+                    <RoleDashNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+                  </div>
+                ) : (
+                  <>
+                    <DashHeader />
+                    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: 90 }}>
+                      <div key={activeTab} style={{ animation: 'zFadeSlideIn 0.25s ease' }}>
+                        {renderTab()}
+                      </div>
+                    </div>
+                    <RoleDashNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+                  </>
+                )}
+
+              </div>
+            </div>
+          </IOSDevice>
+
+          <TweaksPanel title="Tweaks · Repartidor">
+            <TweakSection label="Navegación Rápida" />
+            <TweakButton label="Radar (Mapa)" onClick={() => setActiveTab('radar')} secondary />
+            <TweakButton label="Mis Pedidos" onClick={() => setActiveTab('pedidos')} secondary />
+            <TweakButton label="Mis Ganancias" onClick={() => setActiveTab('ganancias')} secondary />
+            <TweakButton label="Mi Perfil" onClick={() => setActiveTab('perfil')} secondary />
+          </TweaksPanel>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('app-root')).render(<RepartidorDashboard />);
+  </script>
+</body>
+</html>

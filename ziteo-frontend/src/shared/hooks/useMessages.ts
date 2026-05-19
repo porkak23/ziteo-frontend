@@ -43,7 +43,7 @@ export function useMessages(otherUserId: string) {
 
       if (cancelled) return
       if (err) { setError(err.message); return }
-      setMessages(data as Message[])
+      setMessages(data as unknown as Message[])
       setLoading(false)
     }
 

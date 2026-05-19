@@ -1,15 +1,20 @@
+import { useState } from 'react'
 import { Z } from '@/shared/design/tokens'
+import LegalModal, { type LegalDocType } from '@/shared/components/LegalModal'
 
 interface WelcomeScreenProps {
   onNavigate: (dest: string) => void
 }
 
 export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
+  const [legalModal, setLegalModal] = useState<LegalDocType | null>(null)
+
   return (
     <div
       className="fixed inset-0 flex flex-col overflow-hidden"
       style={{ background: Z.navy }}
     >
+      {/* Hero image area */}
       <div
         className="relative overflow-hidden"
         style={{
@@ -20,6 +25,7 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
           `,
         }}
       >
+        {/* Construction image placeholder */}
         <div className="absolute inset-0 flex items-center justify-center flex-col" style={{ gap: 8 }}>
           <div
             style={{
@@ -38,6 +44,7 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
           </div>
         </div>
 
+        {/* Geometric accents */}
         <div
           className="absolute"
           style={{
@@ -58,6 +65,7 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
         />
       </div>
 
+      {/* Content */}
       <div
         className="flex-1 flex flex-col justify-center"
         style={{
@@ -68,8 +76,12 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
       >
         <h2
           style={{
-            fontFamily: Z.font, fontWeight: 800, fontSize: 30,
-            color: '#FFFFFF', margin: 0, lineHeight: 1.15,
+            fontFamily: Z.font,
+            fontWeight: 800,
+            fontSize: 30,
+            color: '#FFFFFF',
+            margin: 0,
+            lineHeight: 1.15,
           }}
         >
           Bienvenido a<br />
@@ -86,8 +98,12 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
 
         <p
           style={{
-            fontFamily: Z.font, fontSize: 14, fontWeight: 400,
-            color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.6,
+            fontFamily: Z.font,
+            fontSize: 14,
+            fontWeight: 400,
+            color: 'rgba(255,255,255,0.5)',
+            margin: 0,
+            lineHeight: 1.6,
           }}
         >
           Conecta con proveedores, maestros de obra y transportistas. Todo lo que necesitas para construir, en un solo lugar.
@@ -123,7 +139,37 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
             Crear Cuenta
           </button>
         </div>
+
+        {/* Legal footer */}
+        <p
+          style={{
+            fontFamily: Z.font,
+            fontSize: 11,
+            color: 'rgba(255,255,255,0.3)',
+            lineHeight: 1.6,
+            margin: '8px 0 0',
+            textAlign: 'center',
+          }}
+        >
+          Al usar Ziteo aceptas nuestros{' '}
+          <span
+            onClick={() => setLegalModal('terminos')}
+            style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            Términos de Uso
+          </span>
+          {' '}y nuestra{' '}
+          <span
+            onClick={() => setLegalModal('privacidad')}
+            style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            Política de Privacidad
+          </span>
+        </p>
       </div>
+
+      {/* Legal modals */}
+      {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
     </div>
   )
 }

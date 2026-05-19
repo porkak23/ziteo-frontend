@@ -5,3 +5,8 @@ export { ZInput } from './ZInput';
 export { ZScreen } from './ZScreen';
 export { ZHeader } from './ZHeader';
 export { ZDivider } from './ZDivider';
+export { ZSelect } from './ZSelect';
+export { ZPinInput } from './ZPinInput';
+export { ZOTPInput } from './ZOTPInput';
+export { ZRoleCard } from './ZRoleCard';
+export { ZStepBar } from './ZStepBar';

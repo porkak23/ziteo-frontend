@@ -3,6 +3,8 @@ import { Z } from '../../shared/design/tokens'
 import { ZAvatar, ZIcon } from '../../shared/design/components'
 import { useAuthStore } from '../auth/store/authStore'
 import type { UserRole } from '../auth/store/authStore'
+import { supabase } from '../../lib/supabaseClient'
+import { addRole as addRoleService } from '../auth/services/authService'
 
 export interface AccountScreenProps {
   onClose: () => void
@@ -66,7 +68,25 @@ export function AccountScreen({ onClose, onLogout }: AccountScreenProps) {
   const handleSwitchRole = (newRole: UserRole) => {
     if (newRole === role) return
     setActiveRole(newRole)
+    supabase.from('profiles').update({ active_role: newRole }).eq('user_id', user!.user_id).then(({ error }) => {
+      if (error) console.error('Error updating active_role:', error.message)
+    })
     onClose()
+  }
+
+  const [addingRole, setAddingRole] = useState<UserRole | null>(null)
+
+  const handleAddRole = async (newRole: UserRole) => {
+    if (!user || addingRole) return
+    setAddingRole(newRole)
+    try {
+      await addRoleService(user.access_token, newRole)
+      useAuthStore.getState().addRole(newRole)
+    } catch (err) {
+      console.error('Error adding role:', err)
+    } finally {
+      setAddingRole(null)
+    }
   }
 
   const handleLogout = () => {
@@ -299,80 +319,113 @@ export function AccountScreen({ onClose, onLogout }: AccountScreenProps) {
           </div>
         </div>
 
-        {/* Cambiar rol */}
-        {availableRoles.length > 1 && (
-          <div>
-            <p
-              style={{
-                fontFamily: Z.font,
-                fontSize: 12,
-                fontWeight: 700,
-                color: Z.textMuted,
-                textTransform: 'uppercase',
-                letterSpacing: 1,
-                margin: '0 0 10px',
-              }}
-            >
-              Cambiar rol
-            </p>
-            <div
-              style={{
-                borderRadius: Z.r.md,
-                background: Z.surface,
-                border: `1px solid ${Z.border}`,
-                overflow: 'hidden',
-              }}
-            >
-              {availableRoles.map((r, i) => {
-                const isActive = r === role
-                return (
-                  <button
-                    key={r}
-                    onClick={() => handleSwitchRole(r as UserRole)}
+        {/* Cambiar/Agregar rol */}
+        <div>
+          <p
+            style={{
+              fontFamily: Z.font,
+              fontSize: 12,
+              fontWeight: 700,
+              color: Z.textMuted,
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+              margin: '0 0 10px',
+            }}
+          >
+            Mis roles
+          </p>
+          <div
+            style={{
+              borderRadius: Z.r.md,
+              background: Z.surface,
+              border: `1px solid ${Z.border}`,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            {availableRoles.map((r, i) => {
+              const isActive = r === role
+              return (
+                <button
+                  key={r}
+                  onClick={() => handleSwitchRole(r as UserRole)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '14px 16px',
+                    borderBottom: i < availableRoles.length - 1 || Object.keys(ROLE_LABELS).length > availableRoles.length ? `1px solid ${Z.divider}` : 'none',
+                    background: isActive ? Z.orangeLight : 'transparent',
+                    border: 'none',
+                    cursor: isActive ? 'default' : 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  <span
                     style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '14px 16px',
-                      borderBottom: i < availableRoles.length - 1 ? `1px solid ${Z.divider}` : 'none',
-                      background: isActive ? Z.orangeLight : 'transparent',
-                      border: 'none',
-                      cursor: isActive ? 'default' : 'pointer',
-                      outline: 'none',
+                      fontFamily: Z.font,
+                      fontSize: 14,
+                      fontWeight: isActive ? 700 : 600,
+                      color: isActive ? Z.orangeDark : Z.text,
                     }}
                   >
+                    {ROLE_LABELS[r as UserRole] ?? r}
+                  </span>
+                  {isActive && (
                     <span
                       style={{
                         fontFamily: Z.font,
-                        fontSize: 14,
-                        fontWeight: isActive ? 700 : 600,
-                        color: isActive ? Z.orangeDark : Z.text,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: Z.orangeDark,
+                        background: Z.orange + '22',
+                        padding: '3px 8px',
+                        borderRadius: 8,
                       }}
                     >
-                      {ROLE_LABELS[r as UserRole] ?? r}
+                      Activo
                     </span>
-                    {isActive && (
-                      <span
-                        style={{
-                          fontFamily: Z.font,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: Z.orangeDark,
-                          background: Z.orange + '22',
-                          padding: '3px 8px',
-                          borderRadius: 8,
-                        }}
-                      >
-                        Activo
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
+                  )}
+                </button>
+              )
+            })}
+            
+            {(Object.keys(ROLE_LABELS) as UserRole[]).filter(r => !availableRoles.includes(r)).map((r, i, arr) => (
+              <button
+                key={r}
+                onClick={() => handleAddRole(r)}
+                disabled={!!addingRole}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '14px 16px',
+                  borderBottom: i < arr.length - 1 ? `1px solid ${Z.divider}` : 'none',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: addingRole ? 'default' : 'pointer',
+                  outline: 'none',
+                  opacity: addingRole === r ? 0.5 : 1,
+                }}
+              >
+                <ZIcon name={addingRole === r ? 'hourglass_empty' : 'add'} size={18} color={Z.orange} />
+                <span
+                  style={{
+                    fontFamily: Z.font,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: Z.orange,
+                  }}
+                >
+                  Agregar rol de {ROLE_LABELS[r as UserRole]}
+                </span>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Logout */}
         <button

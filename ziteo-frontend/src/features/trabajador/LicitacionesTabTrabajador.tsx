@@ -1,10 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Z } from '../../shared/design/tokens'
 import { FilterBar } from '../../shared/design/shell'
-import { ZScreen } from '../../shared/design/components'
 import { ZHeader } from '../../shared/design/components'
 import { ZButton } from '../../shared/design/components'
-import { LicitacionFeed } from '../licitaciones/components/LicitacionFeed'
+import { CIUDADES_ACTIVAS } from '../../shared/constants/geography'
 
 interface Request {
   id: number
@@ -25,11 +24,137 @@ const W_REQUESTS: Request[] = [
   { id: 4, title: 'Acabados interiores departamento', client: 'Arq. Torres', location: 'Norte, SC', budget: 5500, time: '30 días', photos: 4, desc: 'Enlucido, empastado y pintura de departamento completo. 3 ambientes.', urgent: true },
 ]
 
+const CITIES = ['Todas', ...CIUDADES_ACTIVAS]
+const SPECIALTIES = ['Todas', 'Albañilería', 'Electricidad', 'Plomería', 'Pintura', 'Carpintería', 'Acabados']
+
+function DropdownButton({
+  label,
+  value,
+  options,
+  isOpen,
+  onToggle,
+  onSelect,
+}: {
+  label: string
+  value: string
+  options: string[]
+  isOpen: boolean
+  onToggle: () => void
+  onSelect: (v: string) => void
+}) {
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const listId = `dropdown-list-${label.toLowerCase().replace(/\s/g, '-')}`
+  const isActive = value !== 'Todas'
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        onToggle()
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [isOpen, onToggle])
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-controls={listId}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '6px 10px',
+          borderRadius: 20,
+          border: `1.5px solid ${isActive ? Z.orange : Z.border}`,
+          background: isActive ? Z.orangeLight : Z.surface,
+          cursor: 'pointer',
+          fontFamily: Z.font,
+          fontSize: 12,
+          fontWeight: isActive ? 700 : 500,
+          color: isActive ? Z.orangeDark : Z.textSec,
+          whiteSpace: 'nowrap' as const,
+          outline: 'none',
+          transition: 'all 0.15s',
+        }}
+      >
+        {isActive ? value : label}
+        <span aria-hidden="true" style={{ fontSize: 9, opacity: 0.6, marginLeft: 1 }}>▾</span>
+      </button>
+
+      {isOpen && (
+        <div
+          id={listId}
+          role="listbox"
+          aria-label={label}
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            right: 0,
+            zIndex: 50,
+            background: Z.surface,
+            borderRadius: 12,
+            border: `1px solid ${Z.border}`,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+            padding: '6px',
+            minWidth: 140,
+          }}
+        >
+          {options.map((opt) => (
+            <button
+              key={opt}
+              role="option"
+              aria-selected={value === opt}
+              onClick={() => {
+                onSelect(opt)
+                onToggle()
+              }}
+              style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                padding: '8px 12px',
+                borderRadius: 8,
+                border: 'none',
+                cursor: 'pointer',
+                background: value === opt ? Z.orangeLight : 'transparent',
+                fontFamily: Z.font,
+                fontSize: 13,
+                fontWeight: value === opt ? 700 : 400,
+                color: value === opt ? Z.orangeDark : Z.text,
+                transition: 'background 0.1s',
+                outline: 'none',
+              }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function RequestDetail({ request, onBack }: { request: Request; onBack: () => void }) {
   const [offerAmt, setOfferAmt] = useState('')
 
   return (
-    <ZScreen>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        background: Z.bg,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        animation: 'zFadeSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+      }}
+    >
       <ZHeader title="Solicitud de Trabajo" onBack={onBack} />
       <div style={{ flex: 1, padding: '8px 20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {request.photos > 0 && (
@@ -148,28 +273,63 @@ function RequestDetail({ request, onBack }: { request: Request; onBack: () => vo
           No me interesa
         </ZButton>
       </div>
-    </ZScreen>
+    </div>
   )
 }
 
 export function LicitacionesTabTrabajador() {
   const [filter, setFilter] = useState('Nuevas')
   const [selected, setSelected] = useState<Request | null>(null)
+  const [cityFilter, setCityFilter] = useState('Todas')
+  const [specFilter, setSpecFilter] = useState('Todas')
+  const [openDropdown, setOpenDropdown] = useState<'city' | 'spec' | null>(null)
 
   if (selected) {
     return <RequestDetail request={selected} onBack={() => setSelected(null)} />
   }
 
+  const filteredRequests = W_REQUESTS.filter((r) => {
+    if (cityFilter !== 'Todas' && !r.location.includes(cityFilter)) return false
+    if (specFilter !== 'Todas' && !r.title.toLowerCase().includes(specFilter.toLowerCase()) && !r.desc.toLowerCase().includes(specFilter.toLowerCase())) return false
+    return true
+  })
+
   return (
     <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
       <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: 0 }}>
-        Licitaciones
+        Trabajos
       </h2>
-      <FilterBar options={['Nuevas', 'Enviadas', 'Historial']} active={filter} onChange={setFilter} />
+
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <FilterBar options={['Nuevas', 'Enviadas', 'Historial']} active={filter} onChange={setFilter} />
+        </div>
+        <DropdownButton
+          label="Ciudad"
+          value={cityFilter}
+          options={CITIES}
+          isOpen={openDropdown === 'city'}
+          onToggle={() => setOpenDropdown(openDropdown === 'city' ? null : 'city')}
+          onSelect={setCityFilter}
+        />
+        <DropdownButton
+          label="Especialidad"
+          value={specFilter}
+          options={SPECIALTIES}
+          isOpen={openDropdown === 'spec'}
+          onToggle={() => setOpenDropdown(openDropdown === 'spec' ? null : 'spec')}
+          onSelect={setSpecFilter}
+        />
+      </div>
 
       {filter === 'Nuevas' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {W_REQUESTS.map((r) => (
+          {filteredRequests.length === 0 && (
+            <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textMuted, textAlign: 'center', padding: '24px 0' }}>
+              Sin trabajos para estos filtros
+            </p>
+          )}
+          {filteredRequests.map((r) => (
             <button
               key={r.id}
               onClick={() => setSelected(r)}
@@ -274,13 +434,6 @@ export function LicitacionesTabTrabajador() {
           ))}
         </div>
       )}
-
-      <div style={{ borderTop: `1px solid ${Z.border}`, paddingTop: 16 }}>
-        <p style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted, margin: '0 0 12px' }}>
-          Licitaciones activas de constructores:
-        </p>
-        <LicitacionFeed />
-      </div>
     </div>
   )
 }

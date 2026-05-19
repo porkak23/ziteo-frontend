@@ -3,6 +3,7 @@ import { useCart } from '../hooks/useCart'
 import { usePlaceOrder } from '../hooks/useOrders'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
+import { QrPagoModal } from './QrPagoModal'
 
 interface CheckoutScreenProps {
   onBack: () => void
@@ -11,6 +12,7 @@ interface CheckoutScreenProps {
 
 export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
   const [orderError, setOrderError] = useState<string | null>(null)
+  const [pendingQr, setPendingQr] = useState<{ orderId: string; providerId: string } | null>(null)
   const { toasts, showToast, removeToast } = useToast()
 
   const items = useCart((s) => s.items)
@@ -20,10 +22,16 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
 
   function handleConfirm() {
     setOrderError(null)
+
+    // Capture providerId from cart before the mutation clears it
+    const firstProviderId = items[0]?.sellerId ?? ''
+
     placeOrder(undefined, {
-      onSuccess: () => {
+      onSuccess: ({ orderIds, providerIds }) => {
         showToast('¡Pedido realizado con éxito!', 'success')
-        onSuccess()
+        const orderId = orderIds[0] ?? ''
+        const providerId = providerIds[0] ?? firstProviderId
+        setPendingQr({ orderId, providerId })
       },
       onError: (err) => {
         const msg = err instanceof Error ? err.message : 'Error al procesar el pedido'
@@ -90,6 +98,18 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
           {isPending ? 'Procesando...' : 'Confirmar pedido'}
         </button>
       </div>
+
+      {pendingQr && (
+        <QrPagoModal
+          providerId={pendingQr.providerId}
+          orderId={pendingQr.orderId}
+          onConfirmed={onSuccess}
+          onClose={() => {
+            setPendingQr(null)
+            onSuccess()
+          }}
+        />
+      )}
     </div>
   )
 }

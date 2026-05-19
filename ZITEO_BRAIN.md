@@ -52,3 +52,6 @@ Ziteo prefiere usar **PostgreSQL RPCs (Functions)** con Triggers para manejar la
 2.  **Auth Flow**: Flujo robusto (Splash -> Welcome -> Login/Register -> OTP -> Onboarding/OAuth -> App).
 3.  **Restauración de Sesión Fuerte**: `useEffect` en `App.tsx` fuerza a `supabase.auth.setSession()` desde los tokens guardados en Zustand para evitar desconexiones de RLS.
 4.  **Notificaciones**: Guardadas en BD y consultadas vía hook local (sin webhooks complejos, inserción directa al mutar).
+
+## 6. 🌍 Cobertura Geográfica
+Actualmente, Ziteo operará inicialmente solo en 3 ciudades: **Sucre, Potosí y Santa Cruz**. El resto de las ciudades en Bolivia están desactivadas hasta que la plataforma expanda su alcance para llegar a ellas.

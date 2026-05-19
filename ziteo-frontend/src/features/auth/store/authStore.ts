@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import * as Sentry from '@sentry/react'
+import { identifyUser, resetUser as analyticsResetUser } from '../../../lib/analytics'
 
 export type UserRole = 'constructor' | 'proveedor' | 'maestro' | 'chofer'
 
@@ -32,7 +34,14 @@ export const useAuthStore = create<AuthStore>()(
     (set, get) => ({
       user: null,
 
-      setUser: (user) => set({ user }),
+      setUser: (user) => {
+        // Attach identity to Sentry for error attribution.
+        // Only non-sensitive fields: id and display name — no phone, no tokens.
+        Sentry.setUser({ id: user.user_id, username: user.name })
+        // Identify in PostHog — only user_id and role, no PII
+        identifyUser(user.user_id, user.active_role)
+        set({ user })
+      },
 
       setActiveRole: (role) =>
         set((state) => ({
@@ -46,9 +55,17 @@ export const useAuthStore = create<AuthStore>()(
           return { user: { ...state.user, roles: [...state.user.roles, role] } }
         }),
 
-      logout: () => set({ user: null }),
+      logout: () => {
+        Sentry.setUser(null)
+        analyticsResetUser()
+        set({ user: null })
+      },
 
-      clearSession: () => set({ user: null }),
+      clearSession: () => {
+        Sentry.setUser(null)
+        analyticsResetUser()
+        set({ user: null })
+      },
 
       updateTokens: (accessToken, refreshToken) =>
         set((state) => ({

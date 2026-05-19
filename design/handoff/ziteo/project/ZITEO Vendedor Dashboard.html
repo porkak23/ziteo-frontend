@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZITEO — Vendedor Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      display: flex; align-items: center; justify-content: center;
+      background: #0A0C14; font-family: 'Manrope', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    #app-root { position: relative; }
+    #app-root::before {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); width: 500px; height: 700px;
+      background: radial-gradient(ellipse, rgba(58,123,213,0.07) 0%, rgba(232,115,58,0.04) 40%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    @keyframes zFadeSlideIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    ::-webkit-scrollbar { width: 0; }
+  </style>
+</head>
+<body>
+  <div id="app-root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="components/ios-frame.jsx"></script>
+  <script type="text/babel" src="components/tweaks-panel.jsx"></script>
+  <script type="text/babel" src="components/ziteo-ui.jsx"></script>
+  <script type="text/babel" src="components/ziteo-dash-shell.jsx"></script>
+  <script type="text/babel" src="components/ziteo-vendedor-tabs.jsx"></script>
+  <script type="text/babel">
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "showStockAlerts": true
+    }/*EDITMODE-END*/;
+
+    function VendedorDashboard() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+      const [activeTab, setActiveTab] = React.useState('home');
+      const [subScreen, setSubScreen] = React.useState(null);
+
+      const handleNavigate = (target) => {
+        if (['inventario', 'pedidos', 'cotizaciones'].includes(target)) {
+          setActiveTab(target); setSubScreen(null);
+        } else {
+          setSubScreen(target);
+        }
+      };
+
+      const tabs = [
+        { key: 'home',         label: 'Inicio',      Icon: NavIconHome },
+        { key: 'inventario',   label: 'Inventario',  Icon: VNavIconInventory },
+        { key: 'pedidos',      label: 'Pedidos',     Icon: VNavIconOrders },
+        { key: 'cotizaciones', label: 'Cotizar',     Icon: VNavIconQuotes },
+      ];
+
+      const renderTab = () => {
+        switch (activeTab) {
+          case 'home':         return <HomeTabVendedor onNavigate={handleNavigate} />;
+          case 'inventario':   return <InventarioTab />;
+          case 'pedidos':      return <PedidosTabVendedor />;
+          case 'cotizaciones': return <CotizacionesTabVendedor />;
+          default:             return <HomeTabVendedor onNavigate={handleNavigate} />;
+        }
+      };
+
+      return (
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <IOSDevice dark={false} width={402} height={874}>
+            <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+              {subScreen === 'logistica' ? (
+                <LogisticaScreen order={V_ORDERS[0]} onBack={() => setSubScreen(null)} />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <DashHeader />
+                  <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: 90 }}>
+                    <div key={activeTab} style={{ animation: 'zFadeSlideIn 0.25s ease' }}>
+                      {renderTab()}
+                    </div>
+                  </div>
+                  <RoleDashNav tabs={tabs} activeTab={activeTab} onTabChange={(tab) => { setSubScreen(null); setActiveTab(tab); }} />
+                  <ChatFab />
+                </div>
+              )}
+            </div>
+          </IOSDevice>
+
+          <TweaksPanel title="Tweaks · Vendedor">
+            <TweakSection label="Navegación Rápida" />
+            <TweakButton label="Inicio" onClick={() => { setSubScreen(null); setActiveTab('home'); }} secondary />
+            <TweakButton label="Inventario" onClick={() => { setSubScreen(null); setActiveTab('inventario'); }} secondary />
+            <TweakButton label="Pedidos" onClick={() => { setSubScreen(null); setActiveTab('pedidos'); }} secondary />
+            <TweakButton label="Cotizaciones" onClick={() => { setSubScreen(null); setActiveTab('cotizaciones'); }} secondary />
+          </TweaksPanel>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('app-root')).render(<VendedorDashboard />);
+  </script>
+</body>
+</html>

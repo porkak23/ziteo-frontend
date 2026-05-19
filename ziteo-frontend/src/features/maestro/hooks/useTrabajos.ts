@@ -53,7 +53,8 @@ export function usePostularseAProyecto() {
       project_id: string
       applicant_id: string
     }) => {
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
         .from('project_applications')
         .insert({ project_id, applicant_id })
       if (error) throw error

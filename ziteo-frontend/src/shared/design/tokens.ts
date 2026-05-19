@@ -1,29 +1,38 @@
 export const Z = {
-  orange: '#E8733A',
-  orangeDark: '#A43700',
-  orangeLight: '#FFF0EB',
-  orangePastel: '#FFEADF',
-  blue: '#3A7BD5',
-  blueDark: '#1E5FAD',
-  blueLight: '#EDF4FF',
-  bluePastel: '#D6E6FF',
-  navy: '#0D1020',
+  // Accent colours — respond to dark mode via CSS vars
+  orange:       'var(--z-orange)',
+  orangeDark:   'var(--z-orange-dark)',
+  orangeLight:  'var(--z-orange-light)',
+  orangePastel: 'var(--z-orange-pastel)',
+  blue:         'var(--z-blue)',
+  blueDark:     'var(--z-blue-dark)',
+  blueLight:    'var(--z-blue-light)',
+  bluePastel:   'var(--z-blue-pastel)',
+
+  // Always-dark UI (driver/splash — never theme-switched)
+  navy:    '#0D1020',
   navyMid: '#1A1F35',
-  bg: '#F8F6F2',
-  surface: '#FFFFFF',
-  text: '#1A1A2E',
-  textSec: '#64748B',
-  textMuted: '#94A3B8',
-  error: '#BA1A1A',
-  errorBg: '#FFF1F1',
-  success: '#16A34A',
-  border: '#E2E8F0',
-  divider: '#F1F5F9',
+
+  // Surfaces & text — respond to dark mode
+  bg:       'var(--z-bg)',
+  surface:  'var(--z-surface)',
+  text:     'var(--z-text)',
+  textSec:  'var(--z-text-sec)',
+  textMuted:'var(--z-text-muted)',
+  error:    'var(--z-error)',
+  errorBg:  'var(--z-error-bg)',
+  success:  'var(--z-success)',
+  border:   'var(--z-border)',
+  divider:  'var(--z-divider)',
+
+  // Static
   font: "'Manrope', sans-serif",
   r: { sm: 10, md: 14, lg: 20, xl: 28, full: 9999 },
-  gradOrange: 'linear-gradient(135deg, #E8733A 0%, #A43700 100%)',
-  gradBlue: 'linear-gradient(135deg, #5B9BD5 0%, #2E6EB5 100%)',
-  gradMixed: 'linear-gradient(135deg, #E8733A 0%, #3A7BD5 100%)',
+
+  // Gradients
+  gradOrange: 'linear-gradient(135deg, var(--z-orange) 0%, var(--z-orange-dark) 100%)',
+  gradBlue:   'linear-gradient(135deg, #5B9BD5 0%, #2E6EB5 100%)',
+  gradMixed:  'linear-gradient(135deg, var(--z-orange) 0%, var(--z-blue) 100%)',
 } as const;
 
 export type ZColor = typeof Z.orange;

@@ -149,9 +149,11 @@ export function useChat(currentUserId: string, otherUserId: string) {
         optimisticMsg,
       ])
 
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from('messages')
         .insert({
+          conversation_id: [currentUserId, otherUserId].sort().join('_'),
           sender_id: currentUserId,
           receiver_id: otherUserId,
           content: content.trim(),

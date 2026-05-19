@@ -1,9 +1,11 @@
+import { Z } from '../tokens';
+
 interface NavIconProps {
   color?: string;
   size?: number;
 }
 
-export function NavIconHome({ color = '#94A3B8', size = 22 }: NavIconProps) {
+export function NavIconHome({ color = Z.textMuted, size = 22 }: NavIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-4v-6h-8v6H4a1 1 0 01-1-1V10.5z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
@@ -11,7 +13,7 @@ export function NavIconHome({ color = '#94A3B8', size = 22 }: NavIconProps) {
   );
 }
 
-export function NavIconStore({ color = '#94A3B8', size = 22 }: NavIconProps) {
+export function NavIconStore({ color = Z.textMuted, size = 22 }: NavIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path d="M6 2L3 7v13a1 1 0 001 1h16a1 1 0 001-1V7l-3-5H6z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
@@ -21,7 +23,7 @@ export function NavIconStore({ color = '#94A3B8', size = 22 }: NavIconProps) {
   );
 }
 
-export function NavIconProjects({ color = '#94A3B8', size = 22 }: NavIconProps) {
+export function NavIconProjects({ color = Z.textMuted, size = 22 }: NavIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2v11z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
@@ -29,7 +31,7 @@ export function NavIconProjects({ color = '#94A3B8', size = 22 }: NavIconProps) 
   );
 }
 
-export function NavIconBids({ color = '#94A3B8', size = 22 }: NavIconProps) {
+export function NavIconBids({ color = Z.textMuted, size = 22 }: NavIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path d="M16 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V8l-5-5z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
@@ -38,7 +40,7 @@ export function NavIconBids({ color = '#94A3B8', size = 22 }: NavIconProps) {
   );
 }
 
-export function NavIconCart({ color = '#94A3B8', size = 22 }: NavIconProps) {
+export function NavIconCart({ color = Z.textMuted, size = 22 }: NavIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <circle cx="9" cy="21" r="1" fill={color}/>
@@ -48,7 +50,7 @@ export function NavIconCart({ color = '#94A3B8', size = 22 }: NavIconProps) {
   );
 }
 
-export function NavIconTruck({ color = '#94A3B8', size = 22 }: NavIconProps) {
+export function NavIconTruck({ color = Z.textMuted, size = 22 }: NavIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <rect x="1" y="5" width="14" height="12" rx="1.5" stroke={color} strokeWidth="1.8" fill="none"/>
@@ -59,7 +61,7 @@ export function NavIconTruck({ color = '#94A3B8', size = 22 }: NavIconProps) {
   );
 }
 
-export function NavIconUsers({ color = '#94A3B8', size = 22 }: NavIconProps) {
+export function NavIconUsers({ color = Z.textMuted, size = 22 }: NavIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none"/>
@@ -85,6 +87,7 @@ export function NavIconMsg({ color = '#fff', size = 22 }: NavIconProps) {
   );
 }
 
+/** Amber star — #F59E0B is a standard Tailwind amber-400, not a Z brand hex. */
 export function IconStar({ color = '#F59E0B', size = 14 }: NavIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24">
@@ -96,7 +99,7 @@ export function IconStar({ color = '#F59E0B', size = 14 }: NavIconProps) {
 export function IconVerified({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" fill="#3A7BD5"/>
+      <circle cx="12" cy="12" r="10" fill={Z.blue}/>
       <path d="M8 12l3 3 5-6" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
     </svg>
   );

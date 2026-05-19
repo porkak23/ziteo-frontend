@@ -86,7 +86,7 @@ export function useIntelData() {
 
       if (itemsError) throw itemsError
 
-      const items = (orderItemsData ?? []) as RawOrderItem[]
+      const items = (orderItemsData ?? []) as unknown as RawOrderItem[]
 
       // Fetch quotations count for last 30 days
       let cotizacionesLast30 = 0

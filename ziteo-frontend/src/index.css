@@ -93,91 +93,131 @@
     --color-primary-dark:        #A83800;
     --color-success:             #16A34A;
     --color-success-dark:        #166534;
+
+    /* ── Z Design Token Layer (light) ───────────────────── */
+    --z-bg:            #F8F6F2;
+    --z-surface:       #FFFFFF;
+    --z-text:          #1A1A2E;
+    --z-text-sec:      #64748B;
+    --z-text-muted:    #94A3B8;
+    --z-border:        #E2E8F0;
+    --z-divider:       #F1F5F9;
+    --z-error:         #BA1A1A;
+    --z-error-bg:      #FFF1F1;
+    --z-success:       #16A34A;
+    --z-orange:        #E8733A;
+    --z-orange-dark:   #A43700;
+    --z-orange-light:  #FFF0EB;
+    --z-orange-pastel: #FFEADF;
+    --z-blue:          #3A7BD5;
+    --z-blue-dark:     #1E5FAD;
+    --z-blue-light:    #EDF4FF;
+    --z-blue-pastel:   #D6E6FF;
   }
 
   .dark {
     /* Brand */
-    --color-primary:                   #FF7A40;
-    --color-primary-container:         #7A2900;
+    --color-primary:                   #FF7040;
+    --color-primary-container:         #6B2300;
     --color-primary-fixed:             #FFE8DC;
-    --color-primary-fixed-dim:         #FFB899;
-    --color-on-primary:                #1A0800;
+    --color-primary-fixed-dim:         #FFAA88;
+    --color-on-primary:                #1A0700;
     --color-on-primary-fixed:          #3A0E00;
     --color-on-primary-fixed-variant:  #A83800;
     --color-inverse-primary:           #D94F00;
 
-    /* Secondary — lighter grey for dark */
-    --color-secondary:                 #9CA3AF;
-    --color-secondary-container:       #374151;
+    /* Secondary — warm grey for dark */
+    --color-secondary:                 #A39890;
+    --color-secondary-container:       #3A302A;
     --color-secondary-fixed:           #F3F4F6;
     --color-secondary-fixed-dim:       #D1D5DB;
-    --color-on-secondary:              #111827;
-    --color-on-secondary-container:    #F3F4F6;
+    --color-on-secondary:              #12100E;
+    --color-on-secondary-container:    #EDE8E3;
     --color-on-secondary-fixed:        #111827;
-    --color-on-secondary-fixed-variant:#4B5563;
+    --color-on-secondary-fixed-variant:#7A6E66;
 
     /* Tertiary */
-    --color-tertiary:                  #D1D5DB;
-    --color-tertiary-container:        #4B5563;
+    --color-tertiary:                  #C8BDB5;
+    --color-tertiary-container:        #3F3028;
     --color-tertiary-fixed:            #F9FAFB;
     --color-tertiary-fixed-dim:        #E5E7EB;
-    --color-on-tertiary:               #111827;
-    --color-on-tertiary-container:     #F9FAFB;
+    --color-on-tertiary:               #12100E;
+    --color-on-tertiary-container:     #EDE8E3;
     --color-on-tertiary-fixed:         #111827;
-    --color-on-tertiary-fixed-variant: #374151;
+    --color-on-tertiary-fixed-variant: #5A4E46;
 
-    /* Surfaces — true dark */
-    --color-background:                #0A0A0A;
-    --color-surface:                   #161616;
-    --color-surface-bright:            #2A2A2A;
-    --color-surface-dim:               #0A0A0A;
-    --color-surface-container:         #1E1E1E;
-    --color-surface-container-low:     #181818;
-    --color-surface-container-high:    #252525;
-    --color-surface-container-highest: #2E2E2E;
-    --color-surface-container-lowest:  #0D0D0D;
-    --color-surface-variant:           #2D2D2D;
-    --color-surface-tint:              #FF7A40;
+    /* Surfaces — warm charcoal (not pure black) */
+    --color-background:                #0D0A08;
+    --color-surface:                   #171210;
+    --color-surface-bright:            #3A2C24;
+    --color-surface-dim:               #090706;
+    --color-surface-container:         #201812;
+    --color-surface-container-low:     #1A1410;
+    --color-surface-container-high:    #271D16;
+    --color-surface-container-highest: #30241B;
+    --color-surface-container-lowest:  #100D0A;
+    --color-surface-variant:           #261C15;
+    --color-surface-tint:              #FF7040;
 
-    /* Text */
-    --color-on-background:             #F5F5F5;
-    --color-on-surface:                #F5F5F5;
-    --color-on-surface-variant:        #9CA3AF;
+    /* Text — warm off-white */
+    --color-on-background:             #EDE8E3;
+    --color-on-surface:                #EDE8E3;
+    --color-on-surface-variant:        #9C938C;
 
     /* States */
-    --color-error:                     #F87171;
-    --color-error-container:           #7F1D1D;
+    --color-error:                     #FF7575;
+    --color-error-container:           #3D0A0A;
     --color-on-error:                  #1A0000;
-    --color-on-error-container:        #FEE2E2;
+    --color-on-error-container:        #FFD0D0;
 
     /* Outlines */
-    --color-outline:                   #4B5563;
-    --color-outline-variant:           #2D2D2D;
+    --color-outline:                   #5A4C42;
+    --color-outline-variant:           #2C2018;
 
     /* Misc */
     --color-project-center:            #1E1008;
 
     /* Status tokens */
-    --color-status-pending-bg:   #451A03;
-    --color-status-pending-text: #FCD34D;
-    --color-status-success-bg:   #022C22;
-    --color-status-success-text: #6EE7B7;
-    --color-status-error-bg:     #450A0A;
-    --color-status-error-text:   #FCA5A5;
-    --color-status-info-bg:      #172554;
-    --color-status-info-text:    #93C5FD;
-    --color-status-warning-bg:   #1C1107;
-    --color-status-warning-text: #FDE047;
-    --color-status-purple-bg:    #2E1065;
-    --color-status-purple-text:  #C4B5FD;
+    --color-status-pending-bg:   #3A1C06;
+    --color-status-pending-text: #FBAB47;
+    --color-status-success-bg:   #0A2416;
+    --color-status-success-text: #5BD98C;
+    --color-status-error-bg:     #3D0808;
+    --color-status-error-text:   #FF7575;
+    --color-status-info-bg:      #0D1C38;
+    --color-status-info-text:    #7EB5FF;
+    --color-status-warning-bg:   #1E1206;
+    --color-status-warning-text: #FBCF47;
+    --color-status-purple-bg:    #22103C;
+    --color-status-purple-text:  #BEA8FF;
 
     /* Rating */
-    --color-rating:              #FBBF24;
+    --color-rating:              #FBB040;
 
-    /* Extended brand — for gradients */
-    --color-primary-dark:        #7A2900;
+    /* Extended brand */
+    --color-primary-dark:        #6B2300;
     --color-success:             #22C55E;
     --color-success-dark:        #15803D;
+
+    /* ── Z Design Token Layer (dark) — warm charcoal ────── */
+    --z-bg:            #0D0A08;
+    --z-surface:       #171210;
+    --z-text:          #EDE8E3;
+    --z-text-sec:      #9C938C;
+    --z-text-muted:    #6E6158;
+    --z-border:        #342720;
+    --z-divider:       #1D1410;
+    --z-error:         #FF7575;
+    --z-error-bg:      #3D0808;
+    --z-success:       #22C55E;
+    --z-orange:        #FF7848;
+    --z-orange-dark:   #FF5E20;
+    --z-orange-light:  #2D1506;
+    --z-orange-pastel: #1E0E04;
+    --z-blue:          #5B9BDF;
+    --z-blue-dark:     #3A7BD5;
+    --z-blue-light:    #0D1E38;
+    --z-blue-pastel:   #091525;
   }
 
   body {
@@ -275,4 +315,21 @@
 @keyframes radarSpin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* Enforce focus ring — overrides outline:none in JS inline styles */
+button:focus-visible,
+[role="switch"]:focus-visible,
+[role="button"]:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+input:focus-visible:not(.z-input-inner) {
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: 3px;
+  border-radius: 4px;
 }

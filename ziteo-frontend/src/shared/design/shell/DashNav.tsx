@@ -26,10 +26,9 @@ export function DashNav({ activeTab, onTabChange }: DashNavProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
-        background: 'rgba(255,255,255,0.88)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        boxShadow: '0 2px 20px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.04)',
+        background: Z.surface,
+        border: `1px solid ${Z.border}`,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
         zIndex: 20,
         padding: '0 4px',
       }}

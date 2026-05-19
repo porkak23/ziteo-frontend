@@ -8,22 +8,12 @@ import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
 import { supabase } from '../../../lib/supabaseClient'
 import { Z } from '@/shared/design/tokens'
+import { CIUDADES_ACTIVAS } from '@/shared/constants/geography'
+import { track } from '../../../lib/analytics'
 
 interface OnboardingScreenProps {
   onComplete: () => void
 }
-
-const CITIES = [
-  'La Paz',
-  'Cochabamba',
-  'Santa Cruz',
-  'Oruro',
-  'Potosí',
-  'Sucre',
-  'Tarija',
-  'Trinidad',
-  'Cobija',
-]
 
 const ROLE_DATA: { role: UserRole; title: string; description: string }[] = [
   { role: 'constructor', title: 'Constructor', description: 'Compra materiales y gestiona obras' },
@@ -169,6 +159,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
           ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
         })
       }
+      track.onboardingComplete(activeRole)
       onComplete()
     } catch (err) {
       const errorCode = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
@@ -303,7 +294,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
             }}
           >
             <option value="">Selecciona tu ciudad</option>
-            {CITIES.map((c) => (
+            {CIUDADES_ACTIVAS.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>

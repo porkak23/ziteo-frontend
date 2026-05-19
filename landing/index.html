@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Ziteo conecta constructores, proveedores, maestros y transportistas en Bolivia. Disponible en Sucre, Potosi y Santa Cruz." />
+  <meta property="og:title" content="Ziteo - La plataforma que construye Bolivia" />
+  <meta property="og:description" content="Solicita cotizaciones, contrata maestros y gestiona materiales de construccion desde tu celular." />
+  <meta property="og:url" content="https://ziteo.bo" />
+  <meta name="theme-color" content="#D94F00" />
+  <title>Ziteo - La plataforma que construye Bolivia</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --primary: #D94F00;
+      --primary-dark: #b34100;
+      --white: #FFFFFF;
+      --gray-light: #f9f9f9;
+      --gray-mid: #e8e8e8;
+      --gray-border: #d0d0d0;
+      --text-dark: #1a1a1a;
+      --text-mid: #4a4a4a;
+      --text-light: #767676;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-dark);
+      background: var(--white);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ────────────────────────────────────────────────── */
+    .header {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-mid);
+      padding: 0 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .header-tagline {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      display: none;
+    }
+
+    @media (min-width: 480px) {
+      .header-tagline { display: block; }
+    }
+
+    .header-cta {
+      background: var(--primary);
+      color: var(--white);
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+
+    .header-cta:hover {
+      background: var(--primary-dark);
+    }
+
+    /* ── Hero ──────────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(160deg, #fff8f5 0%, var(--white) 60%);
+      padding: 4rem 1.5rem 3.5rem;
+      text-align: center;
+    }
+
+    .hero-inner {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: #fff1ea;
+      color: var(--primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.3rem 0.9rem;
+      border-radius: 100px;
+      border: 1px solid #ffd6bf;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.02em;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 7vw, 3.25rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      color: var(--text-dark);
+      margin-bottom: 1.25rem;
+    }
+
+    .hero h1 span {
+      color: var(--primary);
+    }
+
+    .hero-desc {
+      font-size: clamp(1rem, 2.5vw, 1.125rem);
+      color: var(--text-mid);
+      max-width: 540px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+
+    .download-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    @media (min-width: 480px) {
+      .download-buttons {
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+    }
+
+    .btn-primary {
+      display: inline-block;
+      background: var(--primary);
+      color: var(--white);
+      padding: 0.875rem 2rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 0.15s, transform 0.1s;
+      min-width: 220px;
+      text-align: center;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      display: inline-block;
+      background: var(--white);
+      color: var(--primary);
+      padding: 0.875rem 2rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      border: 2px solid var(--primary);
+      transition: background 0.15s, transform 0.1s;
+      min-width: 220px;
+      text-align: center;
+    }
+
+    .btn-secondary:hover {
+      background: #fff1ea;
+      transform: translateY(-1px);
+    }
+
+    .hero-note {
+      margin-top: 1.25rem;
+      font-size: 0.8rem;
+      color: var(--text-light);
+    }
+
+    /* ── Sections ──────────────────────────────────────────────── */
+    .section {
+      padding: 4rem 1.5rem;
+    }
+
+    .section-alt {
+      background: var(--gray-light);
+    }
+
+    .section-inner {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-dark);
+      margin-bottom: 1rem;
+      letter-spacing: -0.3px;
+    }
+
+    .section-desc {
+      font-size: 1rem;
+      color: var(--text-mid);
+      max-width: 560px;
+      line-height: 1.7;
+      margin-bottom: 2.5rem;
+    }
+
+    /* ── Para quien es — Cards ─────────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    @media (min-width: 480px) {
+      .cards-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (min-width: 768px) {
+      .cards-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--gray-mid);
+      border-radius: 14px;
+      padding: 1.5rem;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+
+    .section-alt .card {
+      background: var(--white);
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      transform: translateY(-2px);
+    }
+
+    .card-role {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 0.75rem;
+    }
+
+    .card-desc {
+      font-size: 0.9rem;
+      color: var(--text-mid);
+      line-height: 1.6;
+    }
+
+    /* ── Como funciona — Steps ─────────────────────────────────── */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 640px) {
+      .steps-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: var(--white);
+      font-size: 1rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .step-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .step-desc {
+      font-size: 0.9rem;
+      color: var(--text-mid);
+      line-height: 1.6;
+    }
+
+    /* ── Disponible en — Cities ────────────────────────────────── */
+    .cities-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    @media (min-width: 480px) {
+      .cities-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .city-card {
+      border: 1px solid var(--gray-mid);
+      border-radius: 14px;
+      padding: 1.5rem;
+      background: var(--white);
+      text-align: center;
+    }
+
+    .city-card.active {
+      border-color: var(--primary);
+      background: #fff8f5;
+    }
+
+    .city-status {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .city-card.active .city-status {
+      color: var(--primary);
+    }
+
+    .city-card:not(.active) .city-status {
+      color: var(--text-light);
+    }
+
+    .city-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .city-desc {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-mid);
+    }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    .footer {
+      background: var(--text-dark);
+      color: rgba(255,255,255,0.7);
+      padding: 3rem 1.5rem;
+    }
+
+    .footer-inner {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .footer-top {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (min-width: 640px) {
+      .footer-top {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+    }
+
+    .footer-brand .logo {
+      color: var(--white);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .footer-tagline {
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.5);
+      margin-top: 0.25rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      color: rgba(255,255,255,0.65);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover {
+      color: var(--white);
+    }
+
+    .footer-divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 1.5rem;
+    }
+
+    .footer-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+    }
+
+    @media (min-width: 640px) {
+      .footer-bottom {
+        flex-direction: row;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="/" class="logo">ZITEO</a>
+      <span class="header-tagline">La plataforma que construye Bolivia</span>
+      <a href="https://app.ziteo.bo" class="header-cta">Abrir app</a>
+    </div>
+  </header>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">Disponible en Bolivia</div>
+      <h1>La plataforma que <span>construye Bolivia</span></h1>
+      <p class="hero-desc">
+        Conectamos constructores, proveedores de materiales, maestros de obra
+        y transportistas en un solo lugar. Cotizaciones en segundos, sin
+        llamadas, sin intermediarios.
+      </p>
+
+      <div class="download-buttons">
+        <a href="https://play.google.com/store/apps/details?id=bo.ziteo.app"
+           id="android-btn"
+           class="btn-primary">Descargar para Android</a>
+        <a href="https://app.ziteo.bo"
+           id="ios-btn"
+           class="btn-secondary">Abrir en iPhone</a>
+        <a href="https://app.ziteo.bo"
+           id="web-btn"
+           class="btn-secondary">Abrir en el navegador</a>
+      </div>
+
+      <p class="hero-note">
+        Gratis para todos los usuarios.
+        <a href="https://app.ziteo.bo?install" style="color: var(--primary); text-decoration: none;">
+          Ver instrucciones de instalacion
+        </a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Para quien es ── -->
+  <section class="section section-alt">
+    <div class="section-inner">
+      <p class="section-label">Para quien es</p>
+      <h2 class="section-title">Una plataforma para todos los que construyen</h2>
+      <p class="section-desc">
+        Cada rol tiene su propia experiencia disenada para su trabajo diario.
+      </p>
+
+      <div class="cards-grid">
+        <div class="card">
+          <p class="card-role">Constructor</p>
+          <h3 class="card-title">Solicita cotizaciones</h3>
+          <p class="card-desc">
+            Publica tu lista de materiales y recibe presupuestos de multiples
+            proveedores en minutos. Compara y elige el mejor precio.
+          </p>
+        </div>
+
+        <div class="card">
+          <p class="card-role">Proveedor</p>
+          <h3 class="card-title">Vende sin intermediarios</h3>
+          <p class="card-desc">
+            Publica tu catalogo de materiales, gestiona tu inventario y recibe
+            pedidos directamente desde constructores verificados.
+          </p>
+        </div>
+
+        <div class="card">
+          <p class="card-role">Maestro de obra</p>
+          <h3 class="card-title">Consigue trabajo</h3>
+          <p class="card-desc">
+            Crea tu perfil profesional con especialidades y disponibilidad.
+            Los constructores te encuentran y contratan directamente.
+          </p>
+        </div>
+
+        <div class="card">
+          <p class="card-role">Transportista</p>
+          <h3 class="card-title">Gestiona tus rutas</h3>
+          <p class="card-desc">
+            Conectate con proveedores que necesitan entregar materiales.
+            Acepta pedidos y organiza tus entregas desde el celular.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Como funciona ── -->
+  <section class="section">
+    <div class="section-inner">
+      <p class="section-label">Como funciona</p>
+      <h2 class="section-title">Tres pasos para empezar</h2>
+      <p class="section-desc">
+        Sin tramites, sin instalaciones complicadas. Registrate y empieza
+        a usar Ziteo en menos de dos minutos.
+      </p>
+
+      <div class="steps-grid">
+        <div class="step">
+          <span class="step-number">1</span>
+          <h3 class="step-title">Crea tu cuenta</h3>
+          <p class="step-desc">
+            Registrate con tu numero de celular. Elige tu rol: constructor,
+            proveedor, maestro o transportista. Sin contrasenas complicadas.
+          </p>
+        </div>
+
+        <div class="step">
+          <span class="step-number">2</span>
+          <h3 class="step-title">Completa tu perfil</h3>
+          <p class="step-desc">
+            Agrega tus datos, ciudad y especialidades. Los constructores pueden
+            encontrarte y los proveedores ven tu historial de pedidos.
+          </p>
+        </div>
+
+        <div class="step">
+          <span class="step-number">3</span>
+          <h3 class="step-title">Empieza a operar</h3>
+          <p class="step-desc">
+            Solicita cotizaciones, publica productos o acepta trabajos. Todo
+            en tiempo real, con notificaciones en tu celular.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Ciudades ── -->
+  <section class="section section-alt">
+    <div class="section-inner">
+      <p class="section-label">Disponible en</p>
+      <h2 class="section-title">Ziteo esta llegando a toda Bolivia</h2>
+      <p class="section-desc">
+        Comenzamos con las principales ciudades del pais. Mas ciudades proximamente.
+      </p>
+
+      <div class="cities-grid">
+        <div class="city-card active">
+          <p class="city-status">Activo</p>
+          <p class="city-name">Santa Cruz</p>
+          <p class="city-desc">Disponible ahora para constructores y proveedores.</p>
+        </div>
+
+        <div class="city-card">
+          <p class="city-status">Proximamente</p>
+          <p class="city-name">Sucre</p>
+          <p class="city-desc">Lanzamiento previsto en los proximos meses.</p>
+        </div>
+
+        <div class="city-card">
+          <p class="city-status">Proximamente</p>
+          <p class="city-name">Potosi</p>
+          <p class="city-desc">En preparacion. Registrate para ser el primero.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a href="/" class="logo">ZITEO</a>
+          <p class="footer-tagline">La plataforma que construye Bolivia</p>
+        </div>
+
+        <nav class="footer-links" aria-label="Pie de pagina">
+          <a href="https://app.ziteo.bo/terminos">Terminos de uso</a>
+          <a href="https://app.ziteo.bo/privacidad">Privacidad</a>
+          <a href="https://app.ziteo.bo?install">Instalar app</a>
+          <a href="https://app.ziteo.bo?status">Estado del servicio</a>
+          <a href="mailto:soporte@ziteo.bo">Contacto</a>
+        </nav>
+      </div>
+
+      <hr class="footer-divider" />
+
+      <div class="footer-bottom">
+        <span>2026 Ziteo. Todos los derechos reservados.</span>
+        <span>Hecho en Bolivia</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Mostrar solo el boton relevante al dispositivo del usuario
+    (function() {
+      var ua = navigator.userAgent;
+      var androidBtn = document.getElementById('android-btn');
+      var iosBtn = document.getElementById('ios-btn');
+      var webBtn = document.getElementById('web-btn');
+
+      if (/android/i.test(ua)) {
+        // Android: mostrar Play Store, ocultar iOS y web
+        if (iosBtn) iosBtn.style.display = 'none';
+        if (webBtn) webBtn.style.display = 'none';
+      } else if (/iphone|ipad|ipod/i.test(ua)) {
+        // iOS: mostrar instrucciones Safari, ocultar Android y web
+        if (androidBtn) androidBtn.style.display = 'none';
+        if (webBtn) webBtn.style.display = 'none';
+      } else {
+        // Desktop u otro: mostrar solo "abrir en navegador"
+        if (androidBtn) androidBtn.style.display = 'none';
+        if (iosBtn) iosBtn.style.display = 'none';
+      }
+    })();
+  </script>
+
+</body>
+</html>

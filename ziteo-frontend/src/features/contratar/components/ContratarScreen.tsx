@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../../auth/store/authStore'
 import { BOLIVIAN_CITIES } from '../../auth/constants/authConstants'
-import { useMaestros, useContratarMaestro, type Maestro } from '../hooks/useMaestros'
+import {
+  useMaestros,
+  useContratarMaestro,
+  isMaestroProfileCompleto,
+  ESPECIALIDADES_MAESTRO,
+  DEFAULT_MAESTRO_FILTERS,
+  type Maestro,
+  type MaestroFilters,
+} from '../hooks/useMaestros'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
 import { ChatScreen } from '../../../shared/components/ChatScreen'
@@ -25,11 +33,8 @@ function MaestroHabilidadesSection({ maestroId }: { maestroId: string }) {
         onClick={() => setExpanded(!expanded)}
         className="flex items-center justify-between text-xs font-label font-semibold text-primary"
       >
-        <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-sm leading-none">star</span>
-          Habilidades ({habilidades.length})
-        </span>
-        <span className="material-symbols-outlined text-sm">{expanded ? 'expand_less' : 'expand_more'}</span>
+        <span>Habilidades ({habilidades.length})</span>
+        <span className="font-label text-on-surface-variant">{expanded ? 'Ocultar' : 'Ver'}</span>
       </button>
       {expanded && (
         <div className="flex flex-col gap-2 mt-1">
@@ -51,8 +56,8 @@ function MaestroHabilidadesSection({ maestroId }: { maestroId: string }) {
 }
 
 function MaestroReviewSection({ maestroId }: { maestroId: string }) {
-  const { data } = useProfileReviews(maestroId);
-  const [expanded, setExpanded] = useState(false);
+  const { data } = useProfileReviews(maestroId)
+  const [expanded, setExpanded] = useState(false)
 
   if (!data || data.totalCount === 0) {
     return (
@@ -60,14 +65,14 @@ function MaestroReviewSection({ maestroId }: { maestroId: string }) {
         <StarRating value={0} readonly size="sm" />
         <span className="text-xs font-body">(0 reseñas)</span>
       </div>
-    );
+    )
   }
 
   return (
     <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-outline-variant/50">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-on-surface">
-          <span className="font-label font-bold text-sm">{(data.averageRating).toFixed(1)}</span>
+          <span className="font-label font-bold text-sm">{data.averageRating.toFixed(1)}</span>
           <StarRating value={data.averageRating} readonly size="sm" />
           <span className="text-xs font-body text-on-surface-variant">({data.totalCount} reseñas)</span>
         </div>
@@ -78,7 +83,7 @@ function MaestroReviewSection({ maestroId }: { maestroId: string }) {
           {expanded ? 'Ocultar' : 'Ver reseñas'}
         </button>
       </div>
-      
+
       {expanded && (
         <div className="flex flex-col gap-2 mt-1 py-1">
           {data.reviews.map(r => (
@@ -142,7 +147,7 @@ function ContratoForm({ maestro, constructorId, onClose }: ContratoFormProps) {
           className="flex items-center justify-center w-11 h-11 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
           aria-label="Volver"
         >
-          <span className="material-symbols-outlined text-lg">arrow_back</span>
+          Volver
         </button>
         <h2 className="font-label font-semibold text-on-surface text-sm truncate flex-1">
           Contratar a {maestro.name}
@@ -158,7 +163,7 @@ function ContratoForm({ maestro, constructorId, onClose }: ContratoFormProps) {
           <>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="contract-desc" className="font-label text-xs text-on-surface-variant">
-                Descripción del trabajo
+                Descripcion del trabajo
               </label>
               <textarea
                 id="contract-desc"
@@ -230,21 +235,26 @@ export function ContratarScreen({ onViewProfile, initialHireMaestroId }: Contrat
   const user = useAuthStore((s) => s.user)
   const constructorId = user?.user_id ?? ''
 
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedMaestro, setSelectedMaestro] = useState<Maestro | null>(null)
   const [chatWith, setChatWith] = useState<ChatWith | null>(null)
-  const [selectedCity, setSelectedCity] = useState<string>(user?.city ?? '')
 
+  // Filters — city defaults to the constructor's city if known; others default
+  const [filters, setFilters] = useState<MaestroFilters>({
+    ...DEFAULT_MAESTRO_FILTERS,
+    city: user?.city ?? '',
+  })
+  const [showAllCities, setShowAllCities] = useState(!user?.city)
+
+  // Debounce search input
+  const [searchInput, setSearchInput] = useState('')
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search)
+      setFilters((prev) => ({ ...prev, search: searchInput }))
     }, 400)
     return () => clearTimeout(timer)
-  }, [search])
+  }, [searchInput])
 
-  const { data: maestros, isLoading } = useMaestros(debouncedSearch || undefined)
-  const filteredMaestros = maestros?.filter(m => selectedCity === '' || m.city === selectedCity)
+  const { data: maestros, isLoading } = useMaestros(filters)
 
   // Auto-open ContratoForm if navigated from MaestroProfileScreen "Contratar"
   useEffect(() => {
@@ -265,6 +275,11 @@ export function ContratarScreen({ onViewProfile, initialHireMaestroId }: Contrat
     )
   }
 
+  const handleCityFilter = (city: string) => {
+    setFilters((prev) => ({ ...prev, city }))
+    setShowAllCities(city === '')
+  }
+
   return (
     <div className="flex flex-col h-full">
       {chatWith && (
@@ -274,18 +289,80 @@ export function ContratarScreen({ onViewProfile, initialHireMaestroId }: Contrat
           onClose={() => setChatWith(null)}
         />
       )}
+
+      {/* Filter bar */}
       <div className="pt-4 flex-shrink-0 flex flex-col gap-3">
-        <CityFilter value={selectedCity} onChange={setSelectedCity} />
-        <div className="px-4 pb-2">
-          <div className="flex items-center gap-2 bg-surface-container rounded-full px-4 py-2">
-            <span className="material-symbols-outlined text-base text-on-surface-variant">
-              search
-            </span>
+        <CityFilter value={filters.city} onChange={handleCityFilter} />
+
+        {/* "Ver todas las ciudades" toggle */}
+        {user?.city && (
+          <div className="px-4 flex items-center gap-2">
+            <button
+              onClick={() => handleCityFilter(showAllCities ? (user.city ?? '') : '')}
+              className={`text-xs font-label font-semibold px-3 py-1 rounded-full border transition-colors ${
+                showAllCities
+                  ? 'bg-primary text-on-primary border-primary'
+                  : 'bg-surface-container text-on-surface-variant border-outline-variant'
+              }`}
+            >
+              {showAllCities ? 'Filtrando: todas las ciudades' : 'Ver todas las ciudades'}
+            </button>
+          </div>
+        )}
+
+        {/* Specialty filter */}
+        <div className="px-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button
+            onClick={() => setFilters((prev) => ({ ...prev, specialty: '' }))}
+            className={`flex-shrink-0 text-xs font-label font-semibold px-3 py-1 rounded-full border transition-colors ${
+              filters.specialty === ''
+                ? 'bg-primary text-on-primary border-primary'
+                : 'bg-surface-container text-on-surface-variant border-outline-variant'
+            }`}
+          >
+            Todas
+          </button>
+          {ESPECIALIDADES_MAESTRO.map((esp) => (
+            <button
+              key={esp}
+              onClick={() => setFilters((prev) => ({ ...prev, specialty: prev.specialty === esp ? '' : esp }))}
+              className={`flex-shrink-0 text-xs font-label font-semibold px-3 py-1 rounded-full border transition-colors ${
+                filters.specialty === esp
+                  ? 'bg-primary text-on-primary border-primary'
+                  : 'bg-surface-container text-on-surface-variant border-outline-variant'
+              }`}
+            >
+              {esp}
+            </button>
+          ))}
+        </div>
+
+        {/* Availability toggle + name search */}
+        <div className="px-4 flex items-center gap-3 pb-2">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <div
+              role="switch"
+              aria-checked={filters.onlyAvailable}
+              onClick={() => setFilters((prev) => ({ ...prev, onlyAvailable: !prev.onlyAvailable }))}
+              className={`relative w-9 h-5 rounded-full cursor-pointer transition-colors ${
+                filters.onlyAvailable ? 'bg-primary' : 'bg-surface-container'
+              } border border-outline-variant`}
+            >
+              <span
+                className={`absolute top-0.5 transition-all w-4 h-4 rounded-full bg-surface shadow-sm ${
+                  filters.onlyAvailable ? 'left-[18px]' : 'left-0.5'
+                }`}
+              />
+            </div>
+            <span className="text-xs font-label text-on-surface-variant">Solo disponibles</span>
+          </label>
+
+          <div className="flex-1 flex items-center gap-2 bg-surface-container rounded-full px-3 py-2">
             <input
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar maestro por nombre..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Buscar por nombre..."
               aria-label="Buscar maestros"
               className="flex-1 bg-transparent font-body text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none"
             />
@@ -297,31 +374,43 @@ export function ContratarScreen({ onViewProfile, initialHireMaestroId }: Contrat
         {isLoading && (
           <>
             {[0, 1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-16 bg-surface-container rounded-2xl animate-pulse"
-              />
+              <div key={i} className="h-16 bg-surface-container rounded-2xl animate-pulse" />
             ))}
           </>
         )}
 
-        {!isLoading && (!filteredMaestros || filteredMaestros.length === 0) && (
+        {!isLoading && (!maestros || maestros.length === 0) && (
           <div className="flex flex-col items-center justify-center gap-3 py-16 px-8">
-            <span className="material-symbols-outlined text-[48px] text-on-surface-variant/20">person_search</span>
-            <p className="font-headline font-bold text-[18px] text-on-surface/70 text-center">Sin maestros disponibles</p>
-            <p className="font-body text-sm text-on-surface-variant/50 text-center">
-              {search ? 'Ningún resultado para esa búsqueda — prueba con otro nombre' : 'No hay maestros registrados en esta ciudad todavía'}
+            <p className="font-headline font-bold text-[18px] text-on-surface/70 text-center">
+              Sin maestros disponibles
             </p>
+            <p className="font-body text-sm text-on-surface-variant/50 text-center">
+              {filters.search
+                ? 'Ningún resultado para esa búsqueda'
+                : filters.specialty
+                ? `No hay maestros de ${filters.specialty} en esta ciudad`
+                : 'No hay maestros registrados con estos filtros todavía'}
+            </p>
+            {(filters.specialty || !filters.onlyAvailable) && (
+              <button
+                onClick={() => setFilters({ ...DEFAULT_MAESTRO_FILTERS, city: filters.city })}
+                className="text-xs font-label text-primary font-semibold mt-2"
+              >
+                Limpiar filtros
+              </button>
+            )}
           </div>
         )}
 
-        {!isLoading && filteredMaestros && filteredMaestros.length > 0 && (
+        {!isLoading && maestros && maestros.length > 0 && (
           <AdBanner variant="banner" className="mb-1" />
         )}
 
         {!isLoading &&
-          filteredMaestros?.map((maestro) => {
+          maestros?.map((maestro) => {
             const initial = maestro.name?.charAt(0)?.toUpperCase() ?? '?'
+            const profileCompleto = isMaestroProfileCompleto(maestro)
+
             return (
               <div
                 key={maestro.user_id}
@@ -342,30 +431,56 @@ export function ContratarScreen({ onViewProfile, initialHireMaestroId }: Contrat
                   )}
 
                   <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                    <span className="font-label font-semibold text-on-surface text-sm truncate">
-                      {maestro.name}
-                    </span>
-                    <div className="flex items-center gap-1 text-on-surface-variant">
-                      <span className="material-symbols-outlined text-sm leading-none">
-                        location_on
+                    <div className="flex items-center gap-2">
+                      <span className="font-label font-semibold text-on-surface text-sm truncate">
+                        {maestro.name}
                       </span>
+                      {!profileCompleto && (
+                        <span className="text-xs font-label text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full flex-shrink-0">
+                          Perfil incompleto
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 text-on-surface-variant">
                       <span className="text-xs font-body">{maestro.city}</span>
                     </div>
-                    {maestro.rate_amount ? (
-                      <div className="flex items-center gap-1 text-on-surface-variant mt-0.5">
-                        <span className="material-symbols-outlined text-sm leading-none">
-                          payments
-                        </span>
-                        <span className="text-xs font-body">
-                          Bs. {maestro.rate_amount}/
-                          {maestro.rate_type === 'per_day'
-                            ? 'día'
-                            : maestro.rate_type === 'per_hour'
-                            ? 'hora'
-                            : 'proyecto'}
-                        </span>
-                      </div>
-                    ) : null}
+
+                    {profileCompleto ? (
+                      <>
+                        <div className="flex items-center gap-1 text-on-surface-variant mt-0.5">
+                          <span className="text-xs font-body">
+                            Bs. {maestro.rate_amount}/
+                            {maestro.rate_type === 'per_day'
+                              ? 'día'
+                              : maestro.rate_type === 'per_hour'
+                              ? 'hora'
+                              : 'proyecto'}
+                          </span>
+                        </div>
+                        {maestro.specialties.length > 0 && (
+                          <div className="flex gap-1 flex-wrap mt-1">
+                            {maestro.specialties.slice(0, 3).map((sp) => (
+                              <span
+                                key={sp}
+                                className="text-xs font-label bg-primary-container text-on-primary-container px-2 py-0.5 rounded-full"
+                              >
+                                {sp}
+                              </span>
+                            ))}
+                            {maestro.specialties.length > 3 && (
+                              <span className="text-xs font-label text-on-surface-variant">
+                                +{maestro.specialties.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs font-body text-on-surface-variant/60 mt-0.5">
+                        Este maestro aún no completó su perfil
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -381,9 +496,7 @@ export function ContratarScreen({ onViewProfile, initialHireMaestroId }: Contrat
                   )}
                   <button
                     type="button"
-                    onClick={() =>
-                      setChatWith({ userId: maestro.user_id, name: maestro.name })
-                    }
+                    onClick={() => setChatWith({ userId: maestro.user_id, name: maestro.name })}
                     className="flex-1 bg-surface-container text-on-surface rounded-2xl px-3 py-1.5 text-sm font-label font-semibold transition-opacity active:opacity-75 border border-outline-variant"
                   >
                     Chatear

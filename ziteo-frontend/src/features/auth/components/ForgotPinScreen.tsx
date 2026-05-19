@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { forgotPin, resetPin, AuthServiceError } from '../services/authService'
-import { AUTH_ERRORS } from '../constants/authConstants'
+import type { ConfirmationResult } from 'firebase/auth'
+import { sendPhoneOtp, confirmPhoneOtp, clearRecaptcha, resetPin, AuthServiceError } from '../services/authService'
+import { AUTH_ERRORS, FIREBASE_ERRORS } from '../constants/authConstants'
 
 interface ForgotPinScreenProps {
   onNavigate: (dest: string) => void
@@ -25,8 +26,16 @@ export default function ForgotPinScreen({ onNavigate }: ForgotPinScreenProps) {
   const [canResend, setCanResend] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
   const [verifiedOtp, setVerifiedOtp] = useState('')
-  const [debugOtp, setDebugOtp] = useState<string | undefined>()
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  function getFirebaseErrMsg(err: unknown): string {
+    if (typeof err === 'object' && err !== null && 'code' in err) {
+      const code = (err as { code: string }).code
+      return FIREBASE_ERRORS[code] ?? AUTH_ERRORS.UNKNOWN
+    }
+    return AUTH_ERRORS.UNKNOWN
+  }
 
   const [newPin, setNewPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
@@ -52,14 +61,13 @@ export default function ForgotPinScreen({ onNavigate }: ForgotPinScreenProps) {
     setPhoneError(null)
     setPhoneLoading(true)
     try {
-      const res = await forgotPin(fullPhone)
-      setDebugOtp(res.debug_otp)
+      const result = await sendPhoneOtp(fullPhone)
+      setConfirmationResult(result)
       setStep('otp')
       setCountdown(RESEND_COOLDOWN)
       setCanResend(false)
     } catch (err) {
-      const code = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
-      setPhoneError(AUTH_ERRORS[code] ?? AUTH_ERRORS.UNKNOWN)
+      setPhoneError(getFirebaseErrMsg(err))
     } finally {
       setPhoneLoading(false)
     }
@@ -94,11 +102,19 @@ export default function ForgotPinScreen({ onNavigate }: ForgotPinScreenProps) {
     if (pasted.length === OTP_LENGTH) confirmOtp(pasted)
   }
 
-  function confirmOtp(code: string) {
-    // We just store the OTP; actual validation happens in auth-reset-pin
-    setVerifiedOtp(code)
+  async function confirmOtp(code: string) {
+    if (!confirmationResult) return
     setOtpError(null)
-    setStep('new-pin')
+    try {
+      await confirmPhoneOtp(confirmationResult, code)
+      setVerifiedOtp(code)
+      clearRecaptcha()
+      setStep('new-pin')
+    } catch (err) {
+      setOtpError(getFirebaseErrMsg(err))
+      setDigits(Array(OTP_LENGTH).fill(''))
+      setTimeout(() => inputRefs.current[0]?.focus(), 50)
+    }
   }
 
   async function handleResend() {
@@ -106,14 +122,14 @@ export default function ForgotPinScreen({ onNavigate }: ForgotPinScreenProps) {
     setResendLoading(true)
     setOtpError(null)
     try {
-      const res = await forgotPin(fullPhone)
-      setDebugOtp(res.debug_otp)
+      const result = await sendPhoneOtp(fullPhone)
+      setConfirmationResult(result)
       setCountdown(RESEND_COOLDOWN)
       setCanResend(false)
       setDigits(Array(OTP_LENGTH).fill(''))
       inputRefs.current[0]?.focus()
-    } catch {
-      setOtpError('No se pudo reenviar el código, intenta de nuevo')
+    } catch (err) {
+      setOtpError(getFirebaseErrMsg(err))
     } finally {
       setResendLoading(false)
     }
@@ -153,6 +169,8 @@ export default function ForgotPinScreen({ onNavigate }: ForgotPinScreenProps) {
   if (step === 'phone') {
     return (
       <main className="min-h-dvh w-full flex flex-col bg-background">
+        {/* Firebase invisible reCAPTCHA — must always be in DOM */}
+        <div id="recaptcha-container" style={{ position: 'fixed', bottom: 0, left: 0 }} />
         <div className="flex items-center justify-between px-5 pt-12 pb-2">
           <button
             onClick={() => onNavigate('login')}
@@ -172,7 +190,7 @@ export default function ForgotPinScreen({ onNavigate }: ForgotPinScreenProps) {
             ¿Olvidaste tu<br />contraseña?
           </h1>
           <p className="font-body text-sm text-on-surface-variant mt-4">
-            Ingresa tu número y te enviamos un código por WhatsApp.
+            Ingresa tu número y te enviamos un código SMS para verificar tu identidad.
           </p>
         </div>
 
@@ -229,24 +247,10 @@ export default function ForgotPinScreen({ onNavigate }: ForgotPinScreenProps) {
         <div className="flex flex-col gap-8 px-6 max-w-sm mx-auto w-full mt-6">
           <div>
             <p className="font-body text-sm text-on-surface-variant">
-              Enviamos un código de 6 dígitos por WhatsApp a
+              Enviamos un código SMS de 6 dígitos a
             </p>
             <p className="font-semibold text-on-surface text-sm mt-0.5">+591 {phone}</p>
           </div>
-
-          {debugOtp && (
-            <button
-              type="button"
-              onClick={() => {
-                setDigits(debugOtp.split(''))
-                confirmOtp(debugOtp)
-              }}
-              className="flex items-center gap-2 bg-primary-container text-on-primary-container rounded-xl px-4 py-3 font-body text-sm text-left w-full"
-            >
-              <span className="material-symbols-outlined text-base">bug_report</span>
-              <span>Código de prueba: <strong className="font-label tracking-widest">{debugOtp}</strong> — toca para ingresar</span>
-            </button>
-          )}
 
           <div className="flex gap-2 justify-center">
             {digits.map((digit, i) => (

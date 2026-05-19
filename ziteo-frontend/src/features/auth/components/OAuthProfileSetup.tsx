@@ -3,11 +3,7 @@ import { setupOAuthProfile, AuthServiceError } from '../services/authService'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../../../lib/supabaseClient'
 import type { UserRole, OAuthUserData } from '../types/authTypes'
-
-const CITIES = [
-  'La Paz', 'Santa Cruz de la Sierra', 'Cochabamba', 'Sucre', 'Oruro',
-  'Potosí', 'Tarija', 'Trinidad', 'Cobija', 'El Alto', 'Sacaba',
-]
+import { CIUDADES_ACTIVAS } from '../../../shared/constants/geography'
 
 // TODO Fase 2: add "Solicitar cambio de rol" screen post-registro that calls RPC promote_user_role
 
@@ -51,8 +47,8 @@ export default function OAuthProfileSetup({ oauthUser, onComplete }: Props) {
           name: profile.name,
           phone: profile.phone ?? '',
           email: oauthUser.email,
-          active_role: profile.active_role,
-          roles: rolesData?.map((r: { role: UserRole }) => r.role) ?? [initialRole],
+          active_role: profile.active_role as UserRole,
+          roles: rolesData?.map((r: { role: string }) => r.role as UserRole) ?? [initialRole],
           access_token: oauthUser.accessToken,
           refresh_token: oauthUser.refreshToken,
           avatar_url: oauthUser.avatarUrl ?? undefined,
@@ -112,7 +108,7 @@ export default function OAuthProfileSetup({ oauthUser, onComplete }: Props) {
             className="px-4 py-4 rounded-xl border border-outline-variant/60 bg-surface-container-low text-on-surface font-body text-sm focus:outline-none focus:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20 appearance-none"
           >
             <option value="">Selecciona tu ciudad</option>
-            {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {CIUDADES_ACTIVAS.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
 

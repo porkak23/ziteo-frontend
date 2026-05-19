@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZITEO — Prototype Completo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      display: flex; align-items: center; justify-content: center;
+      background: #0A0C14;
+      font-family: 'Manrope', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    #app-root { position: relative; }
+    #app-root::before {
+      content: '';
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 540px; height: 920px;
+      background: radial-gradient(ellipse, rgba(232,115,58,0.09) 0%, rgba(58,123,213,0.05) 40%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    @keyframes zFadeSlideIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes zFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes zPulseGlow {
+      0%, 100% { box-shadow: 0 8px 32px rgba(232,115,58,0.3); }
+      50%       { box-shadow: 0 8px 40px rgba(232,115,58,0.5), 0 0 60px rgba(58,123,213,0.15); }
+    }
+    @keyframes driverPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(164,55,0,0.5); }
+      70%  { box-shadow: 0 0 0 14px rgba(164,55,0,0); }
+      100% { box-shadow: 0 0 0 0 rgba(164,55,0,0); }
+    }
+    @keyframes radarSpin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    ::-webkit-scrollbar { width: 0; }
+  </style>
+</head>
+<body>
+  <div id="app-root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <!-- Core design system -->
+  <script type="text/babel" src="components/ios-frame.jsx"></script>
+  <script type="text/babel" src="components/tweaks-panel.jsx"></script>
+  <script type="text/babel" src="components/ziteo-ui.jsx"></script>
+
+  <!-- Auth screens -->
+  <script type="text/babel" src="components/ziteo-screens.jsx"></script>
+
+  <!-- Dashboard shell + tabs -->
+  <script type="text/babel" src="components/ziteo-dash-shell.jsx"></script>
+  <script type="text/babel" src="components/ziteo-dash-home.jsx"></script>
+  <script type="text/babel" src="components/ziteo-dash-store.jsx"></script>
+  <script type="text/babel" src="components/ziteo-dash-projects.jsx"></script>
+  <script type="text/babel" src="components/ziteo-repartidor-tabs.jsx"></script>
+  <script type="text/babel" src="components/ziteo-trabajador-tabs.jsx"></script>
+  <script type="text/babel" src="components/ziteo-vendedor-tabs.jsx"></script>
+
+  <script type="text/babel">
+
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "startScreen": "splash"
+    }/*EDITMODE-END*/;
+
+    // ── Role palette ─────────────────────────────────────────────────────────
+    const ROLE_CFG = {
+      constructor: { label: 'Constructor', color: '#E8733A' },
+      vendedor:    { label: 'Vendedor',    color: '#3A7BD5' },
+      trabajador:  { label: 'Trabajador',  color: '#16A34A' },
+      repartidor:  { label: 'Repartidor',  color: '#9333EA' },
+    };
+
+    // ── Profile Screen — enhanced with "Entrar al Dashboard" CTA ────────────
+    function ProfileScreenUnified({ onLogout, onEnterDashboard }) {
+      const [selectedRole, setSelectedRole] = React.useState('constructor');
+      const [appearance, setAppearance] = React.useState('light');
+
+      const roleData = [
+        { role: 'constructor', title: 'Constructor', description: 'Compra materiales y gestiona obras' },
+        { role: 'vendedor',    title: 'Vendedor',    description: 'Vende materiales y gestiona pedidos' },
+        { role: 'trabajador',  title: 'Trabajador',  description: 'Ofrece servicios profesionales' },
+        { role: 'repartidor',  title: 'Repartidor',  description: 'Realiza entregas de materiales' },
+      ];
+
+      return (
+        <ZScreen bg={Z.bg}>
+          {/* User header */}
+          <div style={{
+            padding: '70px 24px 16px', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: 12,
+            background: `linear-gradient(180deg, ${Z.orangeLight} 0%, ${Z.bg} 100%)`,
+          }}>
+            <ZAvatar name="Juan Carlos" size={88} />
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ fontFamily: Z.font, fontWeight: 800, fontSize: 22, color: Z.text, margin: 0 }}>
+                Juan Carlos Mamani
+              </h3>
+              <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, margin: '4px 0 0' }}>
+                +591 7XX XXX XX · Santa Cruz
+              </p>
+            </div>
+          </div>
+
+          <div style={{ flex: 1, padding: '8px 24px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Role selector */}
+            <div>
+              <label style={{
+                fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.textMuted,
+                letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, display: 'block',
+              }}>Selecciona tu rol</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {roleData.map(r => (
+                  <button key={r.role} onClick={() => setSelectedRole(r.role)} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                    borderRadius: Z.r.md, cursor: 'pointer', width: '100%', textAlign: 'left',
+                    border: selectedRole === r.role ? `2px solid ${Z.orange}` : `1.5px solid ${Z.border}`,
+                    background: selectedRole === r.role ? Z.orangeLight : Z.surface,
+                    transition: 'all 0.2s', boxSizing: 'border-box', outline: 'none',
+                  }}>
+                    <ZRoleIcon role={r.role} size={34} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>{r.title}</div>
+                      <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 1 }}>{r.description}</div>
+                    </div>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${selectedRole === r.role ? Z.orange : Z.border}`,
+                      background: selectedRole === r.role ? Z.orange : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {selectedRole === r.role && (
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ★ Enter Dashboard CTA */}
+            <button onClick={() => onEnterDashboard(selectedRole)} style={{
+              padding: '16px 24px', borderRadius: Z.r.md, border: 'none', cursor: 'pointer',
+              background: Z.gradOrange, color: '#fff',
+              fontFamily: Z.font, fontSize: 15, fontWeight: 700, letterSpacing: 0.2,
+              boxShadow: '0 4px 20px rgba(232,115,58,0.38)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              transition: 'opacity 0.15s',
+            }}>
+              Ingresar como {roleData.find(r => r.role === selectedRole)?.title}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            {/* Appearance */}
+            <div>
+              <label style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.textMuted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, display: 'block' }}>
+                Apariencia
+              </label>
+              <div style={{ display: 'flex', borderRadius: Z.r.sm, overflow: 'hidden', border: `1.5px solid ${Z.border}`, background: Z.surface }}>
+                {[{key:'light',label:'Claro',icon:'sun'},{key:'dark',label:'Oscuro',icon:'moon'},{key:'system',label:'Sistema',icon:'settings'}].map(opt => (
+                  <button key={opt.key} onClick={() => setAppearance(opt.key)} style={{
+                    flex: 1, padding: '12px 8px', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    fontFamily: Z.font, fontSize: 12, fontWeight: 600,
+                    background: appearance === opt.key ? Z.orangeLight : 'transparent',
+                    color: appearance === opt.key ? Z.orangeDark : Z.textSec,
+                    transition: 'all 0.2s', outline: 'none',
+                  }}>
+                    <ZIcon name={opt.icon} size={16} color={appearance === opt.key ? Z.orangeDark : Z.textMuted} />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Settings row */}
+            <button onClick={() => {}} style={{
+              display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+              borderRadius: Z.r.md, border: `1.5px solid ${Z.border}`,
+              background: Z.surface, cursor: 'pointer', width: '100%',
+              fontFamily: Z.font, fontSize: 15, fontWeight: 600, color: Z.text,
+              outline: 'none', textAlign: 'left',
+            }}>
+              <ZIcon name="settings" size={22} color={Z.textSec} />
+              Ajustes
+              <svg width="8" height="14" viewBox="0 0 8 14" style={{ marginLeft: 'auto' }}>
+                <path d="M1 1l6 6-6 6" stroke={Z.textMuted} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            {/* Logout */}
+            <ZButton variant="danger" onClick={onLogout} icon={<ZIcon name="logout" size={18} color={Z.error} />}>
+              Cerrar Sesión
+            </ZButton>
+          </div>
+        </ZScreen>
+      );
+    }
+
+    // ── Repartidor overlay header (map mode) — with profile tap ──────────────
+    function RepartidorHeaderNav({ onProfile }) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '54px 20px 10px', position: 'absolute', top: 0, left: 0, right: 0,
+          zIndex: 10, pointerEvents: 'none',
+        }}>
+          <span style={{
+            fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: 20,
+            letterSpacing: 2, background: 'linear-gradient(135deg, #E8733A 0%, #3A7BD5 100%)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', pointerEvents: 'auto',
+          }}>ZITEO</span>
+          <div style={{ pointerEvents: 'auto' }} onClick={onProfile}>
+            <ZAvatar name="CC" size={36} />
+          </div>
+        </div>
+      );
+    }
+
+    // ── CONSTRUCTOR dashboard ─────────────────────────────────────────────────
+    function ConstructorApp({ onGoToProfile }) {
+      const [activeTab, setActiveTab] = React.useState('home');
+      const [subScreen, setSubScreen] = React.useState(null);
+
+      const handleNavigate = (target) => {
+        if (target === 'tienda') { setActiveTab('tienda'); setSubScreen(null); }
+        else if (['transporte','contratar','nuevo-proyecto'].includes(target)) setSubScreen(target);
+      };
+
+      const renderSubScreen = () => {
+        switch (subScreen) {
+          case 'transporte':     return <TransportScreen onBack={() => setSubScreen(null)} />;
+          case 'contratar':      return <WorkerSearchScreen onBack={() => setSubScreen(null)} />;
+          case 'nuevo-proyecto': return <NewProjectForm onBack={() => setSubScreen(null)} />;
+          default: return null;
+        }
+      };
+
+      const renderTab = () => {
+        switch (activeTab) {
+          case 'home':         return <HomeTab onNavigate={handleNavigate} />;
+          case 'tienda':       return <TiendaTab />;
+          case 'proyectos':    return <ProyectosTab />;
+          case 'licitaciones': return <LicitacionesTab />;
+          default:             return <HomeTab onNavigate={handleNavigate} />;
+        }
+      };
+
+      return (
+        <IOSDevice dark={false} width={402} height={874}>
+          <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+            {subScreen ? renderSubScreen() : (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <DashHeader onProfile={onGoToProfile} />
+                <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: 90 }}>
+                  <div key={activeTab} style={{ animation: 'zFadeSlideIn 0.25s ease' }}>
+                    {renderTab()}
+                  </div>
+                </div>
+                <DashNav activeTab={activeTab} onTabChange={setActiveTab} />
+                <ChatFab />
+              </div>
+            )}
+          </div>
+        </IOSDevice>
+      );
+    }
+
+    // ── REPARTIDOR dashboard ──────────────────────────────────────────────────
+    function RepartidorApp({ onGoToProfile }) {
+      const [activeTab, setActiveTab] = React.useState('radar');
+
+      const tabs = [
+        { key: 'radar',     label: 'Radar',     Icon: RNavIconRadar },
+        { key: 'pedidos',   label: 'Pedidos',   Icon: RNavIconList },
+        { key: 'ganancias', label: 'Ganancias', Icon: RNavIconEarnings },
+        { key: 'perfil',    label: 'Perfil',    Icon: RNavIconUser },
+      ];
+
+      const renderTab = () => {
+        switch (activeTab) {
+          case 'radar':     return <RadarTab />;
+          case 'pedidos':   return <PedidosTabRepartidor />;
+          case 'ganancias': return <GananciasTab />;
+          case 'perfil':    return <PerfilRepartidor />;
+          default:          return <RadarTab />;
+        }
+      };
+
+      return (
+        <IOSDevice dark={false} width={402} height={874}>
+          <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              {activeTab === 'radar' ? (
+                <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                  <RepartidorHeaderNav onProfile={onGoToProfile} />
+                  <RadarTab />
+                  <RoleDashNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+                </div>
+              ) : (
+                <>
+                  <DashHeader onProfile={onGoToProfile} />
+                  <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: 90 }}>
+                    <div key={activeTab} style={{ animation: 'zFadeSlideIn 0.25s ease' }}>
+                      {renderTab()}
+                    </div>
+                  </div>
+                  <RoleDashNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+                </>
+              )}
+            </div>
+          </div>
+        </IOSDevice>
+      );
+    }
+
+    // ── TRABAJADOR dashboard ──────────────────────────────────────────────────
+    function TrabajadorApp({ onGoToProfile }) {
+      const [activeTab, setActiveTab] = React.useState('home');
+
+      const tabs = [
+        { key: 'home',         label: 'Inicio',       Icon: NavIconHome },
+        { key: 'licitaciones', label: 'Licitaciones',  Icon: WNavIconBriefcase },
+        { key: 'proyectos',    label: 'Proyectos',     Icon: WNavIconHardhat },
+        { key: 'perfil',       label: 'Mi Perfil',     Icon: WNavIconUser },
+      ];
+
+      const handleNavigate = (target) => {
+        if (['licitaciones','proyectos','perfil'].includes(target)) setActiveTab(target);
+      };
+
+      const renderTab = () => {
+        switch (activeTab) {
+          case 'home':         return <HomeTabTrabajador onNavigate={handleNavigate} />;
+          case 'licitaciones': return <LicitacionesTabTrabajador />;
+          case 'proyectos':    return <ProyectosTabTrabajador />;
+          case 'perfil':       return <PerfilTabTrabajador />;
+          default:             return <HomeTabTrabajador onNavigate={handleNavigate} />;
+        }
+      };
+
+      return (
+        <IOSDevice dark={false} width={402} height={874}>
+          <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <DashHeader onProfile={onGoToProfile} />
+              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: 90 }}>
+                <div key={activeTab} style={{ animation: 'zFadeSlideIn 0.25s ease' }}>
+                  {renderTab()}
+                </div>
+              </div>
+              <RoleDashNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+              <ChatFab />
+            </div>
+          </div>
+        </IOSDevice>
+      );
+    }
+
+    // ── VENDEDOR dashboard ────────────────────────────────────────────────────
+    function VendedorApp({ onGoToProfile }) {
+      const [activeTab, setActiveTab] = React.useState('home');
+      const [subScreen, setSubScreen] = React.useState(null);
+
+      const handleNavigate = (target) => {
+        if (['inventario','pedidos','cotizaciones'].includes(target)) {
+          setActiveTab(target); setSubScreen(null);
+        } else setSubScreen(target);
+      };
+
+      const tabs = [
+        { key: 'home',         label: 'Inicio',     Icon: NavIconHome },
+        { key: 'inventario',   label: 'Inventario', Icon: VNavIconInventory },
+        { key: 'pedidos',      label: 'Pedidos',    Icon: VNavIconOrders },
+        { key: 'cotizaciones', label: 'Cotizar',    Icon: VNavIconQuotes },
+      ];
+
+      const renderTab = () => {
+        switch (activeTab) {
+          case 'home':         return <HomeTabVendedor onNavigate={handleNavigate} />;
+          case 'inventario':   return <InventarioTab />;
+          case 'pedidos':      return <PedidosTabVendedor />;
+          case 'cotizaciones': return <CotizacionesTabVendedor />;
+          default:             return <HomeTabVendedor onNavigate={handleNavigate} />;
+        }
+      };
+
+      return (
+        <IOSDevice dark={false} width={402} height={874}>
+          <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+            {subScreen === 'logistica' ? (
+              <LogisticaScreen order={V_ORDERS[0]} onBack={() => setSubScreen(null)} />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <DashHeader onProfile={onGoToProfile} />
+                <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: 90 }}>
+                  <div key={activeTab} style={{ animation: 'zFadeSlideIn 0.25s ease' }}>
+                    {renderTab()}
+                  </div>
+                </div>
+                <RoleDashNav
+                  tabs={tabs} activeTab={activeTab}
+                  onTabChange={(tab) => { setSubScreen(null); setActiveTab(tab); }}
+                />
+                <ChatFab />
+              </div>
+            )}
+          </div>
+        </IOSDevice>
+      );
+    }
+
+    // ── Role indicator — fixed floating chip, shown while in dashboard ────────
+    function RoleIndicator({ role, onChangeRole }) {
+      const cfg = ROLE_CFG[role] || {};
+      return (
+        <div style={{
+          position: 'fixed', bottom: 22, left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'rgba(12,15,30,0.9)', backdropFilter: 'blur(16px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(16px) saturate(160%)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 28, padding: '9px 18px 9px 12px',
+          zIndex: 300, boxShadow: '0 4px 28px rgba(0,0,0,0.55)',
+          animation: 'zFadeIn 0.3s ease',
+          whiteSpace: 'nowrap',
+        }}>
+          <div style={{
+            width: 9, height: 9, borderRadius: '50%', background: cfg.color,
+            boxShadow: `0 0 8px ${cfg.color}99`, flexShrink: 0,
+          }} />
+          <span style={{
+            fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700,
+            color: 'rgba(255,255,255,0.8)', letterSpacing: 0.8,
+          }}>
+            {cfg.label}
+          </span>
+          <div style={{ width: 1, height: 13, background: 'rgba(255,255,255,0.14)', margin: '0 2px' }} />
+          <span
+            onClick={onChangeRole}
+            style={{
+              fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600,
+              color: 'rgba(255,255,255,0.42)', cursor: 'pointer', letterSpacing: 0.3,
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.75)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.42)'}
+          >
+            ← Cambiar rol
+          </span>
+        </div>
+      );
+    }
+
+    // ── MAIN APP ROUTER ───────────────────────────────────────────────────────
+    function ZiteoFullApp() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+      // 'auth' | 'constructor' | 'vendedor' | 'trabajador' | 'repartidor'
+      const [appScreen, setAppScreen] = React.useState('auth');
+
+      // auth sub-screens: 'splash' | 'welcome' | 'login' | 'register' | 'profile'
+      const [authScreen, setAuthScreen] = React.useState('splash');
+
+      const isDark = ['splash', 'welcome'].includes(authScreen);
+
+      const navAuth  = (to)   => setAuthScreen(to);
+      const goToDash = (role) => setAppScreen(role);
+      const goToProfile = () => { setAppScreen('auth'); setAuthScreen('profile'); };
+
+      const jumpTo = (screen, auth) => {
+        setAppScreen(screen);
+        if (auth) setAuthScreen(auth);
+      };
+
+      const renderContent = () => {
+        if (appScreen === 'auth') {
+          return (
+            <div key={'auth-' + isDark} style={{ animation: 'zFadeIn 0.25s ease' }}>
+              <IOSDevice dark={isDark} width={402} height={874}>
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  {authScreen === 'splash'   && <SplashScreen onComplete={() => navAuth('welcome')} />}
+                  {authScreen === 'welcome'  && <WelcomeScreen onLogin={() => navAuth('login')} onRegister={() => navAuth('register')} />}
+                  {authScreen === 'login'    && <LoginScreen onBack={() => navAuth('welcome')} onSuccess={() => navAuth('profile')} onRegister={() => navAuth('register')} />}
+                  {authScreen === 'register' && <RegisterScreen onBack={() => navAuth('welcome')} onSuccess={() => navAuth('profile')} />}
+                  {authScreen === 'profile'  && <ProfileScreenUnified onLogout={() => navAuth('welcome')} onEnterDashboard={goToDash} />}
+                </div>
+              </IOSDevice>
+            </div>
+          );
+        }
+
+        const dashboards = {
+          constructor: <ConstructorApp onGoToProfile={goToProfile} />,
+          repartidor:  <RepartidorApp  onGoToProfile={goToProfile} />,
+          trabajador:  <TrabajadorApp  onGoToProfile={goToProfile} />,
+          vendedor:    <VendedorApp    onGoToProfile={goToProfile} />,
+        };
+
+        return (
+          <div key={appScreen} style={{ animation: 'zFadeIn 0.28s ease' }}>
+            {dashboards[appScreen] || null}
+          </div>
+        );
+      };
+
+      return (
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          {renderContent()}
+
+          {/* Role indicator — only in dashboard mode */}
+          {appScreen !== 'auth' && (
+            <RoleIndicator role={appScreen} onChangeRole={goToProfile} />
+          )}
+
+          {/* Master Tweaks panel — full navigation shortcuts */}
+          <TweaksPanel title="ZITEO · Navegación">
+            <TweakSection label="Auth Flow" />
+            <TweakButton label="Splash"          onClick={() => jumpTo('auth', 'splash')}   secondary />
+            <TweakButton label="Welcome"         onClick={() => jumpTo('auth', 'welcome')}  secondary />
+            <TweakButton label="Login"           onClick={() => jumpTo('auth', 'login')}    secondary />
+            <TweakButton label="Registro (paso 1)" onClick={() => jumpTo('auth', 'register')} secondary />
+            <TweakButton label="Selección de Rol" onClick={() => jumpTo('auth', 'profile')} secondary />
+            <TweakSection label="Dashboards" />
+            <TweakButton label="Constructor"     onClick={() => jumpTo('constructor')} />
+            <TweakButton label="Vendedor"        onClick={() => jumpTo('vendedor')} />
+            <TweakButton label="Trabajador"      onClick={() => jumpTo('trabajador')} />
+            <TweakButton label="Repartidor"      onClick={() => jumpTo('repartidor')} />
+          </TweaksPanel>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('app-root')).render(<ZiteoFullApp />);
+  </script>
+</body>
+</html>

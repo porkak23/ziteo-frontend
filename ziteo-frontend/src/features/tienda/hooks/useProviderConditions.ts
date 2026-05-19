@@ -24,7 +24,7 @@ export function useProviderConditions(sellerId: string) {
         if (error.code === 'PGRST116') return null
         throw error
       }
-      return data as ProviderConditions
+      return data as unknown as ProviderConditions
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!sellerId,

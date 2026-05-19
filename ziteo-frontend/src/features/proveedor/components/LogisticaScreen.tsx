@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
+import { CIUDADES_ACTIVAS } from '../../../shared/constants/geography'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -14,10 +15,7 @@ interface LogisticaProfile {
   service_zones: string[] | null
 }
 
-const BOLIVIAN_CITIES = [
-  'La Paz', 'Cochabamba', 'Santa Cruz', 'Oruro',
-  'Potosí', 'Sucre', 'Trinidad', 'Cobija',
-]
+const BOLIVIAN_CITIES = CIUDADES_ACTIVAS
 
 const DELIVERY_SUGGESTIONS = [
   { label: '12 h', value: 12 },

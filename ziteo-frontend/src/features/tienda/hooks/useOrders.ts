@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 import { useCart } from './useCart'
 import type { CartItem, CargoType } from './useCart'
+import { track } from '../../../lib/analytics'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -11,9 +12,15 @@ export interface OrderWithItems {
   constructor_id: string
   provider_id: string
   total: number
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'expired'
   notes: string | null
   created_at: string
+  expires_at: string | null
+  estimated_delivery_at?: string | null
+  payment_evidence_url: string | null
+  payment_evidence_uploaded_at: string | null
+  payment_confirmed_at: string | null
+  payment_rejection_reason: string | null
   items: {
     id: string
     product_id: string
@@ -21,6 +28,7 @@ export interface OrderWithItems {
     price_unit: number
     product: { name: string } | null
   }[]
+  deliveries: { id: string; status: string; driver_id: string | null }[]
 }
 
 // ─── usePlaceOrder ────────────────────────────────────────────────────────────
@@ -101,7 +109,8 @@ export function usePlaceOrder() {
 
       return { orderIds, providerIds: Object.keys(byProvider) }
     },
-    onSuccess: async ({ providerIds }) => {
+    onSuccess: async ({ orderIds, providerIds }) => {
+      orderIds.forEach((id) => track.orderPlaced(id))
       clearCart()
       queryClient.invalidateQueries({ queryKey: ['orders'] })
 
@@ -114,6 +123,15 @@ export function usePlaceOrder() {
           p_title:   'Nuevo pedido',
           p_message: 'Has recibido un nuevo pedido de materiales.',
         })
+        // Also deliver as Web Push if the provider has an active subscription
+        supabase.functions.invoke('notifications/send-push', {
+          body: {
+            user_id: pid,
+            title:   'Nuevo pedido',
+            body:    'Has recibido un nuevo pedido de materiales.',
+            url:     '/',
+          },
+        }).catch((err: unknown) => console.warn('[send-push] order push failed:', err))
       }
     },
   })
@@ -131,7 +149,7 @@ export function useMyOrders(constructorId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('*, items:order_items(*, product:products(name))')
+        .select('*, items:order_items(*, product:products(name)), deliveries(id, status, driver_id)')
         .eq('constructor_id', uid!)
         .order('created_at', { ascending: false })
 
@@ -148,7 +166,35 @@ export function useMyOrders(constructorId?: string) {
           price_unit: item.unit_price ?? item.price_unit,
           product:    item.product ?? null,
         })),
+        deliveries: o.deliveries ?? [],
       })) as OrderWithItems[]
+    },
+  })
+}
+
+// ─── useCancelOrder ───────────────────────────────────────────────────────────
+// Cancels an order that is in 'pending' status.
+// The DB trigger / RPC `restore_stock_on_cancel` (see migrations) releases the
+// reserved stock automatically. The client just sets status = 'cancelled'.
+
+export function useCancelOrder() {
+  const queryClient = useQueryClient()
+  const storeUser   = useAuthStore((s) => s.user)
+
+  return useMutation({
+    mutationFn: async ({ orderId }: { orderId: string }) => {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', orderId)
+        // Guard: only the constructor who owns the order can cancel it
+        .eq('constructor_id', storeUser?.user_id ?? '')
+        // Guard: only pending orders can be cancelled from this path
+        .eq('status', 'pending')
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
     },
   })
 }

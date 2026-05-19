@@ -6,6 +6,8 @@ import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
 import { useUploadPhoto } from '../../../shared/hooks/useUploadPhoto'
 import { UserAvatar } from '../../../shared/components/UserAvatar'
+import { addRole as addRoleService } from '../../auth/services/authService'
+import { CIUDADES_ACTIVAS } from '../../../shared/constants/geography'
 
 function persistActiveRole(userId: string, role: UserRole) {
   supabase.from('profiles').update({ active_role: role }).eq('user_id', userId).then(({ error }) => {
@@ -20,19 +22,7 @@ const USER_ROLES: Record<UserRole, string> = {
   chofer: 'Delivery',
 }
 
-const CITIES = [
-  'La Paz',
-  'Santa Cruz de la Sierra',
-  'Cochabamba',
-  'Sucre',
-  'Oruro',
-  'Potosí',
-  'Tarija',
-  'Trinidad',
-  'Cobija',
-  'El Alto',
-  'Sacaba',
-]
+const CITIES = CIUDADES_ACTIVAS
 
 const PROFILE_OPTIONS = [
   { icon: 'notifications', label: 'Notificaciones' },
@@ -163,26 +153,44 @@ export function PerfilScreen() {
         </div>
       </div>
 
-      {user.roles.length > 1 && (
-        <div className="flex flex-col gap-2 px-4">
-          <span className="font-label text-[11px] uppercase tracking-[0.14em] font-semibold text-on-surface-variant/50">Mis roles</span>
-          <div className="flex flex-wrap gap-2">
-            {user.roles.map((role) => (
-              <button
-                key={role}
-                onClick={() => { setActiveRole(role); persistActiveRole(user!.user_id, role) }}
-                className={`rounded-full px-4 py-1.5 text-sm font-label transition-colors ${
-                  role === user.active_role
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-container text-on-surface border border-outline-variant'
-                }`}
-              >
-                {USER_ROLES[role]}
-              </button>
-            ))}
-          </div>
+      <div className="flex flex-col gap-2 px-4">
+        <span className="font-label text-[11px] uppercase tracking-[0.14em] font-semibold text-on-surface-variant/50">Mis roles</span>
+        <div className="flex flex-wrap gap-2">
+          {user.roles.map((role) => (
+            <button
+              key={role}
+              onClick={() => { setActiveRole(role); persistActiveRole(user!.user_id, role) }}
+              className={`rounded-full px-4 py-1.5 text-sm font-label transition-colors ${
+                role === user.active_role
+                  ? 'bg-primary text-on-primary'
+                  : 'bg-surface-container text-on-surface border border-outline-variant'
+              }`}
+            >
+              {USER_ROLES[role]}
+            </button>
+          ))}
+          
+          {(Object.keys(USER_ROLES) as UserRole[]).filter(r => !user.roles.includes(r)).map(role => (
+            <button
+              key={role}
+              onClick={async () => {
+                if (!user) return
+                try {
+                  await addRoleService(user.access_token, role)
+                  useAuthStore.getState().addRole(role)
+                  showToast(`Rol "${USER_ROLES[role]}" agregado`, 'success')
+                } catch {
+                  showToast('No se pudo agregar el rol', 'error')
+                }
+              }}
+              className="rounded-full px-4 py-1.5 text-sm font-label transition-colors bg-transparent border border-dashed border-outline-variant text-primary hover:bg-primary/5 flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              {USER_ROLES[role]}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       <div className="flex flex-col gap-2 px-4">
         {PROFILE_OPTIONS.map((opt) => (

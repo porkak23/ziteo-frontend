@@ -4,7 +4,7 @@ import type { UserRole } from './features/auth/store/authStore'
 import { useNavStore } from './shared/store/navStore'
 import { supabase } from './lib/supabaseClient'
 import { useAuthSession } from './shared/hooks/useAuthSession'
-import { InstallPWA } from './shared/components/InstallPWA'
+import { InstallPrompt } from './shared/components/InstallPrompt'
 import SplashScreen from './features/auth/components/SplashScreen'
 import WelcomeScreen from './features/auth/components/WelcomeScreen'
 import RegisterForm from './features/auth/components/RegisterForm'
@@ -16,30 +16,38 @@ import ForgotPinScreen from './features/auth/components/ForgotPinScreen'
 import type { OAuthUserData } from './features/auth/types/authTypes'
 import AppLayout from './shared/components/AppLayout'
 import { ThemeInitializer } from './shared/components/ThemeInitializer'
-import { ChatScreen } from './shared/components/ChatScreen'
+import { FeedbackButton } from './shared/components/FeedbackButton'
+import { BetaAcknowledgment } from './features/auth/components/BetaAcknowledgment'
+import { NetworkStatusBanner } from './shared/components/NetworkStatusBanner'
 
-const HomeScreen        = lazy(() => import('./features/app/HomeScreen'))
-const TiendaScreen      = lazy(() => import('./features/tienda').then(m => ({ default: m.TiendaScreen })))
-const ProyectosScreen   = lazy(() => import('./features/proyectos').then(m => ({ default: m.ProyectosScreen })))
-const PerfilScreen      = lazy(() => import('./features/perfil/components/PerfilScreen').then(m => ({ default: m.PerfilScreen })))
-const PedidosProveedorScreen = lazy(() => import('./features/proveedor/components/PedidosProveedorScreen').then(m => ({ default: m.PedidosProveedorScreen })))
-const MisPedidosScreen  = lazy(() => import('./features/tienda/components/MisPedidosScreen').then(m => ({ default: m.MisPedidosScreen })))
-const TrabajosScreen    = lazy(() => import('./features/maestro/components/TrabajosScreen').then(m => ({ default: m.TrabajosScreen })))
-const InventarioScreen  = lazy(() => import('./features/proveedor/components/InventarioScreen').then(m => ({ default: m.InventarioScreen })))
-const IntelScreen       = lazy(() => import('./features/proveedor/components/IntelScreen').then(m => ({ default: m.IntelScreen })))
-const LogisticaScreen   = lazy(() => import('./features/proveedor/components/LogisticaScreen').then(m => ({ default: m.LogisticaScreen })))
-const CotizacionesScreen = lazy(() => import('./features/proveedor/components/CotizacionesScreen').then(m => ({ default: m.CotizacionesScreen })))
-const ContratarScreen   = lazy(() => import('./features/contratar/components/ContratarScreen').then(m => ({ default: m.ContratarScreen })))
-const SettingsScreen        = lazy(() => import('./features/settings/components/SettingsScreen').then(m => ({ default: m.SettingsScreen })))
-const HabilidadesScreen     = lazy(() => import('./features/maestro/components/HabilidadesScreen').then(m => ({ default: m.HabilidadesScreen })))
-const NotificationsScreen   = lazy(() => import('./features/notifications/components/NotificationsScreen').then(m => ({ default: m.NotificationsScreen })))
-const MisLicitacionesScreen = lazy(() => import('./features/licitaciones/components/MisLicitacionesScreen').then(m => ({ default: m.MisLicitacionesScreen })))
-const LicitacionFeed        = lazy(() => import('./features/licitaciones/components/LicitacionFeed').then(m => ({ default: m.LicitacionFeed })))
-const MaestroProfileScreen  = lazy(() => import('./features/maestro/components/MaestroProfileScreen').then(m => ({ default: m.MaestroProfileScreen })))
-const TransportistaScreen   = lazy(() => import('./features/transportista/components/TransportistaScreen').then(m => ({ default: m.TransportistaScreen })))
-const SolicitarTransporteScreen = lazy(() => import('./features/transporte/components/SolicitarTransporteScreen').then(m => ({ default: m.SolicitarTransporteScreen })))
-const HistorialTransportistaScreen = lazy(() => import('./features/transportista/components/HistorialScreen').then(m => ({ default: m.HistorialScreen })))
-const BilleteraTransportistaScreen = lazy(() => import('./features/transportista/components/BilleteraScreen').then(m => ({ default: m.BilleteraScreen })))
+import { StatusPage } from './features/app/components/StatusPage'
+import { InstallInstructionsPage } from './features/app/components/InstallInstructionsPage'
+
+// Detecta si la URL contiene ?status o #status para mostrar la página de estado
+function isStatusRoute(): boolean {
+  return (
+    window.location.search.includes('status') ||
+    window.location.hash === '#status'
+  )
+}
+
+// Detecta si la URL contiene ?install para mostrar la página de instrucciones
+function isInstallRoute(): boolean {
+  return (
+    window.location.search.includes('install') ||
+    window.location.hash === '#install'
+  )
+}
+
+// All role apps and heavy screens are lazy-loaded so they are not included
+// in the initial bundle. Each role's chunk is only fetched after login.
+const TrabajadorApp       = lazy(() => import('./features/trabajador/TrabajadorApp').then(m => ({ default: m.TrabajadorApp })))
+const RepartidorApp       = lazy(() => import('./features/repartidor/RepartidorApp').then(m => ({ default: m.RepartidorApp })))
+const ConstructorApp      = lazy(() => import('./features/constructor/ConstructorApp').then(m => ({ default: m.ConstructorApp })))
+const ProveedorApp        = lazy(() => import('./features/proveedor/ProveedorApp').then(m => ({ default: m.ProveedorApp })))
+const SettingsScreen      = lazy(() => import('./features/settings/components/SettingsScreen').then(m => ({ default: m.SettingsScreen })))
+const NotificationsScreen = lazy(() => import('./features/notifications/components/NotificationsScreen').then(m => ({ default: m.NotificationsScreen })))
+const PerfilScreen        = lazy(() => import('./features/perfil/components/PerfilScreen').then(m => ({ default: m.PerfilScreen })))
 
 function TabSkeleton() {
   return (
@@ -53,24 +61,18 @@ function TabSkeleton() {
 
 type AppScreen = 'splash' | 'welcome' | 'register' | 'login' | 'otp' | 'onboarding' | 'oauth-setup' | 'forgot-pin' | 'app'
 
-
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('splash')
-  const [pendingPhone, setPendingPhone] = useState('')
-  const [pendingPin, setPendingPin] = useState('')
-  const [pendingDebugOtp, setPendingDebugOtp] = useState<string | undefined>()
+  const [pendingPhone] = useState('')
+  const [pendingPin] = useState('')
+  const [pendingDebugOtp] = useState<string | undefined>()
   const [pendingOAuthUser, setPendingOAuthUser] = useState<OAuthUserData | null>(null)
-  const [viewingMaestroId, setViewingMaestroId] = useState<string | null>(null)
-  const [chatWith, setChatWith] = useState<{ userId: string; name: string } | null>(null)
-  const [hireTargetId, setHireTargetId] = useState<string | null>(null)
   const activeTab = useNavStore((s) => s.activeTab)
   const setActiveTab = useNavStore((s) => s.setTab)
   const { isAuthenticated } = useAuthStore()
   const isAuth = useAuthStore((s) => s.user !== null)
   const currentUser = useAuthStore((s) => s.user)
-  const isMaestro = currentUser?.roles?.includes('maestro') ?? false
 
-  // Restore Supabase session on mount and keep tokens in sync with token refreshes
   useAuthSession()
 
   useEffect(() => {
@@ -80,13 +82,6 @@ export default function App() {
       setActiveTab('home')
     }
   }, [isAuth, screen, setScreen, setActiveTab])
-
-  // Chofer has no 'home' tab — land them on 'viajes' instead.
-  useEffect(() => {
-    if (currentUser?.active_role === 'chofer' && activeTab === 'home') {
-      setActiveTab('viajes')
-    }
-  }, [currentUser?.active_role, activeTab, setActiveTab])
 
   // Handle Google / Apple OAuth redirects
   useEffect(() => {
@@ -111,7 +106,7 @@ export default function App() {
             name: profile.name,
             phone: profile.phone ?? '',
             email: session.user.email,
-            active_role: profile.active_role,
+            active_role: profile.active_role as UserRole,
             roles: (rolesData ?? []).map((r: { role: string }) => r.role as UserRole),
             access_token: session.access_token,
             refresh_token: session.refresh_token ?? '',
@@ -137,6 +132,26 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Página de estado del servicio — accesible sin autenticación via ?status o #status
+  if (isStatusRoute()) {
+    return (
+      <>
+        <ThemeInitializer />
+        <StatusPage />
+      </>
+    )
+  }
+
+  // Página de instrucciones de instalación — accesible sin autenticación via ?install o #install
+  if (isInstallRoute()) {
+    return (
+      <>
+        <ThemeInitializer />
+        <InstallInstructionsPage />
+      </>
+    )
+  }
+
   if (screen === 'splash') {
     return (
       <>
@@ -158,10 +173,7 @@ export default function App() {
     return (
       <div className="animate-[fadeSlideUp_0.3s_ease-out]">
         <RegisterForm
-          onSuccess={(phone, pin, debugOtp) => {
-            setPendingPhone(phone)
-            setPendingPin(pin)
-            setPendingDebugOtp(debugOtp)
+          onSuccess={() => {
             setScreen('otp')
           }}
           onNavigate={(dest) => setScreen(dest as AppScreen)}
@@ -189,9 +201,6 @@ export default function App() {
           pin={pendingPin}
           debugOtp={pendingDebugOtp}
           onSuccess={() => {
-            // After OTP the store is already populated by OtpVerification.
-            // Show onboarding if the user has no name or no city yet.
-            // We re-read the store synchronously after setUser was called inside OtpVerification.
             const freshUser = useAuthStore.getState().user
             const needsOnboarding = !freshUser?.name || freshUser.name.trim().length === 0
             setScreen(needsOnboarding ? 'onboarding' : 'app')
@@ -229,61 +238,98 @@ export default function App() {
     )
   }
 
+  // ── Global screens (Settings, Perfil, Notifications) ──────────
+  if (activeTab === 'settings' || activeTab === 'perfil' || activeTab === 'notificaciones') {
+    return (
+      <>
+        <ThemeInitializer />
+        <NetworkStatusBanner />
+        <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
+          <Suspense fallback={<TabSkeleton />}>
+            {activeTab === 'settings' && <SettingsScreen onLogout={() => { setScreen('welcome'); setActiveTab('home') }} />}
+            {activeTab === 'perfil' && <PerfilScreen />}
+            {activeTab === 'notificaciones' && <NotificationsScreen />}
+          </Suspense>
+        </AppLayout>
+        <InstallPrompt />
+        <BetaAcknowledgment />
+        <FeedbackButton />
+      </>
+    )
+  }
+
+  // ── Role short-circuits: each role has its own standalone dashboard ──────────
+  if (currentUser?.active_role === 'constructor') {
+    return (
+      <>
+        <ThemeInitializer />
+        <NetworkStatusBanner />
+        <Suspense fallback={<TabSkeleton />}>
+          <ConstructorApp />
+        </Suspense>
+        <InstallPrompt />
+        <BetaAcknowledgment />
+        <FeedbackButton />
+      </>
+    )
+  }
+
+  if (currentUser?.active_role === 'proveedor') {
+    return (
+      <>
+        <ThemeInitializer />
+        <NetworkStatusBanner />
+        <Suspense fallback={<TabSkeleton />}>
+          <ProveedorApp />
+        </Suspense>
+        <InstallPrompt />
+        <BetaAcknowledgment />
+        <FeedbackButton />
+      </>
+    )
+  }
+
+  if (currentUser?.active_role === 'maestro') {
+    return (
+      <>
+        <ThemeInitializer />
+        <NetworkStatusBanner />
+        <Suspense fallback={<TabSkeleton />}>
+          <TrabajadorApp />
+        </Suspense>
+        <InstallPrompt />
+        <BetaAcknowledgment />
+        <FeedbackButton />
+      </>
+    )
+  }
+
+  if (currentUser?.active_role === 'chofer') {
+    return (
+      <>
+        <ThemeInitializer />
+        <NetworkStatusBanner />
+        <Suspense fallback={<TabSkeleton />}>
+          <RepartidorApp />
+        </Suspense>
+        <InstallPrompt />
+        <BetaAcknowledgment />
+        <FeedbackButton />
+      </>
+    )
+  }
+
+  // Fallback: unauthenticated or unknown role
   return (
     <>
       <ThemeInitializer />
+      <NetworkStatusBanner />
       <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
         <Suspense fallback={<TabSkeleton />}>
-          {activeTab === 'home'        && <HomeScreen onNavigate={setActiveTab} />}
-          {activeTab === 'proyectos'  && <ProyectosScreen />}
-          {activeTab === 'contratar'  && (
-            <>
-              {chatWith && (
-                <ChatScreen
-                  otherUserId={chatWith.userId}
-                  otherUserName={chatWith.name}
-                  onClose={() => setChatWith(null)}
-                />
-              )}
-              {viewingMaestroId
-                ? <MaestroProfileScreen
-                    maestroId={viewingMaestroId}
-                    isOwn={false}
-                    onBack={() => setViewingMaestroId(null)}
-                    onChat={(id, name) => { setViewingMaestroId(null); setChatWith({ userId: id, name }) }}
-                    onHire={(id) => { setHireTargetId(id); setViewingMaestroId(null) }}
-                  />
-                : <ContratarScreen
-                    onViewProfile={(id) => setViewingMaestroId(id)}
-                    initialHireMaestroId={hireTargetId}
-                  />
-              }
-            </>
-          )}
-          {activeTab === 'tienda'     && <TiendaScreen />}
-          {activeTab === 'pedidos'     && <PedidosProveedorScreen />}
-          {activeTab === 'mis-pedidos' && <MisPedidosScreen />}
-          {activeTab === 'intel'        && <IntelScreen />}
-          {activeTab === 'logistica'    && <LogisticaScreen />}
-          {activeTab === 'cotizaciones' && <CotizacionesScreen />}
-          {activeTab === 'trabajos'   && <TrabajosScreen />}
-          {activeTab === 'inventario' && <InventarioScreen />}
-          {activeTab === 'viajes'     && <TransportistaScreen />}
-          {activeTab === 'transporte-pesado' && <SolicitarTransporteScreen type="pesado" onBack={() => setActiveTab('home')} />}
-          {activeTab === 'transporte-ligero' && <SolicitarTransporteScreen type="ligero" onBack={() => setActiveTab('home')} />}
-          {activeTab === 'historial'  && <HistorialTransportistaScreen />}
-          {activeTab === 'billetera'  && <BilleteraTransportistaScreen />}
-          {activeTab === 'mi-perfil'  && (isMaestro && currentUser
-            ? <MaestroProfileScreen maestroId={currentUser.user_id} isOwn={true} />
-            : <PerfilScreen />
-          )}
-          {activeTab === 'perfil'     && <PerfilScreen />}
-          {activeTab === 'habilidades'     && <HabilidadesScreen />}
-          {activeTab === 'settings'        && <SettingsScreen onLogout={() => { setScreen('welcome'); setActiveTab('home') }} />}
-          {activeTab === 'notificaciones'  && <NotificationsScreen />}
-          {activeTab === 'licitaciones'    && (currentUser?.active_role === 'maestro' ? <LicitacionFeed /> : <MisLicitacionesScreen />)}
+          <div className="flex items-center justify-center h-full p-4 text-center">
+            <p className="text-on-surface-variant font-body">Cargando...</p>
+          </div>
         </Suspense>
-        <InstallPWA />
       </AppLayout>
     </>
   )

@@ -1,10 +1,8 @@
 import React, { useState, useCallback, useRef, lazy, Suspense } from 'react'
+import { PerfilRepartidor } from './PerfilRepartidor'
 import { Z } from '@/shared/design/tokens'
 import { RoleDashNav } from '@/shared/design/shell/RoleDashNav'
-import { ZAvatar } from '@/shared/design/components/ZAvatar'
-import { SectionTitle } from '@/shared/design/shell/SectionTitle'
 import { DashHeader } from '@/shared/design/shell'
-import { useAuthStore } from '@/features/auth/store/authStore'
 import AvatarMenu from '@/shared/components/AvatarMenu'
 
 const RadarScreen = lazy(() =>
@@ -56,13 +54,6 @@ function RNavIconUser({ color = Z.textMuted, size = 22 }: { color?: string; size
   )
 }
 
-function IconStar({ color = '#F59E0B', size = 13 }: { color?: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24">
-      <path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 18l-6.2 3.1L7 14.2l-5-4.9 6.9-1L12 2z" fill={color} />
-    </svg>
-  )
-}
 
 function TabSkeleton() {
   return (
@@ -169,144 +160,7 @@ function PedidosTab() {
   )
 }
 
-function PerfilTab() {
-  const user = useAuthStore((s) => s.user)
-  const displayName = user?.name ?? 'Carlos Condori'
-  const city = user?.city ?? 'Santa Cruz'
 
-  return (
-    <div style={{ overflowY: 'auto', paddingBottom: 80 }}>
-      <div style={{
-        padding: '24px 20px 20px',
-        background: `linear-gradient(180deg, ${Z.orangeLight} 0%, ${Z.bg} 100%)`,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-      }}>
-        <ZAvatar name={displayName} size={80} />
-        <div style={{ textAlign: 'center' }}>
-          <h3 style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text, margin: 0 }}>
-            {displayName}
-          </h3>
-          <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, margin: '4px 0 0' }}>
-            Transportista · {city}
-          </p>
-        </div>
-        <div style={{
-          display: 'flex', gap: 16, padding: '12px 20px', borderRadius: Z.r.full,
-          background: Z.surface, border: `1px solid ${Z.border}`,
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text }}>4.9</div>
-            <div style={{ display: 'flex', gap: 2 }}>
-              {[1,2,3,4,5].map(i => <IconStar key={i} color="#F59E0B" size={13} />)}
-            </div>
-          </div>
-          <div style={{ width: 1, background: Z.border }} />
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text }}>247</div>
-            <div style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted }}>viajes</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div>
-          <SectionTitle title="Mi Vehículo" />
-          <div style={{
-            marginTop: 10, padding: '16px', borderRadius: Z.r.md,
-            background: Z.surface, border: `1px solid ${Z.border}`,
-            display: 'flex', gap: 14, alignItems: 'center',
-          }}>
-            <span style={{ fontSize: 36 }}>🚛</span>
-            <div>
-              <div style={{ fontFamily: Z.font, fontSize: 15, fontWeight: 700, color: Z.text }}>
-                Camión de Carga
-              </div>
-              <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, marginTop: 2 }}>
-                Toyota Dyna · Placa 3456-ABC
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                <span style={{
-                  fontFamily: Z.font, fontSize: 11, fontWeight: 600, padding: '4px 10px',
-                  borderRadius: 20, background: Z.orangeLight, color: Z.orangeDark,
-                }}>
-                  Carga máx: 3T
-                </span>
-                <span style={{
-                  fontFamily: Z.font, fontSize: 11, fontWeight: 600, padding: '4px 10px',
-                  borderRadius: 20, background: Z.blueLight, color: Z.blueDark,
-                }}>
-                  Verificado ✓
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <SectionTitle title="Documentos" />
-          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[
-              { doc: 'Licencia de conducir', status: 'Vigente', ok: true },
-              { doc: 'SOAT', status: 'Vigente hasta Mar 2026', ok: true },
-              { doc: 'Tarjeta de propiedad', status: 'Vigente', ok: true },
-              { doc: 'Revisión técnica', status: 'Vence Jun 2025', ok: false },
-            ].map(d => (
-              <div
-                key={d.doc}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '12px 14px', borderRadius: Z.r.sm,
-                  background: Z.surface, border: `1px solid ${d.ok ? Z.border : '#FECACA'}`,
-                }}
-              >
-                <div>
-                  <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>
-                    {d.doc}
-                  </div>
-                  <div style={{
-                    fontFamily: Z.font, fontSize: 11,
-                    color: d.ok ? Z.textMuted : Z.error, marginTop: 2,
-                  }}>
-                    {d.status}
-                  </div>
-                </div>
-                <div style={{
-                  width: 24, height: 24, borderRadius: '50%',
-                  background: d.ok ? '#DCFCE7' : '#FFF1F1',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ fontSize: 12 }}>{d.ok ? '✓' : '!'}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-
-function RepartidorChatFab() {
-  return (
-    <button
-      style={{
-        position: 'fixed', bottom: 92, left: 18, width: 48, height: 48,
-        borderRadius: '50%', border: 'none', cursor: 'pointer',
-        background: Z.gradMixed, boxShadow: '0 4px 16px rgba(232,115,58,0.3)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 25,
-      }}
-      aria-label="Chat"
-    >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"
-          stroke="#fff" strokeWidth="1.8" strokeLinejoin="round" fill="none"
-        />
-      </svg>
-    </button>
-  )
-}
 
 function JobAlertToast({ alert, onDismiss }: { alert: JobAlert; onDismiss: () => void }) {
   return (
@@ -373,13 +227,13 @@ export function RepartidorApp() {
   return (
     <div style={{
       position: 'fixed', inset: 0, background: Z.bg,
-      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
     }}>
       <style>{`@keyframes alertDrop { from { opacity:0; transform:scale(0.88) translateY(-10px); transform-origin: top right; } to { opacity:1; transform:scale(1) translateY(0); transform-origin: top right; } }`}</style>
 
       <DashHeader
         onProfile={() => setShowAccount(true)}
-        onNotif={handleBellClick}
+        onChat={() => handleBellClick()}
         notifCount={alertCount}
       />
       <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
@@ -399,12 +253,11 @@ export function RepartidorApp() {
           {activeTab === 'radar'    && <RadarScreen onNewJobOffer={handleNewJobOffer} />}
           {activeTab === 'pedidos'  && <PedidosTab />}
           {activeTab === 'ganancias' && <GananciasScreen />}
-          {activeTab === 'perfil'   && <PerfilTab />}
+          {activeTab === 'perfil'   && <PerfilRepartidor />}
         </Suspense>
       </main>
 
       <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => setActiveTab(k as RepartidorTab)} />
-      <RepartidorChatFab />
     </div>
   )
 }

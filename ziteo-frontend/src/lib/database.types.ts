@@ -137,6 +137,8 @@ export type Database = {
       contracts: {
         Row: {
           actual_end_date: string | null
+          budget: number | null
+          city: string | null
           constructor_id: string
           contract_date: string | null
           created_at: string | null
@@ -155,6 +157,8 @@ export type Database = {
         }
         Insert: {
           actual_end_date?: string | null
+          budget?: number | null
+          city?: string | null
           constructor_id: string
           contract_date?: string | null
           created_at?: string | null
@@ -173,6 +177,8 @@ export type Database = {
         }
         Update: {
           actual_end_date?: string | null
+          budget?: number | null
+          city?: string | null
           constructor_id?: string
           contract_date?: string | null
           created_at?: string | null
@@ -367,6 +373,13 @@ export type Database = {
           total: number
           updated_at: string | null
           cargo_type: 'light' | 'heavy' | null
+          payment_evidence_url: string | null
+          payment_evidence_uploaded_at: string | null
+          payment_confirmed_at: string | null
+          payment_confirmed_by: string | null
+          payment_rejection_reason: string | null
+          expires_at: string | null
+          estimated_delivery_at: string | null
         }
         Insert: {
           constructor_id: string
@@ -382,6 +395,13 @@ export type Database = {
           total: number
           updated_at?: string | null
           cargo_type?: 'light' | 'heavy' | null
+          payment_evidence_url?: string | null
+          payment_evidence_uploaded_at?: string | null
+          payment_confirmed_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_rejection_reason?: string | null
+          expires_at?: string | null
+          estimated_delivery_at?: string | null
         }
         Update: {
           constructor_id?: string
@@ -397,6 +417,13 @@ export type Database = {
           total?: number
           updated_at?: string | null
           cargo_type?: 'light' | 'heavy' | null
+          payment_evidence_url?: string | null
+          payment_evidence_uploaded_at?: string | null
+          payment_confirmed_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_rejection_reason?: string | null
+          expires_at?: string | null
+          estimated_delivery_at?: string | null
         }
         Relationships: [
           {
@@ -426,12 +453,14 @@ export type Database = {
         Row: {
           active: boolean | null
           category_id: string
+          construction_stage: string | null
           created_at: string | null
           description: string | null
           id: string
           image_bucket: string | null
           image_url: string | null
           is_deleted: boolean | null
+          listing_type: string | null
           name: string
           price_unit: number
           provider_id: string
@@ -443,12 +472,14 @@ export type Database = {
         Insert: {
           active?: boolean | null
           category_id: string
+          construction_stage?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_bucket?: string | null
           image_url?: string | null
           is_deleted?: boolean | null
+          listing_type?: string | null
           name: string
           price_unit: number
           provider_id: string
@@ -460,12 +491,14 @@ export type Database = {
         Update: {
           active?: boolean | null
           category_id?: string
+          construction_stage?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_bucket?: string | null
           image_url?: string | null
           is_deleted?: boolean | null
+          listing_type?: string | null
           name?: string
           price_unit?: number
           provider_id?: string
@@ -495,50 +528,62 @@ export type Database = {
         Row: {
           active_role: string
           avatar_url: string | null
+          beta_acknowledged_at: string | null
           bio: string | null
           city: string
           created_at: string | null
+          email: string | null
           id: string
           name: string
           phone: string
           pin_hash: string
           preferred_auth_method: string | null
+          terms_accepted_at: string | null
           totp_enabled: boolean | null
           totp_secret: string | null
           updated_at: string | null
           user_id: string
+          waitlist: boolean | null
         }
         Insert: {
           active_role: string
           avatar_url?: string | null
+          beta_acknowledged_at?: string | null
           bio?: string | null
           city: string
           created_at?: string | null
+          email?: string | null
           id?: string
           name: string
           phone: string
           pin_hash: string
           preferred_auth_method?: string | null
+          terms_accepted_at?: string | null
           totp_enabled?: boolean | null
           totp_secret?: string | null
           updated_at?: string | null
           user_id: string
+          waitlist?: boolean | null
         }
         Update: {
           active_role?: string
           avatar_url?: string | null
+          beta_acknowledged_at?: string | null
           bio?: string | null
           city?: string
           created_at?: string | null
+          email?: string | null
           id?: string
           name?: string
           phone?: string
           pin_hash?: string
           preferred_auth_method?: string | null
+          terms_accepted_at?: string | null
           totp_enabled?: boolean | null
           totp_secret?: string | null
           updated_at?: string | null
           user_id?: string
+          waitlist?: boolean | null
         }
         Relationships: []
       }
@@ -692,6 +737,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          city: string | null
           constructor_id: string
           created_at: string | null
           description: string | null
@@ -705,11 +751,14 @@ export type Database = {
           needs_maestro: boolean | null
           needs_materials: boolean | null
           photo_url: string | null
+          progress: number | null
           start_date: string | null
           status: string | null
+          title: string | null
           updated_at: string | null
         }
         Insert: {
+          city?: string | null
           constructor_id: string
           created_at?: string | null
           description?: string | null
@@ -723,11 +772,14 @@ export type Database = {
           needs_maestro?: boolean | null
           needs_materials?: boolean | null
           photo_url?: string | null
+          progress?: number | null
           start_date?: string | null
           status?: string | null
+          title?: string | null
           updated_at?: string | null
         }
         Update: {
+          city?: string | null
           constructor_id?: string
           created_at?: string | null
           description?: string | null
@@ -741,8 +793,10 @@ export type Database = {
           needs_maestro?: boolean | null
           needs_materials?: boolean | null
           photo_url?: string | null
+          progress?: number | null
           start_date?: string | null
           status?: string | null
+          title?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -812,6 +866,9 @@ export type Database = {
           is_available: boolean | null
           is_verified: boolean | null
           onboarding_completed: boolean | null
+          min_order_amount: number | null
+          onboarding_complete: boolean | null
+          payment_qr_url: string | null
           role: string
           specialty: string | null
           store_description: string | null
@@ -830,7 +887,10 @@ export type Database = {
           id?: string
           is_available?: boolean | null
           is_verified?: boolean | null
+          min_order_amount?: number | null
+          onboarding_complete?: boolean | null
           onboarding_completed?: boolean | null
+          payment_qr_url?: string | null
           role: string
           specialty?: string | null
           store_description?: string | null
@@ -849,7 +909,10 @@ export type Database = {
           id?: string
           is_available?: boolean | null
           is_verified?: boolean | null
+          min_order_amount?: number | null
+          onboarding_complete?: boolean | null
           onboarding_completed?: boolean | null
+          payment_qr_url?: string | null
           role?: string
           specialty?: string | null
           store_description?: string | null
@@ -870,6 +933,337 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      maestro_habilidades: {
+        Row: {
+          id: string
+          maestro_id: string
+          skill: string
+          porcentaje: number
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          maestro_id: string
+          skill: string
+          porcentaje: number
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          maestro_id?: string
+          skill?: string
+          porcentaje?: number
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maestro_habilidades_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          id: string
+          reviewer_id: string
+          reviewed_id: string
+          contract_id: string | null
+          rating: number
+          comment: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          reviewer_id: string
+          reviewed_id: string
+          contract_id?: string | null
+          rating: number
+          comment?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          reviewer_id?: string
+          reviewed_id?: string
+          contract_id?: string | null
+          rating?: number
+          comment?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewed_id_fkey"
+            columns: ["reviewed_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      disputes: {
+        Row: {
+          id: string
+          order_id: string
+          created_by: string
+          reason: string
+          details: string
+          status: 'open' | 'resolved'
+          created_at: string
+          resolved_at: string | null
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          created_by: string
+          reason: string
+          details: string
+          status?: 'open' | 'resolved'
+          created_at?: string
+          resolved_at?: string | null
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          created_by?: string
+          reason?: string
+          details?: string
+          status?: 'open' | 'resolved'
+          created_at?: string
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      licitaciones: {
+        Row: {
+          id: string
+          constructor_id: string
+          title: string
+          description: string | null
+          specialty: string | null
+          city: string | null
+          budget_min: number | null
+          budget_max: number | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          constructor_id: string
+          title: string
+          description?: string | null
+          specialty?: string | null
+          city?: string | null
+          budget_min?: number | null
+          budget_max?: number | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          constructor_id?: string
+          title?: string
+          description?: string | null
+          specialty?: string | null
+          city?: string | null
+          budget_min?: number | null
+          budget_max?: number | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licitaciones_constructor_id_fkey"
+            columns: ["constructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      licitacion_postulaciones: {
+        Row: {
+          id: string
+          licitacion_id: string
+          maestro_id: string
+          message: string | null
+          proposed_budget: number | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          licitacion_id: string
+          maestro_id: string
+          message?: string | null
+          proposed_budget?: number | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          licitacion_id?: string
+          maestro_id?: string
+          message?: string | null
+          proposed_budget?: number | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licitacion_postulaciones_licitacion_id_fkey"
+            columns: ["licitacion_id"]
+            isOneToOne: false
+            referencedRelation: "licitaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "licitacion_postulaciones_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          is_read: boolean | null
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          is_read?: boolean | null
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          sender_id?: string
+          receiver_id?: string
+          content?: string
+          is_read?: boolean | null
+          read_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      otps: {
+        Row: {
+          id: string
+          user_id: string | null
+          phone: string
+          otp_code: string
+          used: boolean
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          phone: string
+          otp_code: string
+          used?: boolean
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          phone?: string
+          otp_code?: string
+          used?: boolean
+          expires_at?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          id: string
+          user_id: string | null
+          message: string
+          category: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          message: string
+          category?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          message?: string
+          category?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       quotations: {
         Row: {
@@ -1005,7 +1399,80 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      kpi_orders_by_day: {
+        Row: {
+          day: string | null
+          order_count: number | null
+          gmv: number | null
+        }
+        Relationships: []
+      }
+      kpi_gmv_by_city: {
+        Row: {
+          city: string | null
+          total_orders: number | null
+          total_gmv: number | null
+          confirmed_gmv: number | null
+        }
+        Relationships: []
+      }
+      kpi_payment_confirmation_rate: {
+        Row: {
+          total_orders: number | null
+          confirmed: number | null
+          expired: number | null
+          cancelled: number | null
+          confirmation_rate: number | null
+        }
+        Relationships: []
+      }
+      kpi_licitaciones_engagement: {
+        Row: {
+          total: number | null
+          with_bids: number | null
+          without_bids: number | null
+          engagement_rate: number | null
+        }
+        Relationships: []
+      }
+      kpi_active_providers: {
+        Row: {
+          total_providers: number | null
+          with_products: number | null
+          without_products: number | null
+        }
+        Relationships: []
+      }
+      kpi_active_maestros: {
+        Row: {
+          total_maestros: number | null
+          profile_complete: number | null
+          available: number | null
+        }
+        Relationships: []
+      }
+      kpi_signups_by_day: {
+        Row: {
+          day: string | null
+          signups: number | null
+          by_role: Json | null
+        }
+        Relationships: []
+      }
+      maestros_view: {
+        Row: {
+          user_id: string
+          name: string
+          city: string
+          avatar_url: string | null
+          specialties: string[] | null
+          rate_type: string | null
+          rate_amount: number
+          available: boolean | null
+          experience_years: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_rating: {
@@ -1055,6 +1522,37 @@ export type Database = {
           p_message: string
         }
         Returns: undefined
+      }
+      create_dispute: {
+        Args: {
+          p_order_id: string
+          p_reason: string
+          p_details: string
+        }
+        Returns: Json
+      }
+      resolve_dispute: {
+        Args: {
+          p_dispute_id: string
+          p_resolution_notes?: string
+        }
+        Returns: Json
+      }
+      expire_pending_orders: {
+        Args: Record<string, never>
+        Returns: number
+      }
+      confirm_payment_by_provider: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
+      upload_payment_evidence: {
+        Args: { p_order_id: string; p_evidence_url: string }
+        Returns: Json
+      }
+      reject_payment_by_provider: {
+        Args: { p_order_id: string; p_reason?: string }
+        Returns: Json
       }
     }
     Enums: {
