@@ -75,11 +75,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Use a synthetic email for Supabase Auth (phone-only users have no real email)
   const syntheticEmail = `${phone.replace('+', '')}@ziteo.bo`
 
-  // Create the auth user with email_confirm: false so OTP flow is required
+  // Create the auth user — phone was already verified by Firebase OTP before this call,
+  // so we confirm the email immediately to allow login right after registration.
   const { data: authData, error: createError } = await adminClient.auth.admin.createUser({
     email: syntheticEmail,
     password: pin,
-    email_confirm: false, // user must confirm via OTP before they can log in
+    email_confirm: true,
     user_metadata: { phone, name, initial_role },
   })
 

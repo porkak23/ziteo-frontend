@@ -22,6 +22,7 @@ import { NetworkStatusBanner } from './shared/components/NetworkStatusBanner'
 
 import { StatusPage } from './features/app/components/StatusPage'
 import { InstallInstructionsPage } from './features/app/components/InstallInstructionsPage'
+import PrivacidadPage from './features/legal/PrivacidadPage'
 
 // Detecta si la URL contiene ?status o #status para mostrar la página de estado
 function isStatusRoute(): boolean {
@@ -37,6 +38,11 @@ function isInstallRoute(): boolean {
     window.location.search.includes('install') ||
     window.location.hash === '#install'
   )
+}
+
+// Página pública de política de privacidad — accesible sin autenticación en /privacidad
+function isPrivacidadRoute(): boolean {
+  return window.location.pathname === '/privacidad'
 }
 
 // All role apps and heavy screens are lazy-loaded so they are not included
@@ -131,6 +137,11 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // Política de privacidad pública — accesible sin autenticación en /privacidad
+  if (isPrivacidadRoute()) {
+    return <PrivacidadPage />
+  }
 
   // Página de estado del servicio — accesible sin autenticación via ?status o #status
   if (isStatusRoute()) {
