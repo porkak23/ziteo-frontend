@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Z } from '@/shared/design/tokens'
 import { DashHeader } from '@/shared/design/shell/DashHeader'
-// AvatarMenu available for future use
+import AvatarMenu from '@/shared/components/AvatarMenu'
+import { useNavStore } from '@/shared/store/navStore'
 import { usePaymentQr } from '@/features/proveedor/hooks/usePaymentQr'
 import { RoleDashNav } from '@/shared/design/shell/RoleDashNav'
 import type { Tab } from '@/shared/design/shell/RoleDashNav'
@@ -2198,6 +2199,9 @@ export function VendedorApp() {
   const [activeTab, setActiveTab] = useState<VendedorTab>('home')
   const [showAccount, setShowAccount] = useState(false)
   const [showEnvios, setShowEnvios] = useState(false)
+  const settingsTab = useNavStore((s) => s.activeTab)
+  const setNavTab = useNavStore((s) => s.setTab)
+  const showSettings = settingsTab === 'settings' || settingsTab === 'perfil'
   const needsOnboarding = useProveedorOnboardingCheck()
   const [onboardingDone, setOnboardingDone] = useState(false)
 
@@ -2219,7 +2223,8 @@ export function VendedorApp() {
       }}
     >
       <DashHeader onProfile={() => setShowAccount(true)} />
-      {showAccount && <VendedorCuentaScreen onClose={() => setShowAccount(false)} />}
+      <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
+      {showSettings && <VendedorCuentaScreen onClose={() => setNavTab('home')} />}
 
       {showEnvios && <EnviosScreen onClose={() => setShowEnvios(false)} />}
 
