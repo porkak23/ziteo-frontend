@@ -1,23 +1,52 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Z } from '@/shared/design/tokens'
 import { ZIcon } from '@/shared/design/components/ZIcon'
 import { ZButton } from '@/shared/design/components/ZButton'
 import { ZInput } from '@/shared/design/components/ZInput'
+import { ZSelect } from '@/shared/design/components/ZSelect'
+import { ZHeader } from '@/shared/design/components/ZHeader'
 import { SummaryCard } from '@/shared/design/shell/SummaryCard'
 import { SectionTitle } from '@/shared/design/shell/SectionTitle'
-import { ZHeader } from '@/shared/design/components/ZHeader'
+import { CIUDADES_ACTIVAS } from '@/shared/constants/geography'
+import { Toast } from '@/shared/components/Toast'
+import { useToast } from '@/shared/hooks/useToast'
+import { supabase } from '@/lib/supabaseClient'
+import { useAuthStore } from '../auth/store/authStore'
+import { useProyectos, useCreateProyecto } from '../proyectos/hooks/useProyectos'
+import type { ProjectCard as ProjectRow, ProjectStatus } from '../proyectos/types/proyectosTypes'
 
-// ── Data ──────────────────────────────────────────────────────────────────────
-interface Project {
-  id: number; name: string; status: string; date: string; budget: string; pedidos: number; desc: string
+// ── Status label helpers ──────────────────────────────────────────────────────
+const STATUS_LABEL: Record<ProjectStatus, string> = {
+  planning:  'Planificación',
+  active:    'Activo',
+  completed: 'Completo',
+  paused:    'Pausado',
 }
-
-const PROJECTS: Project[] = [
-  { id: 1, name: 'Casa Norte',             status: 'Activo',        date: '15 Mar', budget: '45,000',  pedidos: 8, desc: 'Construcción de vivienda unifamiliar en zona Norte, 2 plantas.' },
-  { id: 2, name: 'Edificio Comercial Sur', status: 'Planificación', date: '02 May', budget: '280,000', pedidos: 0, desc: 'Edificio de oficinas, 6 pisos. Fase de diseño.' },
-  { id: 3, name: 'Remodelación Oficina',   status: 'Completo',      date: '10 Ene', budget: '12,500',  pedidos: 5, desc: 'Remodelación interior de oficina corporativa.' },
-  { id: 4, name: 'Vivienda Familiar',      status: 'Activo',        date: '28 Abr', budget: '38,000',  pedidos: 3, desc: 'Ampliación y acabados de vivienda en zona Este.' },
+const STATUS_COLORS: Record<ProjectStatus, { bg: string; text: string }> = {
+  planning:  { bg: Z.blueLight,   text: Z.blueDark   },
+  active:    { bg: '#DCFCE7',     text: '#16A34A'    },
+  completed: { bg: Z.divider,     text: Z.textMuted  },
+  paused:    { bg: Z.orangeLight, text: Z.orangeDark },
+}
+const STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
+  { value: 'planning',  label: 'Planificación' },
+  { value: 'active',    label: 'Activo'        },
+  { value: 'completed', label: 'Completo'      },
 ]
+
+function formatShortDate(iso: string): string {
+  try {
+    const d = new Date(iso)
+    return d.toLocaleDateString('es-BO', { day: '2-digit', month: 'short' }).replace('.', '')
+  } catch {
+    return ''
+  }
+}
+function formatBudget(n: number | null): string {
+  if (n == null) return '—'
+  return n.toLocaleString('es-BO')
+}
 
 // ── Sub-icons ─────────────────────────────────────────────────────────────────
 function IconPlus({ color = '#fff', size = 14 }: { color?: string; size?: number }) {
@@ -27,7 +56,6 @@ function IconPlus({ color = '#fff', size = 14 }: { color?: string; size?: number
     </svg>
   )
 }
-
 function IconCart({ color = Z.blue, size = 16 }: { color?: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -37,7 +65,6 @@ function IconCart({ color = Z.blue, size = 16 }: { color?: string; size?: number
     </svg>
   )
 }
-
 function IconMoney({ color = Z.orange, size = 16 }: { color?: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -45,7 +72,6 @@ function IconMoney({ color = Z.orange, size = 16 }: { color?: string; size?: num
     </svg>
   )
 }
-
 function IconClock({ color = Z.orange, size = 16 }: { color?: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -69,14 +95,8 @@ function ActivityItem({ title, subtitle, time, color = Z.orange }: { title: stri
 }
 
 // ── ProjectCard ───────────────────────────────────────────────────────────────
-function ProjectCard({ project, onTap }: { project: Project; onTap: () => void }) {
-  const statusColors: Record<string, { bg: string; text: string }> = {
-    'Activo':        { bg: '#DCFCE7', text: '#16A34A' },
-    'Planificación': { bg: Z.blueLight, text: Z.blueDark },
-    'Completo':      { bg: Z.divider, text: Z.textMuted },
-  }
-  const sc = statusColors[project.status] ?? statusColors['Activo']
-
+function ProjectCard({ project, onTap }: { project: ProjectRow; onTap: () => void }) {
+  const sc = STATUS_COLORS[project.status] ?? STATUS_COLORS.planning
   return (
     <button
       onClick={onTap}
@@ -86,96 +106,325 @@ function ProjectCard({ project, onTap }: { project: Project; onTap: () => void }
         width: '100%', cursor: 'pointer', textAlign: 'left', outline: 'none',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontFamily: Z.font, fontSize: 15, fontWeight: 700, color: Z.text }}>{project.name}</span>
-        <span style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: sc.bg, color: sc.text }}>
-          {project.status}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontFamily: Z.font, fontSize: 15, fontWeight: 700, color: Z.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{project.name}</span>
+        <span style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: sc.bg, color: sc.text, flexShrink: 0 }}>
+          {STATUS_LABEL[project.status]}
         </span>
       </div>
       <div style={{ display: 'flex', gap: 16 }}>
         <div>
           <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textMuted, fontWeight: 500 }}>Presupuesto</div>
-          <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text, marginTop: 2 }}>Bs {project.budget}</div>
+          <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text, marginTop: 2 }}>Bs {formatBudget(project.estimated_budget)}</div>
         </div>
         <div>
-          <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textMuted, fontWeight: 500 }}>Pedidos</div>
-          <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text, marginTop: 2 }}>{project.pedidos}</div>
+          <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textMuted, fontWeight: 500 }}>Postulaciones</div>
+          <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text, marginTop: 2 }}>{project.application_count}</div>
         </div>
         <div>
           <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textMuted, fontWeight: 500 }}>Fecha</div>
-          <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text, marginTop: 2 }}>{project.date}</div>
+          <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text, marginTop: 2 }}>{formatShortDate(project.created_at)}</div>
         </div>
       </div>
     </button>
   )
 }
 
+// ── Project history hook (orders + contracts) ────────────────────────────────
+interface OrderHist {
+  id: string
+  total: number
+  status: string | null
+  created_at: string | null
+  provider: { name: string } | null
+}
+interface ContractHist {
+  id: string
+  status: string
+  budget: number | null
+  description: string | null
+  maestro: { name: string } | null
+}
+
+function useProjectHistory(projectId: string) {
+  return useQuery<{ orders: OrderHist[]; contracts: ContractHist[] }>({
+    queryKey: ['proyecto-historial', projectId],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const [ordersRes, contractsRes] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('id, total, status, created_at, provider:profiles!orders_provider_id_fkey(name)')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false })
+          .limit(20),
+        supabase
+          .from('contracts')
+          .select('id, status, budget, description, maestro:profiles!contracts_maestro_id_fkey(name)')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false })
+          .limit(10),
+      ])
+      if (ordersRes.error) throw ordersRes.error
+      if (contractsRes.error) throw contractsRes.error
+      return {
+        orders: (ordersRes.data ?? []) as unknown as OrderHist[],
+        contracts: (contractsRes.data ?? []) as unknown as ContractHist[],
+      }
+    },
+  })
+}
+
+// ── Status menu (dropdown) ────────────────────────────────────────────────────
+function StatusMenu({ current, onPick, onClose }: { current: ProjectStatus; onPick: (s: ProjectStatus) => void; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [onClose])
+  return (
+    <div
+      ref={ref}
+      style={{
+        position: 'absolute', top: '110%', right: 0, zIndex: 30,
+        background: Z.surface, border: `1px solid ${Z.border}`,
+        borderRadius: Z.r.md, boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+        minWidth: 160, overflow: 'hidden',
+      }}
+    >
+      {STATUS_OPTIONS.map(opt => (
+        <button
+          key={opt.value}
+          onClick={() => onPick(opt.value)}
+          style={{
+            width: '100%', textAlign: 'left', padding: '10px 14px',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            fontFamily: Z.font, fontSize: 13,
+            fontWeight: opt.value === current ? 700 : 500,
+            color: opt.value === current ? Z.orangeDark : Z.text,
+          }}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ── ProjectDetail ─────────────────────────────────────────────────────────────
-function ProjectDetail({ project, onBack }: { project: Project; onBack: () => void }) {
+function ProjectDetail({
+  project,
+  onBack,
+  onNavigate,
+  showToast,
+}: {
+  project: ProjectRow
+  onBack: () => void
+  onNavigate?: (dest: string) => void
+  showToast: (msg: string, type?: 'success' | 'error' | 'info') => void
+}) {
+  const queryClient = useQueryClient()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [statusLocal, setStatusLocal] = useState<ProjectStatus>(project.status)
+  const isCompleted = statusLocal === 'completed'
+  const sc = STATUS_COLORS[statusLocal] ?? STATUS_COLORS.planning
+
+  const { data: history, isLoading: historyLoading } = useProjectHistory(project.id)
+
+  async function handlePickStatus(newStatus: ProjectStatus) {
+    setMenuOpen(false)
+    if (newStatus === statusLocal) return
+    const prev = statusLocal
+    setStatusLocal(newStatus)
+    const { error } = await supabase.from('projects').update({ status: newStatus }).eq('id', project.id)
+    if (error) {
+      setStatusLocal(prev)
+      showToast('Error al actualizar estado', 'error')
+      return
+    }
+    queryClient.invalidateQueries({ queryKey: ['proyectos'] })
+    queryClient.invalidateQueries({ queryKey: ['proyecto', project.id] })
+    showToast('Estado actualizado', 'success')
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <ZHeader title={project.name} onBack={onBack} />
       <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div style={{ height: 130, borderRadius: Z.r.lg, background: `linear-gradient(135deg, ${Z.divider}, ${Z.orangeLight})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', fontSize: 11, color: Z.textMuted }}>
-          sitio de construcción
+        {/* Hero */}
+        {project.photo_url ? (
+          <img src={project.photo_url} alt={project.name} style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: Z.r.lg }} />
+        ) : (
+          <div style={{ height: 130, borderRadius: Z.r.lg, background: `linear-gradient(135deg, ${Z.divider}, ${Z.orangeLight})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: Z.font, fontSize: 11, color: Z.textMuted }}>
+            Sitio del proyecto
+          </div>
+        )}
+
+        {/* Status chip (clickable unless completed) */}
+        <div style={{ position: 'relative', alignSelf: 'flex-start' }}>
+          <button
+            onClick={() => { if (!isCompleted) setMenuOpen(v => !v) }}
+            disabled={isCompleted}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '8px 14px', borderRadius: 20,
+              background: sc.bg, color: sc.text,
+              fontFamily: Z.font, fontSize: 12, fontWeight: 700,
+              border: 'none', cursor: isCompleted ? 'default' : 'pointer', outline: 'none',
+            }}
+            aria-label="Cambiar estado del proyecto"
+          >
+            {STATUS_LABEL[statusLocal]}
+            {!isCompleted && (
+              <svg width="10" height="6" viewBox="0 0 12 7" style={{ display: 'inline-block' }}>
+                <path d="M1 1l5 5 5-5" stroke={sc.text} strokeWidth="2" fill="none" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+          {menuOpen && (
+            <StatusMenu current={statusLocal} onPick={handlePickStatus} onClose={() => setMenuOpen(false)} />
+          )}
         </div>
 
+        {/* Summary cards */}
         <div style={{ display: 'flex', gap: 10 }}>
-          <SummaryCard icon={<IconClock color={Z.orange} size={16} />} label="Estado" value={project.status} color={Z.orange} />
-          <SummaryCard icon={<IconCart color={Z.blue} size={16} />} label="Pedidos" value={project.pedidos} color={Z.blue} />
-          <SummaryCard icon={<IconMoney color={Z.orange} size={16} />} label="Presupuesto" value={`${project.budget}`} color={Z.orange} />
+          <SummaryCard icon={<IconClock color={Z.orange} size={16} />} label="Estado" value={STATUS_LABEL[statusLocal]} color={Z.orange} />
+          <SummaryCard icon={<IconCart color={Z.blue} size={16} />} label="Pedidos" value={history?.orders.length ?? 0} color={Z.blue} />
+          <SummaryCard icon={<IconMoney color={Z.orange} size={16} />} label="Presupuesto" value={`${formatBudget(project.estimated_budget)}`} color={Z.orange} />
         </div>
 
-        <div style={{ padding: '14px', borderRadius: Z.r.md, background: Z.surface, border: `1px solid ${Z.border}` }}>
-          <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.textMuted, marginBottom: 6 }}>Descripción</div>
-          <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 500, color: Z.text, lineHeight: 1.5 }}>{project.desc}</div>
-        </div>
+        {/* Description */}
+        {(project.description || project.location_address || project.city) && (
+          <div style={{ padding: '14px', borderRadius: Z.r.md, background: Z.surface, border: `1px solid ${Z.border}` }}>
+            {project.description && (
+              <>
+                <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.textMuted, marginBottom: 6 }}>Descripción</div>
+                <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 500, color: Z.text, lineHeight: 1.5 }}>{project.description}</div>
+              </>
+            )}
+            {(project.city || project.location_address) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: project.description ? 10 : 0, fontFamily: Z.font, fontSize: 12, color: Z.textMuted }}>
+                <ZIcon name="map-pin" size={14} color={Z.textMuted} />
+                <span>{[project.city, project.location_address].filter(Boolean).join(' · ')}</span>
+              </div>
+            )}
+          </div>
+        )}
 
+        {/* Equipo contratado */}
         <div>
-          <SectionTitle title="Historial de Compras" />
+          <SectionTitle title="Equipo Contratado" />
           <div style={{ marginTop: 10 }}>
-            <ActivityItem title="50 bolsas Cemento IP-30"     subtitle="Bs 3,100 · Ferretería San José"    time="15 Mar" color={Z.orange} />
-            <ActivityItem title="20 barras Fierro 12mm"       subtitle="Bs 1,700 · Distribuidora Central"  time="12 Mar" color={Z.blue} />
-            <ActivityItem title="Arena Fina 2m³"              subtitle="Bs 700 · Cantera Sur"              time="10 Mar" color={Z.orange} />
+            {historyLoading ? (
+              <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted, padding: '12px 0' }}>Cargando…</div>
+            ) : !history?.contracts.length ? (
+              <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted, padding: '12px 0' }}>Aún no hay contratos vinculados.</div>
+            ) : (
+              history.contracts.map(c => (
+                <ActivityItem
+                  key={c.id}
+                  title={c.maestro?.name ?? 'Maestro'}
+                  subtitle={`${c.status}${c.budget != null ? ` · Bs ${formatBudget(c.budget)}` : ''}${c.description ? ` · ${c.description}` : ''}`}
+                  time=""
+                  color={c.status === 'active' ? Z.orange : Z.blue}
+                />
+              ))
+            )}
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <ZButton style={{ flex: 1 }}>Comprar Materiales</ZButton>
-          <ZButton variant="secondary" style={{ flex: 1 }}>Contratar</ZButton>
+        {/* Historial de compras */}
+        <div>
+          <SectionTitle title="Historial de Compras" />
+          <div style={{ marginTop: 10 }}>
+            {historyLoading ? (
+              <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted, padding: '12px 0' }}>Cargando…</div>
+            ) : !history?.orders.length ? (
+              <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted, padding: '12px 0' }}>Aún no hay pedidos en este proyecto.</div>
+            ) : (
+              history.orders.map(o => (
+                <ActivityItem
+                  key={o.id}
+                  title={`Pedido #${o.id.slice(0, 6).toUpperCase()}`}
+                  subtitle={`Bs ${formatBudget(o.total)} · ${o.provider?.name ?? 'Proveedor'}${o.status ? ` · ${o.status}` : ''}`}
+                  time={o.created_at ? formatShortDate(o.created_at) : ''}
+                  color={Z.orange}
+                />
+              ))
+            )}
+          </div>
         </div>
+
+        {/* CTAs only when not completed */}
+        {!isCompleted && onNavigate && (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <ZButton style={{ flex: 1 }} onClick={() => onNavigate('tienda')}>Comprar Materiales</ZButton>
+            <ZButton variant="secondary" style={{ flex: 1 }} onClick={() => onNavigate('contratar')}>Contratar</ZButton>
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
 // ── NewProjectForm ────────────────────────────────────────────────────────────
-function NewProjectForm({ onBack }: { onBack: () => void }) {
+function NewProjectForm({ onBack, onCreated }: { onBack: () => void; onCreated: () => void }) {
+  const user = useAuthStore(s => s.user)
+  const { mutate: createProyecto, isPending } = useCreateProyecto()
+  const { toasts, showToast, removeToast } = useToast()
+
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
+  const [city, setCity] = useState(user?.city ?? '')
   const [budget, setBudget] = useState('')
-  const [needPersonnel, setNeedPersonnel] = useState(false)
-  const [needMaterials, setNeedMaterials] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [needsMaestro, setNeedsMaestro] = useState(false)
+  const [needsMaterials, setNeedsMaterials] = useState(false)
 
   function handleCreate() {
-    setSubmitted(true)
-    setTimeout(onBack, 1800)
+    if (!user?.user_id) return
+    if (name.trim().length < 3) {
+      showToast('El nombre debe tener al menos 3 caracteres', 'error')
+      return
+    }
+    if (!city) {
+      showToast('Selecciona una ciudad', 'error')
+      return
+    }
+    createProyecto(
+      {
+        constructor_id: user.user_id,
+        name: name.trim(),
+        description: desc.trim() || null,
+        location_address: null,
+        estimated_budget: budget ? Number(budget) : null,
+        status: 'planning',
+        photo_url: null,
+        start_date: null,
+        needs_maestro: needsMaestro,
+        needs_materials: needsMaterials,
+        city,
+      },
+      {
+        onSuccess: () => {
+          showToast('Proyecto creado', 'success')
+          setTimeout(onCreated, 700)
+        },
+        onError: err => {
+          const msg = err instanceof Error ? err.message : 'Error al crear el proyecto'
+          showToast(msg, 'error')
+        },
+      }
+    )
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <Toast toasts={toasts} onRemove={removeToast} />
       <ZHeader title="Nuevo Proyecto" onBack={onBack} />
       <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div style={{
-          height: 120, borderRadius: Z.r.lg, border: `2px dashed ${Z.border}`,
-          background: Z.surface, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexDirection: 'column', gap: 8, cursor: 'pointer',
-        }}>
-          <ZIcon name="map-pin" size={28} color={Z.textMuted} />
-          <span style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 500, color: Z.textMuted }}>Toca para agregar foto del sitio</span>
-        </div>
-
         <ZInput label="Nombre del proyecto" placeholder="Ej: Casa Norte" value={name} onChange={setName} />
 
         <div>
@@ -183,16 +432,17 @@ function NewProjectForm({ onBack }: { onBack: () => void }) {
           <textarea
             value={desc} onChange={e => setDesc(e.target.value)}
             placeholder="Describe brevemente el proyecto..."
-            style={{ width: '100%', height: 80, borderRadius: Z.r.sm, border: `1.5px solid ${Z.border}`, padding: 14, fontFamily: Z.font, fontSize: 14, color: Z.text, resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', height: 90, borderRadius: Z.r.sm, border: `1.5px solid ${Z.border}`, padding: 14, fontFamily: Z.font, fontSize: 14, color: Z.text, background: Z.surface, resize: 'none', outline: 'none', boxSizing: 'border-box' }}
           />
         </div>
 
+        <ZSelect label="Ciudad" value={city} onChange={setCity} placeholder="Selecciona ciudad" options={[...CIUDADES_ACTIVAS]} />
         <ZInput label="Presupuesto estimado (Bs)" type="number" placeholder="Ej: 50000" value={budget} onChange={setBudget} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
-            { key: 'needPersonnel', label: '¿Necesita contratar personal?', value: needPersonnel, toggle: () => setNeedPersonnel(p => !p) },
-            { key: 'needMaterials', label: '¿Necesita comprar material?',   value: needMaterials, toggle: () => setNeedMaterials(p => !p) },
+            { key: 'maestro',  label: '¿Necesita contratar personal?', value: needsMaestro,   toggle: () => setNeedsMaestro(p => !p) },
+            { key: 'material', label: '¿Necesita comprar material?',   value: needsMaterials, toggle: () => setNeedsMaterials(p => !p) },
           ].map(sw => (
             <div key={sw.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span id={`toggle-label-${sw.key}`} style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 500, color: Z.text }}>{sw.label}</span>
@@ -210,14 +460,53 @@ function NewProjectForm({ onBack }: { onBack: () => void }) {
           ))}
         </div>
 
-        {submitted && (
-          <div role="status" style={{ padding: '14px', borderRadius: Z.r.sm, background: '#DCFCE7', color: '#166534', fontFamily: Z.font, fontSize: 13, fontWeight: 700, textAlign: 'center' }}>
-            ¡Proyecto creado exitosamente!
-          </div>
-        )}
-        <ZButton disabled={!name || submitted} onClick={handleCreate}>
-          Crear Proyecto
+        <ZButton disabled={isPending} onClick={handleCreate}>
+          {isPending ? 'Creando…' : 'Crear Proyecto'}
         </ZButton>
+      </div>
+    </div>
+  )
+}
+
+// ── City filter bottom sheet ──────────────────────────────────────────────────
+function CitySheet({ value, onChange, onClose }: { value: string; onChange: (v: string) => void; onClose: () => void }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 40, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ position: 'relative', background: Z.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: '20px 20px 24px' }}
+      >
+        <div style={{ fontFamily: Z.font, fontSize: 15, fontWeight: 700, color: Z.text, marginBottom: 12 }}>Filtrar por ciudad</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button
+            onClick={() => { onChange(''); onClose() }}
+            style={{
+              padding: '12px 16px', borderRadius: 12, textAlign: 'left',
+              background: value === '' ? Z.orangeLight : Z.surface,
+              color: value === '' ? Z.orangeDark : Z.text,
+              border: `1px solid ${value === '' ? Z.orangeDark : Z.border}`,
+              fontFamily: Z.font, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Todas
+          </button>
+          {CIUDADES_ACTIVAS.map(c => (
+            <button
+              key={c}
+              onClick={() => { onChange(c); onClose() }}
+              style={{
+                padding: '12px 16px', borderRadius: 12, textAlign: 'left',
+                background: value === c ? Z.orangeLight : Z.surface,
+                color: value === c ? Z.orangeDark : Z.text,
+                border: `1px solid ${value === c ? Z.orangeDark : Z.border}`,
+                fontFamily: Z.font, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -225,57 +514,100 @@ function NewProjectForm({ onBack }: { onBack: () => void }) {
 
 // ── Main Tab ──────────────────────────────────────────────────────────────────
 type ProjScreen = 'list' | 'detail' | 'form'
+type StatusFilter = 'Todos' | 'Planificación' | 'Activos' | 'Completos'
+const FILTER_TO_STATUS: Record<Exclude<StatusFilter, 'Todos'>, ProjectStatus> = {
+  'Planificación': 'planning',
+  'Activos':       'active',
+  'Completos':     'completed',
+}
 
 interface ConstructorProyectosTabProps {
   openForm?: boolean
   onFormOpened?: () => void
+  onNavigate?: (dest: string) => void
 }
 
-export function ConstructorProyectosTab({ openForm = false, onFormOpened }: ConstructorProyectosTabProps) {
-  const [filter, setFilter] = useState('Todos')
+export function ConstructorProyectosTab({ openForm = false, onFormOpened, onNavigate }: ConstructorProyectosTabProps) {
+  const user = useAuthStore(s => s.user)
+  const [filter, setFilter] = useState<StatusFilter>('Todos')
+  const [cityFilter, setCityFilter] = useState<string>('')
+  const [showCitySheet, setShowCitySheet] = useState(false)
   const [screen, setScreen] = useState<ProjScreen>(openForm ? 'form' : 'list')
-  const [selected, setSelected] = useState<Project | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { toasts, showToast, removeToast } = useToast()
 
   useEffect(() => {
     if (openForm) onFormOpened?.()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filters = ['Todos', 'Planificación', 'Activos', 'Completos']
-  const filtered = filter === 'Todos'
-    ? PROJECTS
-    : PROJECTS.filter(p =>
-        filter === 'Activos' ? p.status === 'Activo' :
-        filter === 'Planificación' ? p.status === 'Planificación' :
-        p.status === 'Completo'
-      )
+  const statusFilter = filter === 'Todos' ? undefined : FILTER_TO_STATUS[filter]
+  const { data: projects = [], isLoading } = useProyectos({
+    constructor_id: user?.user_id,
+    status: statusFilter,
+    city: cityFilter || undefined,
+  })
+
+  const selected = selectedId ? projects.find(p => p.id === selectedId) ?? null : null
 
   if (screen === 'detail' && selected) {
-    return <ProjectDetail project={selected} onBack={() => setScreen('list')} />
+    return (
+      <>
+        <Toast toasts={toasts} onRemove={removeToast} />
+        <ProjectDetail
+          project={selected}
+          onBack={() => { setScreen('list'); setSelectedId(null) }}
+          onNavigate={onNavigate}
+          showToast={showToast}
+        />
+      </>
+    )
   }
   if (screen === 'form') {
-    return <NewProjectForm onBack={() => setScreen('list')} />
+    return (
+      <NewProjectForm
+        onBack={() => setScreen('list')}
+        onCreated={() => setScreen('list')}
+      />
+    )
   }
 
   return (
     <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Toast toasts={toasts} onRemove={removeToast} />
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: 0 }}>Proyectos</h2>
-        <button
-          onClick={() => setScreen('form')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '11px 16px',
-            borderRadius: 20, border: 'none', cursor: 'pointer',
-            background: Z.orangeDark, color: '#fff', outline: 'none',
-            fontFamily: Z.font, fontSize: 12, fontWeight: 700,
-          }}
-        >
-          <IconPlus color="#fff" size={14} /> Nuevo
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setShowCitySheet(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '11px 14px',
+              borderRadius: 20, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
+              background: Z.surface, color: Z.text, outline: 'none',
+              fontFamily: Z.font, fontSize: 12, fontWeight: 700,
+            }}
+            aria-label="Filtrar por ciudad"
+          >
+            <ZIcon name="map-pin" size={14} color={Z.text} />
+            {cityFilter || 'Ciudad'}
+          </button>
+          <button
+            onClick={() => setScreen('form')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '11px 16px',
+              borderRadius: 20, border: 'none', cursor: 'pointer',
+              background: Z.orangeDark, color: '#fff', outline: 'none',
+              fontFamily: Z.font, fontSize: 12, fontWeight: 700,
+            }}
+          >
+            <IconPlus color="#fff" size={14} /> Nuevo
+          </button>
+        </div>
       </div>
 
-      {/* ≤4 filters → visible chip buttons */}
+      {/* Status chips */}
       <div style={{ display: 'flex', gap: 8 }}>
-        {filters.map(f => {
+        {(['Todos', 'Planificación', 'Activos', 'Completos'] as StatusFilter[]).map(f => {
           const isActive = filter === f
           return (
             <button
@@ -302,17 +634,35 @@ export function ConstructorProyectosTab({ openForm = false, onFormOpened }: Cons
         })}
       </div>
 
+      {/* List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {filtered.map(p => (
-          <ProjectCard key={p.id} project={p} onTap={() => { setSelected(p); setScreen('detail') }} />
-        ))}
-        {filtered.length === 0 && (
+        {isLoading ? (
+          <>
+            <div style={{ height: 88, borderRadius: Z.r.md, background: Z.surface, border: `1px solid ${Z.border}`, opacity: 0.5 }} />
+            <div style={{ height: 88, borderRadius: Z.r.md, background: Z.surface, border: `1px solid ${Z.border}`, opacity: 0.5 }} />
+          </>
+        ) : projects.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
             <ZIcon name="search" size={40} color={Z.textMuted} />
-            <p style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 500, color: Z.textMuted, marginTop: 12 }}>No hay proyectos en esta categoría</p>
+            <p style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 500, color: Z.textMuted, marginTop: 12 }}>
+              {filter === 'Todos' && !cityFilter ? 'Aún no tienes proyectos' : 'No hay proyectos en esta categoría'}
+            </p>
+            {filter === 'Todos' && !cityFilter && (
+              <div style={{ marginTop: 12 }}>
+                <ZButton fullWidth={false} onClick={() => setScreen('form')}>Crear primer proyecto</ZButton>
+              </div>
+            )}
           </div>
+        ) : (
+          projects.map(p => (
+            <ProjectCard key={p.id} project={p} onTap={() => { setSelectedId(p.id); setScreen('detail') }} />
+          ))
         )}
       </div>
+
+      {showCitySheet && (
+        <CitySheet value={cityFilter} onChange={setCityFilter} onClose={() => setShowCitySheet(false)} />
+      )}
     </div>
   )
 }

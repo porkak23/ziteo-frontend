@@ -4,14 +4,41 @@ import { useAuthStore } from '../../../features/auth/store/authStore'
 
 interface DashHeaderProps {
   onProfile: () => void
-  onChat?: () => void
+  onTrack?: () => void
+  onBell?: () => void
+  unreadCount?: number
+  /** @deprecated use unreadCount */
   notifCount?: number
+  /** @deprecated use onTrack */
+  onChat?: () => void
   chatBadge?: number
 }
 
-export function DashHeader({ onProfile, onChat, notifCount = 0, chatBadge = 0 }: DashHeaderProps) {
+const ROLE_LABELS: Record<string, string> = {
+  constructor: 'Constructor',
+  proveedor:   'Vendedor',
+  maestro:     'Maestro',
+  chofer:      'Chofer',
+}
+
+export function DashHeader({
+  onProfile,
+  onTrack,
+  onChat,
+  onBell,
+  unreadCount,
+  notifCount = 0,
+  chatBadge = 0,
+}: DashHeaderProps) {
   const user = useAuthStore((s) => s.user)
   const initials = user?.name ? user.name.trim().charAt(0).toUpperCase() : '?'
+  const activeRole = useAuthStore((s) => s.user?.active_role)
+
+  // Support legacy notifCount prop
+  const bellCount = unreadCount !== undefined ? unreadCount : notifCount
+
+  // Support legacy onChat prop
+  const trackHandler = onTrack ?? onChat
 
   return (
     <div style={{
@@ -29,22 +56,39 @@ export function DashHeader({ onProfile, onChat, notifCount = 0, chatBadge = 0 }:
       borderBottom: `1px solid ${Z.border}`,
       flexShrink: 0,
     }}>
-      {/* Logo */}
-      <span style={{
-        fontFamily: Z.font,
-        fontWeight: 800,
-        fontSize: 20,
-        letterSpacing: 2,
-        color: Z.orange,
-      }}>
-        ZITEO
-      </span>
+      {/* Logo + Role pill */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <span style={{
+          fontFamily: Z.font,
+          fontWeight: 800,
+          fontSize: 20,
+          letterSpacing: 2,
+          color: Z.orange,
+        }}>
+          ZITEO
+        </span>
+        {activeRole && ROLE_LABELS[activeRole] && (
+          <span style={{
+            fontFamily: Z.font,
+            fontSize: 10,
+            fontWeight: 700,
+            background: Z.orangeLight,
+            color: Z.orangeDark,
+            padding: '3px 8px',
+            borderRadius: 20,
+            marginLeft: 8,
+            letterSpacing: 0.3,
+          }}>
+            {ROLE_LABELS[activeRole]}
+          </span>
+        )}
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Chat button */}
-        {onChat && (
+        {/* Track / transport button */}
+        {trackHandler && (
           <button
-            onClick={onChat}
+            onClick={trackHandler}
             style={{
               position: 'relative',
               width: 38, height: 38,
@@ -57,11 +101,14 @@ export function DashHeader({ onProfile, onChat, notifCount = 0, chatBadge = 0 }:
               justifyContent: 'center',
               boxShadow: `0 0 0 1px ${Z.border}`,
             }}
-            aria-label="Chat"
+            aria-label="Seguimiento de transporte"
           >
+            {/* Truck / tracking SVG icon */}
             <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-                stroke={Z.textSec} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
+              <path d="M1 3h15v13H1V3z" stroke={Z.textSec} strokeWidth="1.8" strokeLinejoin="round" fill="none" />
+              <path d="M16 8h4l3 3v5h-7V8z" stroke={Z.textSec} strokeWidth="1.8" strokeLinejoin="round" fill="none" />
+              <circle cx="5.5" cy="18.5" r="2.5" stroke={Z.textSec} strokeWidth="1.8" fill="none" />
+              <circle cx="18.5" cy="18.5" r="2.5" stroke={Z.textSec} strokeWidth="1.8" fill="none" />
             </svg>
             {chatBadge > 0 && (
               <div style={{
@@ -80,6 +127,7 @@ export function DashHeader({ onProfile, onChat, notifCount = 0, chatBadge = 0 }:
 
         {/* Bell button */}
         <button
+          onClick={onBell}
           style={{
             position: 'relative',
             width: 38, height: 38,
@@ -98,7 +146,7 @@ export function DashHeader({ onProfile, onChat, notifCount = 0, chatBadge = 0 }:
             <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"
               stroke={Z.textSec} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          {notifCount > 0 && (
+          {bellCount > 0 && (
             <div style={{
               position: 'absolute', top: -2, right: -2,
               width: 18, height: 18, borderRadius: '50%',
@@ -107,7 +155,7 @@ export function DashHeader({ onProfile, onChat, notifCount = 0, chatBadge = 0 }:
               fontFamily: Z.font, fontSize: 10, fontWeight: 700, color: '#fff',
               border: `2px solid ${Z.bg}`,
             }}>
-              {notifCount}
+              {bellCount > 9 ? '9+' : bellCount}
             </div>
           )}
         </button>

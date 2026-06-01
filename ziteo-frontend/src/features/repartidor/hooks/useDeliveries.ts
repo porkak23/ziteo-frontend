@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { useAuthStore } from '@/features/auth/store/authStore'
 
 export interface PendingDelivery {
   id: string
@@ -91,30 +90,20 @@ export function useAvailableDeliveries(vehicleType: 'heavy' | 'light') {
 
 export function useAcceptDelivery() {
   const queryClient = useQueryClient()
-  const user = useAuthStore((s) => s.user)
 
   return useMutation({
-    mutationFn: async ({ deliveryId, orderId }: { deliveryId: string; orderId: string }) => {
-      const { error: deliveryError } = await supabase
-        .from('deliveries')
-        .update({
-          driver_id: user?.user_id,
-          status: 'accepted',
-          accepted_at: new Date().toISOString(),
-        })
-        .eq('id', deliveryId)
-
-      if (deliveryError) throw deliveryError
-
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({ status: 'shipped' })
-        .eq('id', orderId)
-
-      if (orderError) throw orderError
+    mutationFn: async ({ deliveryId }: { deliveryId: string; orderId?: string }) => {
+      const { data, error } = await supabase.rpc('accept_delivery', { p_delivery_id: deliveryId })
+      if (error) throw error
+      const result = data as { success: boolean; message?: string; delivery_id?: string } | null
+      if (!result || result.success !== true) {
+        throw new Error(result?.message ?? 'No se pudo aceptar la entrega')
+      }
+      return result
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deliveries', 'available'] })
+      queryClient.invalidateQueries({ queryKey: ['deliveries', 'my'] })
     },
   })
 }

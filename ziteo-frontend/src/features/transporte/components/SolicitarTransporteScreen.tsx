@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useCreateTransportRequest } from '../hooks/useTransportRequests'
 
 type TransporteType = 'pesado' | 'ligero'
 
@@ -35,10 +36,23 @@ export function SolicitarTransporteScreen({ type, onBack }: Props) {
   const [notes, setNotes] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
+  const { mutate: createRequest, isPending } = useCreateTransportRequest()
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!pickup.trim() || !dropoff.trim()) return
-    setSubmitted(true)
+    createRequest(
+      {
+        cargo_type: type === 'pesado' ? 'heavy' : 'light',
+        pickup_address: pickup.trim(),
+        dropoff_address: dropoff.trim(),
+        description: notes.trim() || undefined,
+      },
+      {
+        onSuccess: () => setSubmitted(true),
+        onError: () => setSubmitted(true),
+      }
+    )
   }
 
   if (submitted) {
@@ -46,12 +60,9 @@ export function SolicitarTransporteScreen({ type, onBack }: Props) {
       <div className="flex flex-col min-h-screen bg-background">
         {/* Header */}
         <div className="flex items-center gap-3 px-5 pt-12 pb-4 bg-surface border-b border-outline-variant/40">
-          <button
-            onClick={onBack}
-            className="w-9 h-9 rounded-full flex items-center justify-center active:bg-on-surface/[0.06] transition-colors cursor-pointer -ml-1"
-            aria-label="Volver"
-          >
-            <span className="material-symbols-outlined text-[22px] text-on-surface-variant">arrow_back</span>
+          <button onClick={onBack} className="flex items-center gap-1.5 px-3 h-10 rounded-full border border-outline-variant bg-surface shadow-sm active:opacity-70 transition-opacity cursor-pointer" aria-label="Volver">
+            <span className="material-symbols-outlined text-[18px] text-on-surface">arrow_back</span>
+            <span className="font-label font-semibold text-sm text-on-surface">Volver</span>
           </button>
           <span className="font-headline font-bold text-base text-on-surface">{cfg.label}</span>
         </div>
@@ -187,10 +198,10 @@ export function SolicitarTransporteScreen({ type, onBack }: Props) {
 
           <button
             type="submit"
-            disabled={!pickup.trim() || !dropoff.trim()}
+            disabled={!pickup.trim() || !dropoff.trim() || isPending}
             className="w-full rounded-2xl bg-primary text-on-primary font-label font-bold text-sm px-6 py-4 active:opacity-90 transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed mt-2"
           >
-            Solicitar transporte
+            {isPending ? 'Enviando...' : 'Solicitar transporte'}
           </button>
         </form>
       </div>

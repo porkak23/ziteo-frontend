@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabaseClient'
+import { getProductImageUrl } from '../../features/tienda/utils/productImages'
 
 interface SearchProject { id: string; title: string; status: string; photo_url: string | null }
 interface SearchProfile { user_id: string; name: string; active_role: string; avatar_url: string | null }
@@ -34,7 +35,14 @@ export function useGlobalSearch(query: string) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setProjects(projReq.error ? [] : ((projReq.data || []) as any))
           setProfiles(profReq.error ? [] : (profReq.data || []))
-          setProducts(prodReq.error ? [] : (prodReq.data || []))
+          setProducts(
+            prodReq.error
+              ? []
+              : (prodReq.data || []).map((p: any) => ({
+                  ...p,
+                  image_url: getProductImageUrl(p.name, p.image_url),
+                }))
+          )
         }
       } catch (error) {
         console.error('Global search error:', error)

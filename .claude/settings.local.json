@@ -7,7 +7,20 @@
       "Bash(node_modules/.bin/tailwindcss.cmd init:*)",
       "mcp__claude_ai_Supabase__get_project_url",
       "mcp__claude_ai_Supabase__get_publishable_keys",
-      "Bash(node_modules/.bin/tsc.cmd --noEmit)"
+      "Bash(node_modules/.bin/tsc.cmd --noEmit)",
+      "mcp__claude_ai_Supabase__get_logs",
+      "Bash(find d:\\\\\\\\Ziteo.1\\\\\\\\ziteo-backend -name \"*.sql\" -path \"*migrations*\")",
+      "Bash(awk '/profiles: \\\\{/,/^      \\\\}/' src/lib/database.types.ts)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(python -c \"from PIL import Image; img = Image.open\\('ziteo-frontend/public/screenshots/home.png'\\); print\\('size:', img.size\\)\")",
+      "Bash(dir \"d:\\\\Ziteo.1\\\\supabase\\\\functions\\\\auth\")",
+      "Bash(dir \"d:\\\\Ziteo.1\\\\supabase\\\\functions\\\\notifications\")",
+      "Bash(Get-Content \"d:\\\\Ziteo.1\\\\ziteo-frontend\\\\src\\\\index.css\" -Head 60)",
+      "Bash(python -c ' *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(vercel --prod --yes)",
+      "Bash(vercel --version)",
+      "Bash(vercel whoami *)"
     ]
   }
 }

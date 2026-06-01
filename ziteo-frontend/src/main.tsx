@@ -9,9 +9,15 @@ import App from './App.tsx'
 import { ErrorBoundary } from './shared/components/ErrorBoundary'
 import * as Sentry from '@sentry/react'
 import { initAnalytics } from './lib/analytics'
+import { initPWAInstallCapture } from './shared/lib/pwaInstall'
 
 // Initialize PostHog before render (no-ops if VITE_POSTHOG_KEY is empty)
 initAnalytics()
+
+// Capture `beforeinstallprompt` as early as possible so the install flow can
+// fire the native dialog with a single tap, even if the event arrives before
+// any component mounts.
+initPWAInstallCapture()
 
 const queryClient = new QueryClient({
   defaultOptions: {

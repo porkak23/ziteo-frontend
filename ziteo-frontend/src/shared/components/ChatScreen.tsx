@@ -90,13 +90,9 @@ export function ChatScreen({ otherUserId, otherUserName, onClose, productContext
     <div className="fixed inset-0 z-50 flex flex-col bg-surface">
       {/* Header */}
       <div className="h-14 flex-shrink-0 flex items-center gap-3 px-4 border-b border-outline-variant">
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex items-center justify-center w-11 h-11 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
-          aria-label="Volver"
-        >
-          <span className="material-symbols-outlined text-lg">arrow_back</span>
+        <button type="button" onClick={onClose} className="flex items-center gap-1.5 px-3 h-10 rounded-full border border-outline-variant bg-surface shadow-sm active:opacity-70 transition-opacity cursor-pointer" aria-label="Volver">
+          <span className="material-symbols-outlined text-[18px] text-on-surface">arrow_back</span>
+          <span className="font-label font-semibold text-sm text-on-surface">Volver</span>
         </button>
         <h2 className="font-label font-semibold text-on-surface text-sm truncate flex-1">
           {otherUserName}

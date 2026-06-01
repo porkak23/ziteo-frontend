@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Z } from '@/shared/design/tokens'
 
+// SplashScreen is always-dark by design — onboarding identity moment, brand-locked.
+
 interface SplashScreenProps {
   onComplete: () => void
 }

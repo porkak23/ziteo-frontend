@@ -118,7 +118,7 @@ export function useCrearLicitacion() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.misLicitaciones() })
+      queryClient.invalidateQueries({ queryKey: ['mis-licitaciones'] })
     },
   })
 }
@@ -132,7 +132,7 @@ export function useCerrarLicitacion() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.misLicitaciones() })
+      queryClient.invalidateQueries({ queryKey: ['mis-licitaciones'] })
     },
   })
 }

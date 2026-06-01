@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { NotificationsScreen } from '@/features/notifications/components/NotificationsScreen'
 import { Z } from '@/shared/design/tokens'
 import { DashHeader } from '@/shared/design/shell/DashHeader'
 import AvatarMenu from '@/shared/components/AvatarMenu'
@@ -25,8 +26,10 @@ import { Toast } from '@/shared/components/Toast'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabaseClient'
 import { ProveedorOnboardingWizard } from '@/features/proveedor/components/ProveedorOnboardingWizard'
+import { OfertasEspecialesScreen } from '@/features/proveedor/components/OfertasEspecialesScreen'
+import { useLicitacionesProveedor } from '@/features/licitaciones/hooks/useLicitaciones'
 
-type VendedorTab = 'home' | 'inventario' | 'pedidos' | 'cotizaciones'
+type VendedorTab = 'home' | 'inventario' | 'pedidos' | 'cotizaciones' | 'solicitudes'
 
 // ─── Nav Icons ───────────────────────────────────────────────────────────────
 
@@ -67,6 +70,17 @@ function VNavIconQuotes({ color = Z.textMuted, size = 22 }: { color?: string; si
         stroke={color} strokeWidth="1.8" fill="none" />
       <path d="M14 2v6h6M12 18v-6M9 15l3-3 3 3"
         stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function VNavIconSolicitudes({ color = Z.textMuted, size = 22 }: { color?: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
+        stroke={color} strokeWidth="1.8" fill="none" />
+      <rect x="9" y="3" width="6" height="4" rx="1" stroke={color} strokeWidth="1.8" fill="none" />
+      <path d="M9 12h6M9 16h4" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   )
 }
@@ -170,6 +184,28 @@ function HomeTab({
   const pendingCount = orders.filter((o) => o.status === 'pending').length
   const { data: products = [] } = useInventario(0)
 
+  const { data: homeQuotations = [] } = useQuery<{ status: string }[]>({
+    queryKey: ['proveedor-quotations', providerId],
+    enabled: !!providerId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('quotations')
+        .select('status')
+        .eq('provider_id', providerId)
+        .order('created_at', { ascending: false })
+      if (error) {
+        if (error.code === '42P01') return []
+        throw error
+      }
+      return (data ?? []) as { status: string }[]
+    },
+  })
+  const pendingCotizacionesCount = homeQuotations.filter((q) => q.status === 'pending').length
+  const { data: licitaciones = [] } = useLicitacionesProveedor()
+  const openLicitacionesCount: number = licitaciones.filter((l) => !l._ya_postulado).length
+
   const recentOrders = orders.slice(0, 3)
 
   return (
@@ -248,45 +284,51 @@ function HomeTab({
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button
-            onClick={() => onNavigate('inventario')}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '16px',
-              borderRadius: Z.r.md, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
-              background: Z.surface, textAlign: 'left', outline: 'none',
-            }}
-          >
-            <div style={{
-              width: 38, height: 38, borderRadius: 11, background: Z.blueLight,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <VNavIconInventory color={Z.blueDark} size={20} />
-            </div>
-            <div>
-              <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>Inventario</div>
-              <div style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted }}>
-                {products.length} productos
-              </div>
-            </div>
-          </button>
-
-          <button
             onClick={() => onNavigate('cotizaciones')}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '16px',
               borderRadius: Z.r.md, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
-              background: Z.surface, textAlign: 'left', outline: 'none',
+              background: Z.surface, textAlign: 'left', outline: 'none', position: 'relative',
             }}
           >
-            <div style={{
-              width: 38, height: 38, borderRadius: 11, background: Z.orangeLight,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
+            <div style={{ width: 38, height: 38, borderRadius: 11, background: Z.orangeLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <VNavIconQuotes color={Z.orangeDark} size={20} />
             </div>
-            <div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>Cotizaciones</div>
-              <div style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted }}>Ver solicitudes</div>
+              <div style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted }}>
+                {pendingCotizacionesCount > 0 ? `${pendingCotizacionesCount} pendiente${pendingCotizacionesCount !== 1 ? 's' : ''}` : 'Ver cotizaciones'}
+              </div>
             </div>
+            {pendingCotizacionesCount > 0 && (
+              <span style={{ position: 'absolute', top: -5, right: -5, background: Z.orange, color: '#fff', fontFamily: Z.font, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+                {pendingCotizacionesCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => onNavigate('solicitudes')}
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '16px',
+              borderRadius: Z.r.md, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
+              background: Z.surface, textAlign: 'left', outline: 'none', position: 'relative',
+            }}
+          >
+            <div style={{ width: 38, height: 38, borderRadius: 11, background: Z.blueLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <VNavIconSolicitudes color={Z.blueDark} size={20} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>Solicitudes</div>
+              <div style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted }}>
+                {openLicitacionesCount > 0 ? `${openLicitacionesCount} nueva${openLicitacionesCount !== 1 ? 's' : ''}` : 'Ver solicitudes'}
+              </div>
+            </div>
+            {openLicitacionesCount > 0 && (
+              <span style={{ position: 'absolute', top: -5, right: -5, background: Z.blue, color: '#fff', fontFamily: Z.font, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+                {openLicitacionesCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -370,7 +412,6 @@ function InventarioTab() {
 
   useEffect(() => {
     if (page.length === 0 && offset === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllProducts([])
       return
     }
@@ -1771,6 +1812,7 @@ function CotizacionesTab() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [offerModal, setOfferModal] = useState<{ id: string; buyerName: string } | null>(null)
   const [offerPrice, setOfferPrice] = useState('')
+  const [showOfertas, setShowOfertas] = useState(false)
 
   const { data: quotations = [], isLoading } = useProveedorQuotations(providerId)
 
@@ -1969,10 +2011,36 @@ function CotizacionesTab() {
         </div>
       )}
 
+      {showOfertas && <OfertasEspecialesScreen onBack={() => setShowOfertas(false)} />}
+
       <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: 0 }}>
           Cotizaciones
         </h2>
+        <button
+          onClick={() => setShowOfertas(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+            borderRadius: Z.r.md, border: 'none', cursor: 'pointer', width: '100%',
+            background: `linear-gradient(135deg, ${Z.orangeDark} 0%, ${Z.orange} 100%)`,
+            boxShadow: '0 4px 14px rgba(164,55,0,0.22)', textAlign: 'left', outline: 'none', marginTop: 8,
+          }}
+        >
+          <div style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 800, color: '#fff' }}>Ofertas Especiales</div>
+            <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.75)', marginTop: 1 }}>
+              Aplica descuentos rápidos a tu inventario
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" style={{ marginLeft: 'auto' }}>
+            <path d="M9 18l6-6-6-6" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          </svg>
+        </button>
         <FilterBar
           options={['Solicitudes', 'Enviadas', 'Historial']}
           active={tab}
@@ -2199,11 +2267,27 @@ export function VendedorApp() {
   const [activeTab, setActiveTab] = useState<VendedorTab>('home')
   const [showAccount, setShowAccount] = useState(false)
   const [showEnvios, setShowEnvios] = useState(false)
+  const [showNotifs, setShowNotifs] = useState(false)
   const settingsTab = useNavStore((s) => s.activeTab)
   const setNavTab = useNavStore((s) => s.setTab)
   const showSettings = settingsTab === 'settings' || settingsTab === 'perfil'
   const needsOnboarding = useProveedorOnboardingCheck()
   const [onboardingDone, setOnboardingDone] = useState(false)
+  const userId = useAuthStore((s) => s.user?.user_id) ?? ''
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notif-unread', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_read', false)
+      return count ?? 0
+    },
+    staleTime: 30_000,
+  })
 
   // While we check onboarding status, render nothing to avoid flash
   if (needsOnboarding === null) return null
@@ -2222,9 +2306,20 @@ export function VendedorApp() {
         flexDirection: 'column',
       }}
     >
-      <DashHeader onProfile={() => setShowAccount(true)} />
+      <DashHeader
+        onProfile={() => setShowAccount(true)}
+        onTrack={() => {/* seguimiento: próximamente */}}
+        onBell={() => setShowNotifs(true)}
+        unreadCount={unreadCount}
+      />
       <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
       {showSettings && <VendedorCuentaScreen onClose={() => setNavTab('home')} />}
+
+      {showNotifs && (
+        <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 40, overflowY: 'auto' }}>
+          <NotificationsScreen onClose={() => setShowNotifs(false)} />
+        </div>
+      )}
 
       {showEnvios && <EnviosScreen onClose={() => setShowEnvios(false)} />}
 
@@ -2238,7 +2333,7 @@ export function VendedorApp() {
         {activeTab === 'home'         && <HomeTab onNavigate={setActiveTab} onShowEnvios={() => setShowEnvios(true)} />}
         {activeTab === 'inventario'   && <InventarioTab />}
         {activeTab === 'pedidos'      && <PedidosTab />}
-        {activeTab === 'cotizaciones' && <CotizacionesTab />}
+        {(activeTab === 'cotizaciones' || activeTab === 'solicitudes') && <CotizacionesTab />}
       </main>
 
       <RoleDashNav

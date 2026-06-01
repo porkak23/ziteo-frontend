@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
+import { getProductImageUrl } from '../../tienda/utils/productImages'
 
 export const INVENTARIO_PAGE_SIZE = 15
 
@@ -69,7 +70,7 @@ export function useInventario(offset: number) {
         price: Number(p.price_unit),
         unit: p.unit_type,
         stock: p.stock_quantity,
-        image_url: p.image_url,
+        image_url: getProductImageUrl(p.name, p.image_url),
         active: p.active,
         category_name: Array.isArray(p.category) ? p.category[0]?.name : p.category?.name,
       })) as ProductoInventario[]

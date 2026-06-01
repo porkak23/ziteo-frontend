@@ -100,6 +100,15 @@ const CATEGORY_GROUPS = [
 const PROMO_BANNERS = [
   {
     id: 0,
+    title: '¡Felicidades Sucre! 🇧🇴',
+    subtitle: '217 años del Grito de Libertad. 15% OFF en herramientas y flete gratis.',
+    cta: 'Celebrar con ofertas',
+    group: 'herramientas',
+    from: '#E53935', // Premium Bolivian crimson red
+    to: '#FFA000', // Freedom amber/gold
+  },
+  {
+    id: 1,
     title: 'Cemento y áridos',
     subtitle: 'Los mejores precios directos del proveedor',
     cta: 'Ver materiales',
@@ -108,7 +117,7 @@ const PROMO_BANNERS = [
     to: 'var(--color-primary-dark)',
   },
   {
-    id: 1,
+    id: 2,
     title: 'Herramientas Pro',
     subtitle: 'Todo lo que tu obra necesita',
     cta: 'Ver catálogo',
@@ -117,7 +126,7 @@ const PROMO_BANNERS = [
     to: 'var(--color-surface-container)',
   },
   {
-    id: 2,
+    id: 3,
     title: 'Entrega en tu ciudad',
     subtitle: 'Choferes certificados llevan tu pedido',
     cta: 'Pedir ahora',

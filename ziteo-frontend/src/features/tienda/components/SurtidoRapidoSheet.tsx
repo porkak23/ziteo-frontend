@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabaseClient'
 import { useCart } from '../hooks/useCart'
+import { getProductImageUrl } from '../utils/productImages'
 
 interface SurtidoRapidoSheetProps {
   open: boolean
@@ -43,7 +44,7 @@ function useSurtidoProducts(providerId: string, enabled: boolean) {
         bulk_price: p.bulk_price != null ? Number(p.bulk_price) : null,
         bulk_unit: p.bulk_unit ?? null,
         bulk_min_qty: p.bulk_min_qty != null ? Number(p.bulk_min_qty) : null,
-        image_url: p.image_url ?? null,
+        image_url: getProductImageUrl(p.name, p.image_url) ?? null,
       })) as SurtidoProduct[]
     },
     staleTime: 2 * 60 * 1000,

@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Z } from '../../shared/design/tokens'
 import {
   NavIconHome,
@@ -13,6 +14,7 @@ import { useAuthStore } from '../auth/store/authStore'
 import AvatarMenu from '../../shared/components/AvatarMenu'
 import { supabase } from '../../lib/supabaseClient'
 import { MaestroOnboardingWizard } from '../maestro/components/MaestroOnboardingWizard'
+import { NotificationsScreen } from '../notifications/components/NotificationsScreen'
 
 const HomeTabTrabajador = lazy(() =>
   import('./HomeTabTrabajador').then((m) => ({ default: m.HomeTabTrabajador }))
@@ -79,9 +81,24 @@ function useMaestroOnboardingCheck() {
 export function TrabajadorApp() {
   const globalTab = useNavStore((s) => s.activeTab)
   const setGlobalTab = useNavStore((s) => s.setTab)
-  const currentUser = useAuthStore((s) => s.user)
   const needsOnboarding = useMaestroOnboardingCheck()
   const [onboardingDone, setOnboardingDone] = useState(false)
+  const [showNotifs, setShowNotifs] = useState(false)
+  const userId = useAuthStore((s) => s.user?.user_id) ?? ''
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notif-unread', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_read', false)
+      return count ?? 0
+    },
+    staleTime: 30_000,
+  })
 
   const toTrabajadorTab = (tab: string): TrabajadorTab => {
     if (tab === 'licitaciones' || tab === 'proyectos' || tab === 'perfil') {
@@ -129,11 +146,18 @@ export function TrabajadorApp() {
     <div style={{ minHeight: '100vh', paddingBottom: 92, background: Z.bg }}>
       <DashHeader
         onProfile={() => setShowAccount(true)}
-        onChat={() => setGlobalTab('chat')}
-        notifCount={currentUser ? 3 : 0}
+        onTrack={() => {/* seguimiento: próximamente */}}
+        onBell={() => setShowNotifs(true)}
+        unreadCount={unreadCount}
       />
 
       <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
+
+      {showNotifs && (
+        <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 40, overflowY: 'auto' }}>
+          <NotificationsScreen onClose={() => setShowNotifs(false)} />
+        </div>
+      )}
 
       <div>
         <Suspense fallback={<TabSkeleton />}>

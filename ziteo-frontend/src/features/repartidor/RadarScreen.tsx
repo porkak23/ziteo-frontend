@@ -55,9 +55,11 @@ const NAV_CLEARANCE = 82
 
 function makeJobIcon(type: VehicleType) {
   const color = type === 'heavy' ? Z.orange : Z.blue
+  const heavySvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 20h16M6 20V10l8-6 8 6M9 20v-6h4v6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+  const lightSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
   return L.divIcon({
     className: '',
-    html: `<div style="width:32px;height:32px;border-radius:50%;background:${color};border:3px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);font-size:13px">${type === 'heavy' ? '🏗' : '⚡'}</div>`,
+    html: `<div style="width:32px;height:32px;border-radius:50%;background:${color};border:3px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25)">${type === 'heavy' ? heavySvg : lightSvg}</div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   })
@@ -72,7 +74,7 @@ const driverIcon = L.divIcon({
 
 const destIcon = L.divIcon({
   className: '',
-  html: `<div style="width:28px;height:28px;border-radius:50%;background:#16A34A;border:3px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.25)">E</div>`,
+  html: `<div style="width:28px;height:28px;border-radius:50%;background:var(--z-success);border:3px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.25)">E</div>`,
   iconSize: [28, 28],
   iconAnchor: [14, 14],
 })
@@ -182,20 +184,6 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
   const { data: pendingDeliveries = [] } = useAvailableDeliveries(vehicleType)
   const { mutate: acceptDelivery } = useAcceptDelivery()
 
-  useEffect(() => {
-    if (mode === 'online') {
-      const t = setTimeout(() => {
-        setShowOfferPop(true)
-        const offer = MAP_JOBS[0]
-        onNewJobOffer?.({ title: offer.title, pay: offer.pay, dist: offer.dist, type: offer.type })
-      }, 2500)
-      return () => clearTimeout(t)
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setShowOfferPop(false)
-    return undefined
-  }, [mode, onNewJobOffer])
-
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setSheetCollapsed(false) }, [mode])
 
@@ -215,7 +203,22 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
     orderId: d.order_id,
   })), [pendingDeliveries])
   const visibleJobs = realJobs.length > 0 ? realJobs : MAP_JOBS.filter(j => j.type === vehicleType)
-  const currentOffer = selectedJob ?? MAP_JOBS[0]
+  const currentOffer = selectedJob ?? realJobs[0] ?? MAP_JOBS[0]
+
+  useEffect(() => {
+    if (mode !== 'online') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowOfferPop(false)
+      return undefined
+    }
+    if (realJobs.length === 0) return undefined
+    const t = setTimeout(() => {
+      setShowOfferPop(true)
+      const offer = realJobs[0]
+      onNewJobOffer?.({ title: offer.title, pay: offer.pay, dist: offer.dist, type: offer.type })
+    }, 1200)
+    return () => clearTimeout(t)
+  }, [mode, realJobs, onNewJobOffer])
 
   const handleGoOnline = () => { track.radarActivated(); setMode('online'); setActiveJob(null); setDeliveryStep(0) }
   const handleAccept = (job: MapJob) => {
@@ -258,14 +261,15 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
         }}>
           {isFullscreen ? '● EN LÍNEA' : '○ OFFLINE'}
         </span>
-        <div
+        <button
+          type="button"
+          role="switch"
+          aria-checked={mode === 'online'}
+          aria-label="Cambiar estado del radar"
           onClick={() => mode === 'offline' ? handleGoOnline() : setMode('offline')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && (mode === 'offline' ? handleGoOnline() : setMode('offline'))}
-          aria-label={isFullscreen ? 'Desconectarse' : 'Conectarse'}
           style={{
-            width: 50, height: 28, borderRadius: 14, padding: 2, cursor: 'pointer',
+            border: 'none', padding: 2,
+            width: 50, height: 28, borderRadius: 14, cursor: 'pointer',
             background: isFullscreen ? Z.orange : Z.border, transition: 'background 0.3s',
             display: 'flex', alignItems: 'center',
             boxShadow: isFullscreen ? '0 2px 10px rgba(232,115,58,0.4)' : '0 1px 4px rgba(0,0,0,0.15)',
@@ -276,7 +280,7 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
             boxShadow: '0 1px 4px rgba(0,0,0,0.2)', transition: 'transform 0.3s',
             transform: isFullscreen ? 'translateX(22px)' : 'translateX(0)',
           }} />
-        </div>
+        </button>
       </div>
     </div>
   )
@@ -438,9 +442,15 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
                       {job.from} → {job.to}
                     </div>
                     <div style={{ display: 'flex', gap: 10, marginTop: 3 }}>
-                      <span style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted }}>📍 {job.dist}</span>
-                      <span style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted }}>⏱ {job.time}</span>
-                      <span style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted }}>⚖ {job.weight}</span>
+                      <span style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke={Z.textMuted} strokeWidth="2" fill="none"/><circle cx="12" cy="9" r="2.5" stroke={Z.textMuted} strokeWidth="2" fill="none"/></svg>
+                        {job.dist}
+                      </span>
+                      <span style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke={Z.textMuted} strokeWidth="2" fill="none"/><path d="M12 7v5l3 2" stroke={Z.textMuted} strokeWidth="2" strokeLinecap="round"/></svg>
+                        {job.time}
+                      </span>
+                      <span style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted }}>{job.weight}</span>
                     </div>
                   </div>
                   <span style={{ fontFamily: Z.font, fontSize: 17, fontWeight: 800, color: Z.orangeDark, flexShrink: 0 }}>
@@ -560,14 +570,16 @@ export function RadarScreen({ onNewJobOffer }: { onNewJobOffer?: (a: JobAlert) =
               display: 'flex', gap: 14, padding: '12px', borderRadius: Z.r.md,
               background: Z.bg, marginBottom: 16,
             }}>
-              <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textSec }}>
-                📍 {currentOffer.dist}
+              <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textSec, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke={Z.textMuted} strokeWidth="2" fill="none"/><circle cx="12" cy="9" r="2.5" stroke={Z.textMuted} strokeWidth="2" fill="none"/></svg>
+                {currentOffer.dist}
               </div>
               <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textSec }}>
-                ⚖ {currentOffer.weight}
+                {currentOffer.weight}
               </div>
-              <div style={{ marginLeft: 'auto', fontFamily: Z.font, fontSize: 11, fontWeight: 600, color: Z.blue }}>
-                ✓ Apto para tu vehículo
+              <div style={{ marginLeft: 'auto', fontFamily: Z.font, fontSize: 11, fontWeight: 600, color: Z.blue, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke={Z.blue} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Apto para tu vehículo
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>

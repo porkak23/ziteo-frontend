@@ -12,17 +12,12 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- RLS en storage: solo el propietario puede subir/actualizar su QR
 CREATE POLICY "provider_upload_own_qr"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
   bucket_id = 'payment-qrs'
-  AND (storage.foldername(name))[1] = auth.uid()::text
-  AND EXISTS (
-    SELECT 1 FROM user_roles
-    WHERE user_id = auth.uid() AND role = 'proveedor'
-  )
+  AND split_part(name, '/', 1) = auth.uid()::text
 );
 
 CREATE POLICY "provider_update_own_qr"
@@ -30,7 +25,7 @@ ON storage.objects FOR UPDATE
 TO authenticated
 USING (
   bucket_id = 'payment-qrs'
-  AND (storage.foldername(name))[1] = auth.uid()::text
+  AND split_part(name, '/', 1) = auth.uid()::text
 );
 
 CREATE POLICY "provider_delete_own_qr"
@@ -38,7 +33,7 @@ ON storage.objects FOR DELETE
 TO authenticated
 USING (
   bucket_id = 'payment-qrs'
-  AND (storage.foldername(name))[1] = auth.uid()::text
+  AND split_part(name, '/', 1) = auth.uid()::text
 );
 
 -- RLS en storage: buyer puede leer el QR SOLO si tiene un pedido activo con ese proveedor
@@ -49,13 +44,13 @@ USING (
   bucket_id = 'payment-qrs'
   AND (
     -- El propio proveedor puede ver su QR
-    (storage.foldername(name))[1] = auth.uid()::text
+    split_part(name, '/', 1) = auth.uid()::text
     OR
     -- Constructor con pedido pending/confirmed con este proveedor
     EXISTS (
       SELECT 1 FROM orders o
       WHERE o.buyer_id = auth.uid()
-        AND o.provider_id::text = (storage.foldername(name))[1]
+        AND o.provider_id::text = split_part(name, '/', 1)
         AND o.status IN ('pending', 'confirmed')
     )
   )

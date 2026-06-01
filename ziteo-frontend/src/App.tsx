@@ -1,19 +1,14 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useAuthStore } from './features/auth/store/authStore'
-import type { UserRole } from './features/auth/store/authStore'
 import { useNavStore } from './shared/store/navStore'
-import { supabase } from './lib/supabaseClient'
 import { useAuthSession } from './shared/hooks/useAuthSession'
+import { signOut } from './features/auth/services/authService'
 import { InstallPrompt } from './shared/components/InstallPrompt'
 import SplashScreen from './features/auth/components/SplashScreen'
 import WelcomeScreen from './features/auth/components/WelcomeScreen'
 import RegisterForm from './features/auth/components/RegisterForm'
-import LoginForm from './features/auth/components/LoginForm'
-import OtpVerification from './features/auth/components/OtpVerification'
-import OnboardingScreen from './features/auth/components/OnboardingScreen'
-import OAuthProfileSetup from './features/auth/components/OAuthProfileSetup'
-import ForgotPinScreen from './features/auth/components/ForgotPinScreen'
-import type { OAuthUserData } from './features/auth/types/authTypes'
+import InstallSuggestion from './features/auth/components/InstallSuggestion'
+import AlreadyRegisteredNotice from './features/auth/components/AlreadyRegisteredNotice'
 import AppLayout from './shared/components/AppLayout'
 import { ThemeInitializer } from './shared/components/ThemeInitializer'
 import { FeedbackButton } from './shared/components/FeedbackButton'
@@ -23,30 +18,22 @@ import { NetworkStatusBanner } from './shared/components/NetworkStatusBanner'
 import { StatusPage } from './features/app/components/StatusPage'
 import { InstallInstructionsPage } from './features/app/components/InstallInstructionsPage'
 import PrivacidadPage from './features/legal/PrivacidadPage'
+import BetaSignupForm from './features/auth/components/BetaSignupForm'
 
-// Detecta si la URL contiene ?status o #status para mostrar la página de estado
+const BETA_MODE = import.meta.env.VITE_BETA_MODE === 'true'
+
 function isStatusRoute(): boolean {
-  return (
-    window.location.search.includes('status') ||
-    window.location.hash === '#status'
-  )
+  return window.location.search.includes('status') || window.location.hash === '#status'
 }
 
-// Detecta si la URL contiene ?install para mostrar la página de instrucciones
 function isInstallRoute(): boolean {
-  return (
-    window.location.search.includes('install') ||
-    window.location.hash === '#install'
-  )
+  return window.location.search.includes('install') || window.location.hash === '#install'
 }
 
-// Página pública de política de privacidad — accesible sin autenticación en /privacidad
 function isPrivacidadRoute(): boolean {
   return window.location.pathname === '/privacidad'
 }
 
-// All role apps and heavy screens are lazy-loaded so they are not included
-// in the initial bundle. Each role's chunk is only fetched after login.
 const TrabajadorApp       = lazy(() => import('./features/trabajador/TrabajadorApp').then(m => ({ default: m.TrabajadorApp })))
 const RepartidorApp       = lazy(() => import('./features/repartidor/RepartidorApp').then(m => ({ default: m.RepartidorApp })))
 const ConstructorApp      = lazy(() => import('./features/constructor/ConstructorApp').then(m => ({ default: m.ConstructorApp })))
@@ -65,14 +52,10 @@ function TabSkeleton() {
   )
 }
 
-type AppScreen = 'splash' | 'welcome' | 'register' | 'login' | 'otp' | 'onboarding' | 'oauth-setup' | 'forgot-pin' | 'app'
+type AppScreen = 'splash' | 'install-suggestion' | 'welcome' | 'already-registered' | 'register' | 'app'
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('splash')
-  const [pendingPhone] = useState('')
-  const [pendingPin] = useState('')
-  const [pendingDebugOtp] = useState<string | undefined>()
-  const [pendingOAuthUser, setPendingOAuthUser] = useState<OAuthUserData | null>(null)
   const activeTab = useNavStore((s) => s.activeTab)
   const setActiveTab = useNavStore((s) => s.setTab)
   const { isAuthenticated } = useAuthStore()
@@ -87,63 +70,26 @@ export default function App() {
       setScreen('welcome')
       setActiveTab('home')
     }
-  }, [isAuth, screen, setScreen, setActiveTab])
+  }, [isAuth, screen, setActiveTab])
 
-  // Handle Google / Apple OAuth redirects
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event !== 'SIGNED_IN' || !session) return
-      const provider = session.user.app_metadata?.provider
-      if (provider !== 'google' && provider !== 'apple') return
-      if (useAuthStore.getState().user) return
+  async function handleLogout() {
+    await signOut().catch(() => undefined)
+    setScreen('welcome')
+    setActiveTab('home')
+  }
 
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('user_id, name, phone, city, active_role, avatar_url')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
+  if (BETA_MODE && (screen === 'welcome' || screen === 'register' || screen === 'already-registered' || screen === 'install-suggestion')) {
+    return (
+      <div className="animate-[fadeSlideUp_0.3s_ease-out]">
+        <BetaSignupForm onSuccess={() => setScreen('app')} />
+      </div>
+    )
+  }
 
-        if (profile) {
-          const { data: rolesData } = await supabase
-            .from('user_roles').select('role').eq('user_id', session.user.id)
-          useAuthStore.getState().setUser({
-            user_id: session.user.id,
-            name: profile.name,
-            phone: profile.phone ?? '',
-            email: session.user.email,
-            active_role: profile.active_role as UserRole,
-            roles: (rolesData ?? []).map((r: { role: string }) => r.role as UserRole),
-            access_token: session.access_token,
-            refresh_token: session.refresh_token ?? '',
-            avatar_url: profile.avatar_url ?? undefined,
-            city: profile.city,
-          })
-          setScreen('app')
-        } else {
-          setPendingOAuthUser({
-            userId: session.user.id,
-            email: session.user.email ?? '',
-            name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? '',
-            avatarUrl: session.user.user_metadata?.avatar_url ?? null,
-            accessToken: session.access_token,
-            refreshToken: session.refresh_token ?? '',
-          })
-          setScreen('oauth-setup')
-        }
-      } catch (err) {
-        console.error('OAuth callback error:', err)
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
-
-  // Política de privacidad pública — accesible sin autenticación en /privacidad
   if (isPrivacidadRoute()) {
     return <PrivacidadPage />
   }
 
-  // Página de estado del servicio — accesible sin autenticación via ?status o #status
   if (isStatusRoute()) {
     return (
       <>
@@ -153,7 +99,6 @@ export default function App() {
     )
   }
 
-  // Página de instrucciones de instalación — accesible sin autenticación via ?install o #install
   if (isInstallRoute()) {
     return (
       <>
@@ -167,7 +112,16 @@ export default function App() {
     return (
       <>
         <ThemeInitializer />
-        <SplashScreen onComplete={() => setScreen(isAuthenticated() ? 'app' : 'welcome')} />
+        <SplashScreen onComplete={() => setScreen(isAuthenticated() ? 'app' : 'install-suggestion')} />
+      </>
+    )
+  }
+
+  if (screen === 'install-suggestion') {
+    return (
+      <>
+        <ThemeInitializer />
+        <InstallSuggestion onContinue={() => setScreen('welcome')} />
       </>
     )
   }
@@ -180,23 +134,22 @@ export default function App() {
     )
   }
 
-  if (screen === 'register') {
+  if (screen === 'already-registered') {
     return (
       <div className="animate-[fadeSlideUp_0.3s_ease-out]">
-        <RegisterForm
-          onSuccess={() => {
-            setScreen('otp')
-          }}
-          onNavigate={(dest) => setScreen(dest as AppScreen)}
+        <AlreadyRegisteredNotice
+          onBack={() => setScreen('welcome')}
+          onRegisterAnyway={() => setScreen('register')}
+          onSuccess={() => setScreen('app')}
         />
       </div>
     )
   }
 
-  if (screen === 'login') {
+  if (screen === 'register') {
     return (
       <div className="animate-[fadeSlideUp_0.3s_ease-out]">
-        <LoginForm
+        <RegisterForm
           onSuccess={() => setScreen('app')}
           onNavigate={(dest) => setScreen(dest as AppScreen)}
         />
@@ -204,52 +157,6 @@ export default function App() {
     )
   }
 
-  if (screen === 'otp') {
-    return (
-      <div className="animate-[fadeSlideUp_0.3s_ease-out]">
-        <OtpVerification
-          phone={pendingPhone}
-          pin={pendingPin}
-          debugOtp={pendingDebugOtp}
-          onSuccess={() => {
-            const freshUser = useAuthStore.getState().user
-            const needsOnboarding = !freshUser?.name || freshUser.name.trim().length === 0
-            setScreen(needsOnboarding ? 'onboarding' : 'app')
-          }}
-          onNavigate={(dest) => setScreen(dest as AppScreen)}
-        />
-      </div>
-    )
-  }
-
-  if (screen === 'onboarding') {
-    return (
-      <div className="animate-[fadeSlideUp_0.3s_ease-out]">
-        <OnboardingScreen onComplete={() => setScreen('app')} />
-      </div>
-    )
-  }
-
-  if (screen === 'forgot-pin') {
-    return (
-      <div className="animate-[fadeSlideUp_0.3s_ease-out]">
-        <ForgotPinScreen onNavigate={(dest) => setScreen(dest as AppScreen)} />
-      </div>
-    )
-  }
-
-  if (screen === 'oauth-setup' && pendingOAuthUser) {
-    return (
-      <div className="animate-[fadeSlideUp_0.3s_ease-out]">
-        <OAuthProfileSetup
-          oauthUser={pendingOAuthUser}
-          onComplete={() => { setPendingOAuthUser(null); setScreen('app') }}
-        />
-      </div>
-    )
-  }
-
-  // ── Global screens (Settings, Perfil, Notifications) ──────────
   if (activeTab === 'settings' || activeTab === 'perfil' || activeTab === 'notificaciones') {
     return (
       <>
@@ -257,7 +164,7 @@ export default function App() {
         <NetworkStatusBanner />
         <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
           <Suspense fallback={<TabSkeleton />}>
-            {activeTab === 'settings' && <SettingsScreen onLogout={() => { setScreen('welcome'); setActiveTab('home') }} />}
+            {activeTab === 'settings' && <SettingsScreen onLogout={handleLogout} />}
             {activeTab === 'perfil' && <PerfilScreen />}
             {activeTab === 'notificaciones' && <NotificationsScreen />}
           </Suspense>
@@ -269,7 +176,6 @@ export default function App() {
     )
   }
 
-  // ── Role short-circuits: each role has its own standalone dashboard ──────────
   if (currentUser?.active_role === 'constructor') {
     return (
       <>
@@ -330,7 +236,6 @@ export default function App() {
     )
   }
 
-  // Fallback: unauthenticated or unknown role
   return (
     <>
       <ThemeInitializer />

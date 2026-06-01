@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Z } from '../../shared/design/tokens'
 import { SummaryCard, SectionTitle } from '../../shared/design/shell'
 import { IconStar } from '../../shared/design/shell'
 import { useAuthStore } from '../auth/store/authStore'
+import { supabase } from '../../lib/supabaseClient'
 
 interface HomeTabTrabajadorProps {
   onNavigate: (tab: string) => void
@@ -42,7 +43,37 @@ const SAMPLE_REQUESTS = [
 
 export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
   const [isActive, setIsActive] = useState(false)
+  const [togglePending, setTogglePending] = useState(false)
   const user = useAuthStore((s) => s.user)
+
+  useEffect(() => {
+    if (!user?.user_id) return
+    let cancelled = false
+    supabase
+      .from('user_roles')
+      .select('is_available')
+      .eq('user_id', user.user_id)
+      .eq('role', 'maestro')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setIsActive(Boolean(data.is_available))
+      })
+    return () => { cancelled = true }
+  }, [user?.user_id])
+
+  async function handleToggle() {
+    if (!user?.user_id || togglePending) return
+    const next = !isActive
+    setIsActive(next)
+    setTogglePending(true)
+    const { error } = await supabase
+      .from('user_roles')
+      .update({ is_available: next })
+      .eq('user_id', user.user_id)
+      .eq('role', 'maestro')
+    if (error) setIsActive(!next)
+    setTogglePending(false)
+  }
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches'
   const firstName = user?.name?.split(' ')[0] ?? 'Maestro'
@@ -76,9 +107,14 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
             </div>
           </div>
 
-          <div
-            onClick={() => setIsActive(!isActive)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isActive}
+            aria-label="Cambiar disponibilidad"
+            onClick={handleToggle}
+            disabled={togglePending}
+            style={{ border: 'none', background: 'transparent', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: togglePending ? 'wait' : 'pointer', opacity: togglePending ? 0.6 : 1 }}
           >
             <div
               style={{
@@ -116,7 +152,7 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
             >
               {isActive ? 'ACTIVO' : 'INACTIVO'}
             </span>
-          </div>
+          </button>
         </div>
 
         <div
@@ -243,7 +279,11 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.text }}>
-                    {r.title}{r.urgent ? ' 🔥' : ''}
+                    {r.title}{r.urgent && (
+                      <svg width="14" height="16" viewBox="0 0 24 24" fill="none" style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 4 }}>
+                        <path d="M12 2s4 4 4 8a4 4 0 11-8 0c0-2 1-3 1-3s-2 2-2 5a6 6 0 0012 0c0-5-7-10-7-10z" stroke={Z.orange} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
+                      </svg>
+                    )}
                   </div>
                   <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: Z.textMuted, marginTop: 2 }}>
                     {r.client} · Bs {r.budget.toLocaleString()}

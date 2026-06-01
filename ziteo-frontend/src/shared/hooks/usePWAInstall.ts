@@ -7,28 +7,19 @@
 //   4. At least 7 days have passed since the last dismissal
 
 import { useState, useEffect } from 'react'
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
+import {
+  getDeferredInstallPrompt,
+  isIOSDevice,
+  isStandaloneDisplay,
+  subscribeInstallPrompt,
+  triggerNativeInstall,
+  type BeforeInstallPromptEvent,
+} from '../lib/pwaInstall'
 
 const STORAGE_KEY_SESSIONS   = 'pwa_session_count'
 const STORAGE_KEY_DISMISSED  = 'pwa_install_dismissed_at'
 const MIN_SESSIONS_REQUIRED  = 3
 const COOLDOWN_MS            = 7 * 24 * 60 * 60 * 1000 // 7 days
-
-function isStandalone(): boolean {
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    // Safari / iOS
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  )
-}
-
-function isIOS(): boolean {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent)
-}
 
 function incrementSessionCount(): number {
   const current = parseInt(localStorage.getItem(STORAGE_KEY_SESSIONS) ?? '0', 10)
@@ -69,7 +60,9 @@ export interface PWAInstallState {
 }
 
 export function usePWAInstall(hasCompletedOnboarding: boolean): PWAInstallState {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(
+    getDeferredInstallPrompt(),
+  )
   const [dismissed, setDismissed] = useState(false)
 
   // Increment session counter once per hook mount (i.e., once per app load)
@@ -78,26 +71,15 @@ export function usePWAInstall(hasCompletedOnboarding: boolean): PWAInstallState 
   }, [])
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
-    }
-    window.addEventListener('beforeinstallprompt', handler)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+    const unsub = subscribeInstallPrompt((e) => setDeferredPrompt(e))
+    return () => unsub()
   }, [])
 
-  const ios = isIOS()
-  const installed = isStandalone()
+  const ios = isIOSDevice()
+  const installed = isStandaloneDisplay()
   const enoughSessions = getSessionCount() >= MIN_SESSIONS_REQUIRED
   const coolingDown = isCoolingDown()
 
-  // Conditions to show prompt:
-  // - Not already installed
-  // - Onboarding completed (has role)
-  // - Not manually dismissed in this session
-  // - Not in cooldown window from a previous dismissal
-  // - Enough sessions OR iOS (iOS always shows manual instructions once conditions are met)
-  // - Chrome: also requires deferredPrompt to be captured
   const shouldShowPrompt =
     !installed &&
     hasCompletedOnboarding &&
@@ -107,13 +89,10 @@ export function usePWAInstall(hasCompletedOnboarding: boolean): PWAInstallState 
     (ios ? true : deferredPrompt !== null)
 
   const triggerInstall = async (): Promise<void> => {
-    if (!deferredPrompt) return
-    await deferredPrompt.prompt()
-    const choice = await deferredPrompt.userChoice
-    if (choice.outcome === 'dismissed') {
+    const outcome = await triggerNativeInstall()
+    if (outcome === 'dismissed' || outcome === 'unavailable') {
       recordDismissal()
     }
-    setDeferredPrompt(null)
     setDismissed(true)
   }
 

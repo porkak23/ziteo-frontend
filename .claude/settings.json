@@ -134,7 +134,8 @@
       "Bash(xargs cat *)",
       "Bash(git log *)",
       "Bash(git reset *)",
-      "Bash(cat C:/Users/pereira/AppData/Local/Temp/claude/d--Ziteo-1/cebbb029-c046-455a-9fa9-a6edd37360ec/tasks/btzw49cfo.output)"
+      "Bash(cat C:/Users/pereira/AppData/Local/Temp/claude/d--Ziteo-1/cebbb029-c046-455a-9fa9-a6edd37360ec/tasks/btzw49cfo.output)",
+      "Bash(node scripts/generate-icons.mjs)"
     ],
     "additionalDirectories": [
       "C:\\Users\\pereira\\.claude\\plugins"

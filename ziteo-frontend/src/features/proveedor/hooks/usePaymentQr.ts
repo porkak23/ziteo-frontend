@@ -24,9 +24,12 @@ export function usePaymentQr() {
       // Fixed path — upsert always overwrites the same file, no garbage accumulates
       const filePath = `${user.user_id}/qr.png`
 
+      // Intentamos borrar el archivo anterior (si existe) para evitar error de upsert
+      await supabase.storage.from('payment-qrs').remove([filePath])
+
       const { error: uploadError } = await supabase.storage
         .from('payment-qrs')
-        .upload(filePath, file, { upsert: true })
+        .upload(filePath, file, { upsert: false })
 
       if (uploadError) throw uploadError
 
@@ -97,9 +100,12 @@ export function usePaymentQr() {
       const ext = file.name.split('.').pop() ?? 'jpg'
       const filePath = `${user.user_id}/${orderId}.${ext}`
 
+      // Borramos comprobante previo si existiera
+      await supabase.storage.from('payment-proofs').remove([filePath])
+
       const { error: storageError } = await supabase.storage
         .from('payment-proofs')
-        .upload(filePath, file, { upsert: true })
+        .upload(filePath, file, { upsert: false })
 
       if (storageError) throw storageError
 

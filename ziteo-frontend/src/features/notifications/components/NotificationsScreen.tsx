@@ -33,7 +33,11 @@ function timeAgo(dateStr: string): string {
   return `hace ${days} d`
 }
 
-export function NotificationsScreen() {
+interface NotificationsScreenProps {
+  onClose?: () => void
+}
+
+export function NotificationsScreen({ onClose }: NotificationsScreenProps = {}) {
   const user = useAuthStore((s) => s.user)
   const queryClient = useQueryClient()
 
@@ -97,17 +101,34 @@ export function NotificationsScreen() {
   return (
     <div className="flex flex-col min-h-dvh bg-background">
       {/* Header */}
-      <div className="h-14 flex items-center justify-between px-4 border-b border-outline-variant bg-surface flex-shrink-0">
-        <h1 className="font-headline font-extrabold text-xl text-on-surface">Notificaciones</h1>
-        {unreadCount > 0 && (
+      <div className="h-14 flex items-center px-4 border-b border-outline-variant bg-surface flex-shrink-0" style={{ position: 'relative' }}>
+        {onClose && (
           <button
-            onClick={() => markAllRead()}
-            disabled={isMarking}
-            className="text-xs text-primary font-label font-semibold active:opacity-70 transition-opacity disabled:opacity-50"
+            onClick={onClose}
+            aria-label="Volver"
+            className="flex items-center justify-center w-9 h-9 rounded-xl"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
           >
-            {isMarking ? 'Marcando...' : 'Marcar todas como leídas'}
+            <span className="material-symbols-outlined text-[22px] text-on-surface-variant">arrow_back</span>
           </button>
         )}
+        <h1
+          className="font-headline font-extrabold text-xl text-on-surface"
+          style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}
+        >
+          Notificaciones
+        </h1>
+        <div style={{ marginLeft: 'auto' }}>
+          {unreadCount > 0 && (
+            <button
+              onClick={() => markAllRead()}
+              disabled={isMarking}
+              className="text-xs text-primary font-label font-semibold active:opacity-70 transition-opacity disabled:opacity-50"
+            >
+              {isMarking ? 'Marcando...' : 'Marcar todas como leídas'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content */}

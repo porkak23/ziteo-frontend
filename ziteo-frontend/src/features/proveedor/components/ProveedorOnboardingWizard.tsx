@@ -5,7 +5,7 @@
  * 3 pasos: Perfil del negocio, QR de pago, Primer producto.
  * Al completar o saltar todo: marca onboarding_complete = true.
  */
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 import { CIUDADES_ACTIVAS } from '../../../shared/constants/geography'
@@ -107,7 +107,28 @@ function Step1Perfil({
   const [phone, setPhone] = useState(initialPhone)
   const [touched, setTouched] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const user = useAuthStore((s) => s.user)
+  const setUser = useAuthStore((s) => s.setUser)
+
+  // Pre-rellenar nombre/descripción desde la BD si ya se habían guardado antes,
+  // para que reabrir el wizard no muestre los campos vacíos.
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    supabase
+      .from('user_roles')
+      .select('store_name, store_description')
+      .eq('user_id', user.user_id)
+      .eq('role', 'proveedor')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        if (data.store_name) setStoreName((prev) => prev || data.store_name!)
+        if (data.store_description) setDescription((prev) => prev || data.store_description!)
+      })
+    return () => { cancelled = true }
+  }, [user])
 
   const storeNameError = touched && storeName.trim().length < 2 ? 'Mínimo 2 caracteres' : null
   const cityError = touched && !city ? 'Selecciona una ciudad' : null
@@ -117,9 +138,10 @@ function Step1Perfil({
     setTouched(true)
     if (hasErrors) return
     setSaving(true)
+    setSaveError(null)
     try {
       if (user) {
-        await supabase
+        const { error: roleErr } = await supabase
           .from('user_roles')
           .update({
             store_name: storeName.trim(),
@@ -127,13 +149,22 @@ function Step1Perfil({
           })
           .eq('user_id', user.user_id)
           .eq('role', 'proveedor')
+        if (roleErr) throw roleErr
 
-        await supabase
+        const { error: profileErr } = await supabase
           .from('profiles')
           .update({ city, phone: phone.trim() || undefined })
           .eq('user_id', user.user_id)
+        if (profileErr) throw profileErr
+
+        // Reflejar la ciudad nueva en el store para el resto de la app.
+        if (city && city !== user.city) {
+          setUser({ ...user, city })
+        }
       }
       onNext({ storeName, description, city, phone })
+    } catch {
+      setSaveError('No se pudo guardar. Revisa tu conexión e intenta de nuevo.')
     } finally {
       setSaving(false)
     }
@@ -210,6 +241,10 @@ function Step1Perfil({
         />
       </Field>
 
+      {saveError && (
+        <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error }}>{saveError}</span>
+      )}
+
       <button
         onClick={handleNext}
         disabled={saving}
@@ -247,8 +282,10 @@ function Step2QR({ onNext, onSkip }: { onNext: () => void; onSkip: () => void })
     const file = e.target.files?.[0]
     if (!file || !user) return
 
-    if (!file.type.startsWith('image/')) {
-      setError('El archivo debe ser una imagen.')
+    // El bucket solo acepta JPG, PNG o WEBP — validamos antes para dar un mensaje claro.
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowed.includes(file.type)) {
+      setError('Formato no válido. Usa una imagen JPG, PNG o WEBP.')
       return
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -261,19 +298,25 @@ function Step2QR({ onNext, onSkip }: { onNext: () => void; onSkip: () => void })
     setUploading(true)
 
     try {
-      const filePath = `${user.user_id}/qr.png`
+      // Conservar la extensión real del archivo para que coincida con su tipo.
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+      const filePath = `${user.user_id}/qr.${ext}`
+      // Eliminar archivo previo antes de subir para evitar conflictos de RLS con upsert.
+      await supabase.storage.from('payment-qrs').remove([filePath])
       const { error: uploadErr } = await supabase.storage
         .from('payment-qrs')
-        .upload(filePath, file, { upsert: true })
+        .upload(filePath, file, { upsert: false, contentType: file.type })
       if (uploadErr) throw uploadErr
 
-      await supabase
+      const { error: dbErr } = await supabase
         .from('user_roles')
         .update({ payment_qr_url: filePath })
         .eq('user_id', user.user_id)
         .eq('role', 'proveedor')
-    } catch {
-      setError('No se pudo subir el QR. Intenta de nuevo.')
+      if (dbErr) throw dbErr
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Intenta de nuevo.'
+      setError(`No se pudo subir el QR: ${msg}`)
       setPreview(null)
     } finally {
       setUploading(false)
@@ -603,9 +646,27 @@ export function ProveedorOnboardingWizard({ onComplete }: WizardProps) {
           background: `linear-gradient(180deg, ${Z.orangeLight} 0%, ${Z.bg} 100%)`,
         }}
       >
-        <p style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 4px' }}>
-          Paso {step} de 3
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <p style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>
+            Paso {step} de 3
+          </p>
+          <button
+            onClick={finish}
+            style={{
+              fontFamily: Z.font,
+              fontSize: 13,
+              fontWeight: 700,
+              color: Z.textSec,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px 6px',
+              margin: '-4px -6px',
+            }}
+          >
+            Saltar
+          </button>
+        </div>
         <StepDots current={step} total={3} />
       </div>
 

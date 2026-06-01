@@ -22,6 +22,8 @@ export const Z = {
   error:    'var(--z-error)',
   errorBg:  'var(--z-error-bg)',
   success:  'var(--z-success)',
+  successBg:'var(--z-success-bg)',
+  successDark:'var(--z-success-dark)',
   border:   'var(--z-border)',
   divider:  'var(--z-divider)',
 

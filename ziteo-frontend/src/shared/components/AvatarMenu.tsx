@@ -23,12 +23,20 @@ const ROLE_LABELS: Record<UserRole, string> = {
 
 const ALL_ROLES: UserRole[] = ['constructor', 'proveedor', 'maestro', 'chofer']
 
+interface AvatarMenuExtraItem {
+  icon: string
+  label: string
+  onClick: () => void
+}
+
 interface AvatarMenuProps {
   isOpen: boolean
   onClose: () => void
+  extraItems?: AvatarMenuExtraItem[]
+  onSettingsClick?: () => void
 }
 
-export default function AvatarMenu({ isOpen, onClose }: AvatarMenuProps) {
+export default function AvatarMenu({ isOpen, onClose, extraItems, onSettingsClick }: AvatarMenuProps) {
   const user = useAuthStore((s) => s.user)
   const setActiveRole = useAuthStore((s) => s.setActiveRole)
   const addRole = useAuthStore((s) => s.addRole)
@@ -216,8 +224,24 @@ export default function AvatarMenu({ isOpen, onClose }: AvatarMenuProps) {
 
         {/* ── Acciones ───────────────────────────────────────── */}
         <div className="py-1.5">
+          {extraItems?.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => { item.onClick(); onClose() }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-high transition-colors"
+            >
+              <span className="material-symbols-outlined text-[17px] text-on-surface-variant">{item.icon}</span>
+              <span className="text-[13px] font-label text-on-surface">{item.label}</span>
+            </button>
+          ))}
           <button
-            onClick={handleSettings}
+            onClick={() => {
+              if (onSettingsClick) {
+                onSettingsClick()
+              } else {
+                handleSettings()
+              }
+            }}
             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-high transition-colors"
           >
             <span className="material-symbols-outlined text-[17px] text-on-surface-variant">settings</span>

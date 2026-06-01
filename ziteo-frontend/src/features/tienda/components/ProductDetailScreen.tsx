@@ -5,6 +5,7 @@ import { useCart } from '../hooks/useCart'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
 import { supabase } from '../../../lib/supabaseClient'
+import { getProductImageUrl } from '../utils/productImages'
 
 interface ProductDetailScreenProps {
   product: ProductCard
@@ -99,9 +100,9 @@ export function ProductDetailScreen({ product, onBack, onViewProviderStore }: Pr
       </header>
 
       <div className="flex-1 overflow-y-auto pb-28">
-        {product.image_url ? (
+        {getProductImageUrl(product.name, product.image_url) ? (
           <img
-            src={product.image_url}
+            src={getProductImageUrl(product.name, product.image_url)}
             alt={product.name}
             className="h-56 w-full object-cover"
           />

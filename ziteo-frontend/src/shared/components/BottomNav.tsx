@@ -10,29 +10,27 @@ interface Tab {
 const TAB_CONFIG: Record<UserRole, Tab[]> = {
   constructor: [
     { id: 'home',         label: 'Inicio',       icon: 'home' },
-    { id: 'proyectos',    label: 'Proyectos',    icon: 'engineering' },
-    { id: 'licitaciones', label: 'Licitaciones', icon: 'gavel' },
     { id: 'tienda',       label: 'Tienda',       icon: 'storefront' },
+    { id: 'proyectos',    label: 'Proyectos',    icon: 'engineering' },
+    { id: 'licitaciones', label: 'Licitar',      icon: 'gavel' },
   ],
   proveedor: [
-    { id: 'home',         label: 'Inicio',     icon: 'home' },
-    { id: 'inventario',   label: 'Inventario', icon: 'inventory_2' },
-    { id: 'pedidos',      label: 'Pedidos',    icon: 'receipt_long' },
-    { id: 'logistica',    label: 'Logística',  icon: 'local_shipping' },
-    { id: 'cotizaciones', label: 'Cotiz.',     icon: 'request_quote' },
-    { id: 'intel',        label: 'Intel',      icon: 'bar_chart' },
+    { id: 'home',         label: 'Inicio',       icon: 'home' },
+    { id: 'inventario',   label: 'Inventario',   icon: 'inventory_2' },
+    { id: 'pedidos',      label: 'Pedidos',      icon: 'receipt_long' },
+    { id: 'cotizaciones', label: 'Cotizaciones', icon: 'request_quote' },
   ],
   maestro: [
-    { id: 'home',        label: 'Inicio',      icon: 'home' },
-    { id: 'trabajos',    label: 'Trabajos',    icon: 'work' },
-    { id: 'licitaciones',label: 'Licitaciones',icon: 'gavel' },
-    { id: 'habilidades', label: 'Habilidades', icon: 'star' },
+    { id: 'home',         label: 'Inicio',       icon: 'home' },
+    { id: 'licitaciones', label: 'Trabajos',     icon: 'work' },
+    { id: 'proyectos',    label: 'Proyectos',    icon: 'engineering' },
+    { id: 'perfil',       label: 'Mi Perfil',    icon: 'person' },
   ],
   chofer: [
-    { id: 'viajes',    label: 'Viajes',    icon: 'local_shipping' },
-    { id: 'historial', label: 'Historial', icon: 'history' },
-    { id: 'billetera', label: 'Billetera', icon: 'account_balance_wallet' },
-    { id: 'perfil',    label: 'Perfil',    icon: 'person' },
+    { id: 'radar',        label: 'Radar',        icon: 'explore' },
+    { id: 'pedidos',      label: 'Pedidos',      icon: 'receipt_long' },
+    { id: 'ganancias',    label: 'Ganancias',    icon: 'account_balance_wallet' },
+    { id: 'perfil',       label: 'Perfil',       icon: 'person' },
   ],
 }
 

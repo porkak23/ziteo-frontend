@@ -54,6 +54,24 @@ export function useGenerateQuotation() {
 
       if (error) throw new Error(error.message)
 
+      // Notificar al proveedor (best-effort — no lanzar si falla)
+      try {
+        await supabase.rpc('send_notification', {
+          p_user_id: params.provider_id,
+          p_type: 'order',
+          p_title: 'Nueva cotización recibida',
+          p_message: `Un constructor solicitó una cotización con ${params.items.length} producto${params.items.length !== 1 ? 's' : ''}.`,
+        })
+        supabase.functions.invoke('notifications/send-push', {
+          body: {
+            user_id: params.provider_id,
+            title: 'Nueva cotización recibida',
+            body: `Un constructor solicitó una cotización con ${params.items.length} producto${params.items.length !== 1 ? 's' : ''}.`,
+            url: '/',
+          },
+        }).catch(() => { /* push opcional */ })
+      } catch { /* silencioso */ }
+
       return quotationId as string
     },
     onSuccess: () => {

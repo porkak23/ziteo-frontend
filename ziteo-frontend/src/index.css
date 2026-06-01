@@ -105,6 +105,8 @@
     --z-error:         #BA1A1A;
     --z-error-bg:      #FFF1F1;
     --z-success:       #16A34A;
+    --z-success-bg:    #DCFCE7;
+    --z-success-dark:  #166534;
     --z-orange:        #E8733A;
     --z-orange-dark:   #A43700;
     --z-orange-light:  #FFF0EB;
@@ -210,6 +212,8 @@
     --z-error:         #FF7575;
     --z-error-bg:      #3D0808;
     --z-success:       #22C55E;
+    --z-success-bg:    #052e16;
+    --z-success-dark:  #4ADE80;
     --z-orange:        #FF7848;
     --z-orange-dark:   #FF5E20;
     --z-orange-light:  #2D1506;
@@ -320,6 +324,11 @@
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.45; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 /* Enforce focus ring — overrides outline:none in JS inline styles */

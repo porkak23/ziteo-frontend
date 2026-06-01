@@ -68,4 +68,5 @@ export interface TiendaFilters {
   listing_type?: ListingType
   construction_stage?: ConstructionStage
   provider_id?: string
+  seller_type?: string
 }

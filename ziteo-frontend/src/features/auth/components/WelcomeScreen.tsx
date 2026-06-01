@@ -17,50 +17,28 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
       {/* Hero image area */}
       <div
         className="relative overflow-hidden"
-        style={{
-          height: '55%',
-          background: `
-            linear-gradient(180deg, rgba(13,16,32,0.2) 0%, rgba(13,16,32,0.7) 80%, ${Z.navy} 100%),
-            linear-gradient(135deg, #2D1B0E 0%, #1A1520 50%, #0D1530 100%)
-          `,
-        }}
+        style={{ height: '55%', background: Z.navy }}
       >
-        {/* Construction image placeholder */}
-        <div className="absolute inset-0 flex items-center justify-center flex-col" style={{ gap: 8 }}>
-          <div
-            style={{
-              padding: '12px 20px',
-              border: '1px dashed rgba(255,255,255,0.15)',
-              borderRadius: 12,
-              fontFamily: 'monospace',
-              fontSize: 11,
-              color: 'rgba(255,255,255,0.2)',
-              textAlign: 'center',
-              lineHeight: 1.6,
-              letterSpacing: 0.5,
-            }}
-          >
-            foto de obrero boliviano<br />trabajando en obra
-          </div>
-        </div>
-
-        {/* Geometric accents */}
-        <div
-          className="absolute"
+        <img
+          src="/welcome-hero.jpg"
+          alt="Obrero boliviano en obra con casco Ziteo"
+          loading="eager"
+          decoding="async"
           style={{
-            top: '30%', left: -20, width: 60, height: 60,
-            border: '1.5px solid rgba(232,115,58,0.2)',
-            borderRadius: 12,
-            transform: 'rotate(45deg)',
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center 30%',
           }}
         />
+        {/* Dark gradient overlay for text legibility on the content below */}
         <div
-          className="absolute"
+          className="absolute inset-0"
           style={{
-            top: '20%', right: -10, width: 40, height: 40,
-            border: '1.5px solid rgba(58,123,213,0.2)',
-            borderRadius: 8,
-            transform: 'rotate(30deg)',
+            background: `linear-gradient(180deg, rgba(13,16,32,0) 0%, rgba(13,16,32,0.35) 60%, ${Z.navy} 100%)`,
+            pointerEvents: 'none',
           }}
         />
       </div>
@@ -87,9 +65,7 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
           Bienvenido a<br />
           <span
             style={{
-              background: Z.gradMixed,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: Z.orange,
             }}
           >
             ZITEO
@@ -111,7 +87,7 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
 
         <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }}>
           <button
-            onClick={() => onNavigate('login')}
+            onClick={() => onNavigate('register')}
             style={{
               fontFamily: Z.font, fontWeight: 700, fontSize: 14,
               letterSpacing: '0.3px', textTransform: 'uppercase',
@@ -121,10 +97,10 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
               transition: 'all 0.15s ease',
             }}
           >
-            Inicia Sesión
+            Registrarme
           </button>
           <button
-            onClick={() => onNavigate('register')}
+            onClick={() => onNavigate('already-registered')}
             style={{
               fontFamily: Z.font, fontWeight: 700, fontSize: 14,
               letterSpacing: '0.3px', textTransform: 'uppercase',
@@ -136,7 +112,7 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
               transition: 'all 0.15s ease',
             }}
           >
-            Crear Cuenta
+            Ya estoy registrado
           </button>
         </div>
 

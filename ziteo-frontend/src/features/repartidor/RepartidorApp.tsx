@@ -4,6 +4,14 @@ import { Z } from '@/shared/design/tokens'
 import { RoleDashNav } from '@/shared/design/shell/RoleDashNav'
 import { DashHeader } from '@/shared/design/shell'
 import AvatarMenu from '@/shared/components/AvatarMenu'
+import { ZHeader } from '@/shared/design/components/ZHeader'
+import { Toast } from '@/shared/components/Toast'
+import { useToast } from '@/shared/hooks/useToast'
+import {
+  usePendingTransportRequests,
+  useAcceptTransportRequest,
+  type TransportRequest,
+} from '../transporte/hooks/useTransportRequests'
 
 const RadarScreen = lazy(() =>
   import('./RadarScreen').then((m) => ({ default: m.RadarScreen }))
@@ -202,12 +210,105 @@ function JobAlertToast({ alert, onDismiss }: { alert: JobAlert; onDismiss: () =>
   )
 }
 
+function TransportPoolScreen({ onClose }: { onClose: () => void }) {
+  const { data: requests = [], isLoading } = usePendingTransportRequests()
+  const { mutate: accept, isPending } = useAcceptTransportRequest()
+  const { toasts, showToast, removeToast } = useToast()
+
+  function handleAccept(request: TransportRequest) {
+    accept(request.id, {
+      onSuccess: (result) => {
+        if (result.success) {
+          showToast('Solicitud aceptada correctamente.', 'success')
+        } else {
+          showToast(result.message || 'No se pudo aceptar la solicitud.', 'error')
+        }
+      },
+      onError: (err) => {
+        showToast(err.message || 'Error al aceptar la solicitud', 'error')
+      },
+    })
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <ZHeader title="Solicitudes de Transporte" onBack={onClose} />
+      <Toast toasts={toasts} onRemove={removeToast} />
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {isLoading && (
+          <div style={{ textAlign: 'center', padding: '40px 0', fontFamily: Z.font, fontSize: 14, color: Z.textMuted }}>
+            Cargando solicitudes...
+          </div>
+        )}
+        {!isLoading && requests.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <RNavIconList color={Z.textMuted} size={44} />
+            <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textMuted, margin: 0 }}>
+              No hay solicitudes de transporte pendientes
+            </p>
+          </div>
+        )}
+        {requests.map((req) => (
+          <div
+            key={req.id}
+            style={{
+              padding: '14px 16px', borderRadius: Z.r.md,
+              background: Z.surface, border: `1px solid ${Z.border}`,
+              display: 'flex', flexDirection: 'column', gap: 8,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                fontFamily: Z.font, fontSize: 10, fontWeight: 700,
+                padding: '2px 8px', borderRadius: 20,
+                background: req.cargo_type === 'heavy' ? Z.orangeLight : Z.blueLight,
+                color: req.cargo_type === 'heavy' ? Z.orangeDark : Z.blue,
+              }}>
+                {req.cargo_type === 'heavy' ? 'Pesado' : 'Ligero'}
+              </span>
+              {req.city && (
+                <span style={{ fontFamily: Z.font, fontSize: 11, color: Z.textMuted }}>{req.city}</span>
+              )}
+            </div>
+            <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.text }}>
+              {req.pickup_address}
+            </div>
+            <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec }}>
+              Destino: {req.dropoff_address}
+            </div>
+            {req.description && (
+              <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted, fontStyle: 'italic' }}>
+                {req.description}
+              </div>
+            )}
+            <button
+              onClick={() => handleAccept(req)}
+              disabled={isPending}
+              style={{
+                marginTop: 4, padding: '10px 0', borderRadius: Z.r.sm,
+                background: Z.orangeDark, border: 'none', cursor: 'pointer',
+                fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: '#fff',
+                opacity: isPending ? 0.5 : 1, outline: 'none',
+              }}
+            >
+              {isPending ? 'Aceptando...' : 'Aceptar'}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function RepartidorApp() {
   const [activeTab, setActiveTab] = useState<RepartidorTab>('radar')
   const [showAccount, setShowAccount] = useState(false)
+  const [showTransportPool, setShowTransportPool] = useState(false)
   const [alertCount, setAlertCount] = useState(0)
   const [activeAlert, setActiveAlert] = useState<JobAlert | null>(null)
   const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const { data: transportRequests = [] } = usePendingTransportRequests()
 
   const handleNewJobOffer = useCallback((alert: JobAlert) => {
     setAlertCount(c => c + 1)
@@ -233,8 +334,10 @@ export function RepartidorApp() {
 
       <DashHeader
         onProfile={() => setShowAccount(true)}
-        onChat={() => handleBellClick()}
-        notifCount={alertCount}
+        onBell={() => handleBellClick()}
+        unreadCount={alertCount}
+        onTrack={() => setShowTransportPool(true)}
+        chatBadge={transportRequests.length}
       />
       <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
 
@@ -258,6 +361,12 @@ export function RepartidorApp() {
       </main>
 
       <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => setActiveTab(k as RepartidorTab)} />
+
+      {showTransportPool && (
+        <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 35, display: 'flex', flexDirection: 'column' }}>
+          <TransportPoolScreen onClose={() => setShowTransportPool(false)} />
+        </div>
+      )}
     </div>
   )
 }
