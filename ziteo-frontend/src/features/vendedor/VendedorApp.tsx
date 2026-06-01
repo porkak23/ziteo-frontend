@@ -89,7 +89,7 @@ const VENDEDOR_TABS: Tab[] = [
   { key: 'home',         label: 'Inicio',      Icon: VNavIconHome },
   { key: 'inventario',   label: 'Inventario',  Icon: VNavIconInventory },
   { key: 'pedidos',      label: 'Pedidos',     Icon: VNavIconOrders },
-  { key: 'cotizaciones', label: 'Cotizaciones', Icon: VNavIconQuotes },
+  { key: 'solicitudes',  label: 'Solicitudes',  Icon: VNavIconSolicitudes },
 ]
 
 
@@ -1404,7 +1404,7 @@ function EnviosScreen({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <ZScreen bg={Z.bg} style={{ position: 'fixed' }}>
+    <ZScreen bg={Z.bg} style={{ position: 'fixed', zIndex: 30 }}>
       <Toast toasts={toasts} onRemove={removeToast} />
       <ZHeader title="Gestión de Envíos" onBack={onClose} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
