@@ -48,11 +48,11 @@ export function OfertasEspecialesScreen({ onBack }: Props) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 50, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       <Toast toasts={toasts} onRemove={removeToast} />
       <ZHeader title="Ofertas Especiales" onBack={onBack} />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Info banner */}
         <div style={{
           padding: '12px 14px', borderRadius: Z.r.md, background: Z.blueLight,

@@ -28,8 +28,9 @@ import { supabase } from '@/lib/supabaseClient'
 import { ProveedorOnboardingWizard } from '@/features/proveedor/components/ProveedorOnboardingWizard'
 import { OfertasEspecialesScreen } from '@/features/proveedor/components/OfertasEspecialesScreen'
 import { useLicitacionesProveedor } from '@/features/licitaciones/hooks/useLicitaciones'
+import { SolicitudesProveedorFeed } from '@/features/licitaciones/components/SolicitudesProveedorFeed'
 
-type VendedorTab = 'home' | 'inventario' | 'pedidos' | 'cotizaciones' | 'solicitudes'
+type VendedorTab = 'home' | 'inventario' | 'pedidos' | 'cotizaciones' | 'solicitudes' | 'ofertas'
 
 // ─── Nav Icons ───────────────────────────────────────────────────────────────
 
@@ -77,19 +78,26 @@ function VNavIconQuotes({ color = Z.textMuted, size = 22 }: { color?: string; si
 function VNavIconSolicitudes({ color = Z.textMuted, size = 22 }: { color?: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
-        stroke={color} strokeWidth="1.8" fill="none" />
-      <rect x="9" y="3" width="6" height="4" rx="1" stroke={color} strokeWidth="1.8" fill="none" />
-      <path d="M9 12h6M9 16h4" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M3 11l18-5v12L3 14v-3z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill="none" />
+      <path d="M11.6 16.8L11 21l-4-1 .6-4.2" stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function VNavIconOfertas({ color = Z.textMuted, size = 22 }: { color?: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
+        stroke={color} strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   )
 }
 
 const VENDEDOR_TABS: Tab[] = [
-  { key: 'home',         label: 'Inicio',      Icon: VNavIconHome },
-  { key: 'inventario',   label: 'Inventario',  Icon: VNavIconInventory },
-  { key: 'pedidos',      label: 'Pedidos',     Icon: VNavIconOrders },
-  { key: 'solicitudes',  label: 'Solicitudes',  Icon: VNavIconSolicitudes },
+  { key: 'home',        label: 'Inicio',     Icon: VNavIconHome },
+  { key: 'inventario',  label: 'Inventario', Icon: VNavIconInventory },
+  { key: 'pedidos',     label: 'Pedidos',    Icon: VNavIconOrders },
+  { key: 'ofertas',     label: 'Ofertas',    Icon: VNavIconOfertas },
 ]
 
 
@@ -331,6 +339,32 @@ function HomeTab({
             )}
           </button>
         </div>
+
+        {/* Ofertas Especiales — botón independiente */}
+        <button
+          onClick={() => onNavigate('ofertas')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px',
+            borderRadius: Z.r.lg, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
+            width: '100%', background: Z.surface, textAlign: 'left', outline: 'none',
+          }}
+        >
+          <div style={{
+            width: 40, height: 40, borderRadius: 12, background: Z.orangeLight,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <VNavIconOfertas color={Z.orangeDark} size={22} />
+          </div>
+          <div>
+            <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>Ofertas Especiales</div>
+            <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: Z.textMuted, marginTop: 1 }}>
+              Aplica descuentos a tu inventario
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" style={{ marginLeft: 'auto' }}>
+            <path d="M9 18l6-6-6-6" stroke={Z.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </svg>
+        </button>
       </div>
 
       <div>
@@ -1757,7 +1791,7 @@ function GestionEnvioScreen({
 
 // ─── COTIZACIONES TAB ─────────────────────────────────────────────────────────
 
-type CotizacionesSubTab = 'Solicitudes' | 'Enviadas' | 'Historial'
+type CotizacionesSubTab = 'Pendientes' | 'Enviadas' | 'Historial'
 
 interface QuotationItem {
   product_id: string
@@ -1808,12 +1842,10 @@ function CotizacionesTab() {
   const providerId = user?.user_id ?? ''
   const { toasts, showToast, removeToast } = useToast()
   const queryClient = useQueryClient()
-  const [tab, setTab] = useState<CotizacionesSubTab>('Solicitudes')
+  const [tab, setTab] = useState<CotizacionesSubTab>('Pendientes')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [offerModal, setOfferModal] = useState<{ id: string; buyerName: string } | null>(null)
   const [offerPrice, setOfferPrice] = useState('')
-  const [showOfertas, setShowOfertas] = useState(false)
-
   const { data: quotations = [], isLoading } = useProveedorQuotations(providerId)
 
   const { mutate: acceptQuotation, isPending: accepting } = useMutation({
@@ -2011,38 +2043,12 @@ function CotizacionesTab() {
         </div>
       )}
 
-      {showOfertas && <OfertasEspecialesScreen onBack={() => setShowOfertas(false)} />}
-
       <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: 0 }}>
           Cotizaciones
         </h2>
-        <button
-          onClick={() => setShowOfertas(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
-            borderRadius: Z.r.md, border: 'none', cursor: 'pointer', width: '100%',
-            background: `linear-gradient(135deg, ${Z.orangeDark} 0%, ${Z.orange} 100%)`,
-            boxShadow: '0 4px 14px rgba(164,55,0,0.22)', textAlign: 'left', outline: 'none', marginTop: 8,
-          }}
-        >
-          <div style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <div>
-            <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 800, color: '#fff' }}>Ofertas Especiales</div>
-            <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.75)', marginTop: 1 }}>
-              Aplica descuentos rápidos a tu inventario
-            </div>
-          </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" style={{ marginLeft: 'auto' }}>
-            <path d="M9 18l6-6-6-6" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-          </svg>
-        </button>
         <FilterBar
-          options={['Solicitudes', 'Enviadas', 'Historial']}
+          options={['Pendientes', 'Enviadas', 'Historial']}
           active={tab}
           onChange={(v) => setTab(v as CotizacionesSubTab)}
         />
@@ -2053,12 +2059,12 @@ function CotizacionesTab() {
               <div key={i} style={{ height: 120, borderRadius: Z.r.md, background: Z.divider }} />
             ))}
           </div>
-        ) : tab === 'Solicitudes' ? (
+        ) : tab === 'Pendientes' ? (
           pending.length === 0 ? (
             <div style={{ padding: '48px 0', textAlign: 'center' }}>
               <VNavIconQuotes color={Z.textMuted} size={40} />
               <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textMuted, marginTop: 12 }}>
-                No hay solicitudes pendientes
+                No hay cotizaciones pendientes
               </p>
             </div>
           ) : (
@@ -2330,10 +2336,19 @@ export function VendedorApp() {
           paddingBottom: 96,
         }}
       >
-        {activeTab === 'home'         && <HomeTab onNavigate={setActiveTab} onShowEnvios={() => setShowEnvios(true)} />}
-        {activeTab === 'inventario'   && <InventarioTab />}
-        {activeTab === 'pedidos'      && <PedidosTab />}
-        {(activeTab === 'cotizaciones' || activeTab === 'solicitudes') && <CotizacionesTab />}
+        {activeTab === 'home'          && <HomeTab onNavigate={setActiveTab} onShowEnvios={() => setShowEnvios(true)} />}
+        {activeTab === 'inventario'    && <InventarioTab />}
+        {activeTab === 'pedidos'       && <PedidosTab />}
+        {activeTab === 'cotizaciones'  && <CotizacionesTab />}
+        {activeTab === 'solicitudes'   && (
+          <div style={{ padding: '16px 20px 20px' }}>
+            <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: '0 0 16px' }}>
+              Solicitudes
+            </h2>
+            <SolicitudesProveedorFeed />
+          </div>
+        )}
+        {activeTab === 'ofertas'       && <OfertasEspecialesScreen onBack={() => setActiveTab('home')} />}
       </main>
 
       <RoleDashNav
