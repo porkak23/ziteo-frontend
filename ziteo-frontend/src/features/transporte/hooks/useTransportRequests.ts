@@ -10,6 +10,10 @@ export interface TransportRequest {
   cargo_type: 'light' | 'heavy'
   pickup_address: string
   dropoff_address: string
+  pickup_lat: number | null
+  pickup_lng: number | null
+  dropoff_lat: number | null
+  dropoff_lng: number | null
   description: string | null
   city: string | null
   status: 'pending' | 'accepted' | 'in_transit' | 'completed' | 'cancelled'
@@ -24,6 +28,10 @@ export interface CreateTransportPayload {
   cargo_type: 'light' | 'heavy'
   pickup_address: string
   dropoff_address: string
+  pickup_lat?: number | null
+  pickup_lng?: number | null
+  dropoff_lat?: number | null
+  dropoff_lng?: number | null
   description?: string
   city?: string
 }
@@ -41,6 +49,10 @@ export function useCreateTransportRequest() {
           cargo_type:      payload.cargo_type,
           pickup_address:  payload.pickup_address,
           dropoff_address: payload.dropoff_address,
+          pickup_lat:      payload.pickup_lat ?? null,
+          pickup_lng:      payload.pickup_lng ?? null,
+          dropoff_lat:     payload.dropoff_lat ?? null,
+          dropoff_lng:     payload.dropoff_lng ?? null,
           description:     payload.description ?? null,
           city:            payload.city ?? null,
           status:          'pending',

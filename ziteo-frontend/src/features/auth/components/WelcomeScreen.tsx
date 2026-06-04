@@ -121,26 +121,50 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
           style={{
             fontFamily: Z.font,
             fontSize: 11,
-            color: 'rgba(255,255,255,0.3)',
+            color: 'rgba(255,255,255,0.55)',
             lineHeight: 1.6,
             margin: '8px 0 0',
             textAlign: 'center',
           }}
         >
           Al usar Ziteo aceptas nuestros{' '}
-          <span
+          <button
+            type="button"
             onClick={() => setLegalModal('terminos')}
-            style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
+            style={{
+              color: 'rgba(255,255,255,0.85)',
+              fontWeight: 600,
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              fontFamily: Z.font,
+              fontSize: 'inherit',
+              display: 'inline',
+            }}
           >
             Términos de Uso
-          </span>
+          </button>
           {' '}y nuestra{' '}
-          <span
+          <button
+            type="button"
             onClick={() => setLegalModal('privacidad')}
-            style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
+            style={{
+              color: 'rgba(255,255,255,0.85)',
+              fontWeight: 600,
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              fontFamily: Z.font,
+              fontSize: 'inherit',
+              display: 'inline',
+            }}
           >
             Política de Privacidad
-          </span>
+          </button>
         </p>
       </div>
 

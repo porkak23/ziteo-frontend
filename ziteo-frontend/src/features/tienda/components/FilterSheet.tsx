@@ -40,6 +40,7 @@ export function FilterSheet({ open, onClose, filters, categories, onApply }: Fil
     draft.construction_stage,
     draft.min_price !== undefined,
     draft.max_price !== undefined,
+    draft.seller_type,
   ].filter(Boolean).length
 
   // Keep draft in sync when sheet re-opens
@@ -135,6 +136,31 @@ export function FilterSheet({ open, onClose, filters, categories, onApply }: Fil
                     key={label}
                     type="button"
                     onClick={() => setDraft((d) => ({ ...d, listing_type: type }))}
+                    className={`flex-1 py-2 rounded-2xl border font-label text-sm font-medium transition-[border-color,background-color,color] ${
+                      isSelected
+                        ? 'bg-primary text-on-primary border-primary'
+                        : 'bg-surface-container text-on-surface-variant border-outline-variant'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Section 1.5: Origen de los artículos */}
+          <div className="flex flex-col gap-3">
+            <span className="font-label font-semibold text-on-surface text-sm">Origen de los artículos</span>
+            <div className="flex gap-2">
+              {([undefined, 'occasional'] as (TiendaFilters['seller_type'] | undefined)[]).map((type) => {
+                const label = type === undefined ? 'Todos' : 'Solo Ocasión'
+                const isSelected = draft.seller_type === type
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => setDraft((d) => ({ ...d, seller_type: type }))}
                     className={`flex-1 py-2 rounded-2xl border font-label text-sm font-medium transition-[border-color,background-color,color] ${
                       isSelected
                         ? 'bg-primary text-on-primary border-primary'

@@ -4,7 +4,7 @@ export default function PrivacidadPage() {
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '48px 24px 80px' }}>
 
         {/* Brand */}
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#D94F00', marginBottom: 24 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#A43700', marginBottom: 24 }}>
           Ziteo
         </div>
 
@@ -123,7 +123,7 @@ export default function PrivacidadPage() {
             <p>
               Para consultas o solicitudes relacionadas con esta Política de Privacidad, comunícate con nuestro equipo
               de soporte a través de la aplicación o escríbenos a{' '}
-              <a href="mailto:soporte@ziteo.com.bo" style={{ color: '#D94F00' }}>soporte@ziteo.com.bo</a>.
+              <a href="mailto:soporte@ziteo.com.bo" style={{ color: '#A43700' }}>soporte@ziteo.com.bo</a>.
             </p>
           </Section>
 

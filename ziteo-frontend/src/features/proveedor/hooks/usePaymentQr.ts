@@ -34,11 +34,12 @@ export function usePaymentQr() {
       if (uploadError) throw uploadError
 
       // Store the relative path (not a public URL — bucket is private)
+      const role = user.active_role || 'proveedor'
       const { error: dbError } = await supabase
         .from('user_roles')
         .update({ payment_qr_url: filePath })
         .eq('user_id', user.user_id)
-        .eq('role', 'proveedor')
+        .eq('role', role)
 
       if (dbError) throw new Error('QR subido pero no se pudo guardar en perfil')
 
@@ -50,7 +51,7 @@ export function usePaymentQr() {
 
   // ─── Constructor: fetch signed QR URL to display ─────────────────────────────
 
-  async function getSignedQrUrl(providerUserId: string): Promise<string | null> {
+  async function getSignedQrUrl(providerUserId: string, role: string = 'proveedor'): Promise<string | null> {
     // Verify that the authenticated buyer has at least one order with this provider
     const { data: { user: authUser } } = await supabase.auth.getUser()
     if (!authUser) return null
@@ -62,14 +63,18 @@ export function usePaymentQr() {
       .eq('constructor_id', authUser.id)
       .limit(1)
 
-    if (!orderRows || orderRows.length === 0) return null
+    if (!orderRows || orderRows.length === 0) {
+      // If it's a maestro, we also allow the own worker or a constructor to read it without active ecommerce orders.
+      // For now let's bypass order check if the role is 'maestro', since workers are hired differently.
+      if (role !== 'maestro') return null
+    }
 
     // Fetch the stored relative path from user_roles
     const { data, error } = await supabase
       .from('user_roles')
       .select('payment_qr_url')
       .eq('user_id', providerUserId)
-      .eq('role', 'proveedor')
+      .eq('role', role)
       .maybeSingle()
 
     if (error || !data?.payment_qr_url) return null
@@ -79,6 +84,31 @@ export function usePaymentQr() {
       .createSignedUrl(data.payment_qr_url, 600) // 10 minutes
 
     return signed?.signedUrl ?? null
+  }
+
+  // ─── Constructor: fetch provider's alternative payment methods ───────────────
+  // Returns the bank-transfer details and whether cash is accepted, so the
+  // checkout can show them when the buyer picks "Transferencia" or when the
+  // provider has no QR configured.
+
+  async function getProviderPaymentMethods(
+    providerUserId: string,
+    role: string = 'proveedor',
+  ): Promise<{ bankTransfer: string | null; cash: boolean }> {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('payment_bank_transfer, payment_cash')
+      .eq('user_id', providerUserId)
+      .eq('role', role)
+      .maybeSingle()
+
+    if (error || !data) return { bankTransfer: null, cash: false }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = data as any
+    return {
+      bankTransfer: d.payment_bank_transfer ?? null,
+      cash: Boolean(d.payment_cash),
+    }
   }
 
   // ─── Constructor: upload payment proof (comprobante) ─────────────────────────
@@ -157,6 +187,7 @@ export function usePaymentQr() {
   return {
     uploadQr,
     getSignedQrUrl,
+    getProviderPaymentMethods,
     uploadPaymentEvidence,
     getPaymentEvidence,
     confirmPayment,

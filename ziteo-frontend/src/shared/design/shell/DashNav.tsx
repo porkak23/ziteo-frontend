@@ -39,6 +39,7 @@ export function DashNav({ activeTab, onTabChange }: DashNavProps) {
           <button
             key={key}
             onClick={() => onTabChange(key)}
+            aria-current={active ? 'page' : undefined}
             style={{
               display: 'flex',
               flexDirection: 'column',

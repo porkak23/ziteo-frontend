@@ -32,13 +32,12 @@ export function useGlobalSearch(query: string) {
         ])
 
         if (isMounted) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setProjects(projReq.error ? [] : ((projReq.data || []) as any))
-          setProfiles(profReq.error ? [] : (profReq.data || []))
+          setProjects(projReq.error ? [] : ((projReq.data || []) as SearchProject[]))
+          setProfiles(profReq.error ? [] : ((profReq.data || []) as SearchProfile[]))
           setProducts(
             prodReq.error
               ? []
-              : (prodReq.data || []).map((p: any) => ({
+              : ((prodReq.data || []) as SearchProduct[]).map((p) => ({
                   ...p,
                   image_url: getProductImageUrl(p.name, p.image_url),
                 }))

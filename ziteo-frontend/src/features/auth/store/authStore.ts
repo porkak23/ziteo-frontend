@@ -23,6 +23,7 @@ interface AuthStore {
   setUser: (user: AuthUser) => void
   setActiveRole: (role: UserRole) => void
   addRole: (role: UserRole) => void
+  removeRole: (role: UserRole) => void
   logout: () => void
   clearSession: () => void
   updateTokens: (accessToken: string, refreshToken: string) => void
@@ -53,6 +54,14 @@ export const useAuthStore = create<AuthStore>()(
           if (!state.user) return state
           if (state.user.roles.includes(role)) return state
           return { user: { ...state.user, roles: [...state.user.roles, role] } }
+        }),
+
+      removeRole: (role) =>
+        set((state) => {
+          if (!state.user) return state
+          const newRoles = state.user.roles.filter((r) => r !== role)
+          const activeRole = state.user.active_role === role ? newRoles[0] || 'constructor' : state.user.active_role
+          return { user: { ...state.user, roles: newRoles, active_role: activeRole } }
         }),
 
       logout: () => {

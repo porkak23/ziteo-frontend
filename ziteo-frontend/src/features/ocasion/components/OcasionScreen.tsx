@@ -10,7 +10,7 @@ import { FilterBar } from '../../../shared/design/shell/FilterBar'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
 import { useAuthStore } from '../../auth/store/authStore'
-import { CATEGORIAS_CONSTRUCCION } from '../../proveedor/hooks/useInventario'
+import { useCategorias } from '../../tienda/hooks/useTienda'
 import {
   useMisPublicaciones,
   useCrearPublicacion,
@@ -86,6 +86,8 @@ export function OcasionScreen({ onBack }: { onBack: () => void }) {
   const confirmRentalReturn = useConfirmRentalReturn()
 
   // Form State
+  const { data: categorias = [] } = useCategorias()
+
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -93,7 +95,7 @@ export function OcasionScreen({ onBack }: { onBack: () => void }) {
     item_condition: 'nuevo' as 'nuevo' | 'usado',
     price: '',
     stock: '',
-    category_name: '',
+    category_id: '',
     unit: 'unidad',
     rental_daily_rate: '',
     rental_weekly_rate: '',
@@ -112,7 +114,7 @@ export function OcasionScreen({ onBack }: { onBack: () => void }) {
       item_condition: 'nuevo',
       price: '',
       stock: '',
-      category_name: '',
+      category_id: '',
       unit: 'unidad',
       rental_daily_rate: '',
       rental_weekly_rate: '',
@@ -161,7 +163,7 @@ export function OcasionScreen({ onBack }: { onBack: () => void }) {
       showToast('El stock no puede ser negativo', 'error')
       return
     }
-    if (!form.category_name) {
+    if (!form.category_id) {
       showToast('Selecciona una categoría', 'error')
       return
     }
@@ -180,7 +182,7 @@ export function OcasionScreen({ onBack }: { onBack: () => void }) {
         price: form.price,
         unit: form.unit,
         stock: form.stock,
-        category_name: form.category_name,
+        category_id: form.category_id,
         listing_type: form.listing_type,
         item_condition: form.item_condition,
         rental_daily_rate: form.listing_type === 'rent' ? form.rental_daily_rate : undefined,
@@ -1056,10 +1058,10 @@ export function OcasionScreen({ onBack }: { onBack: () => void }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <ZSelect
                 label="Categoría *"
-                value={form.category_name}
-                onChange={(val) => setForm((f) => ({ ...f, category_name: val }))}
+                value={form.category_id}
+                onChange={(val) => setForm((f) => ({ ...f, category_id: val }))}
                 placeholder="Seleccionar..."
-                options={[...CATEGORIAS_CONSTRUCCION]}
+                options={categorias.map((c) => ({ value: c.id, label: c.name }))}
               />
 
               <ZSelect

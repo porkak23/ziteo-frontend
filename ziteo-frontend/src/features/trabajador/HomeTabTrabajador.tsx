@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Z } from '../../shared/design/tokens'
 import { SummaryCard, SectionTitle } from '../../shared/design/shell'
 import { IconStar } from '../../shared/design/shell'
 import { useAuthStore } from '../auth/store/authStore'
-import { supabase } from '../../lib/supabaseClient'
+import { usePendingContracts } from '../maestro/hooks/useContracts'
 
 interface HomeTabTrabajadorProps {
   onNavigate: (tab: string) => void
@@ -36,44 +36,11 @@ function DollarIcon({ color = Z.orange }: { color?: string }) {
 }
 
 const SAMPLE_PROJECT = { id: 1, name: 'Casa Norte', client: 'Juan Mamani', progress: 60 }
-const SAMPLE_REQUESTS = [
-  { id: 1, title: 'Albañilería segundo piso', client: 'Juan Mamani', budget: 3000, location: 'Zona Norte', urgent: true },
-  { id: 2, title: 'Reparación de techo filtraciones', client: 'María López', budget: 800, location: 'Zona Sur', urgent: false },
-]
 
 export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
   const [isActive, setIsActive] = useState(false)
-  const [togglePending, setTogglePending] = useState(false)
   const user = useAuthStore((s) => s.user)
-
-  useEffect(() => {
-    if (!user?.user_id) return
-    let cancelled = false
-    supabase
-      .from('user_roles')
-      .select('is_available')
-      .eq('user_id', user.user_id)
-      .eq('role', 'maestro')
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled && data) setIsActive(Boolean(data.is_available))
-      })
-    return () => { cancelled = true }
-  }, [user?.user_id])
-
-  async function handleToggle() {
-    if (!user?.user_id || togglePending) return
-    const next = !isActive
-    setIsActive(next)
-    setTogglePending(true)
-    const { error } = await supabase
-      .from('user_roles')
-      .update({ is_available: next })
-      .eq('user_id', user.user_id)
-      .eq('role', 'maestro')
-    if (error) setIsActive(!next)
-    setTogglePending(false)
-  }
+  const { data: pendingContracts = [] } = usePendingContracts(user?.user_id ?? '')
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches'
   const firstName = user?.name?.split(' ')[0] ?? 'Maestro'
@@ -107,14 +74,9 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
             </div>
           </div>
 
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isActive}
-            aria-label="Cambiar disponibilidad"
-            onClick={handleToggle}
-            disabled={togglePending}
-            style={{ border: 'none', background: 'transparent', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: togglePending ? 'wait' : 'pointer', opacity: togglePending ? 0.6 : 1 }}
+          <div
+            onClick={() => setIsActive(!isActive)}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer' }}
           >
             <div
               style={{
@@ -152,7 +114,7 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
             >
               {isActive ? 'ACTIVO' : 'INACTIVO'}
             </span>
-          </button>
+          </div>
         </div>
 
         <div
@@ -252,48 +214,40 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
         <div>
           <SectionTitle
             title="Nuevas Solicitudes"
-            action={`${SAMPLE_REQUESTS.length} disponibles`}
-            onAction={() => onNavigate('licitaciones')}
+            action={pendingContracts.length > 0 ? `${pendingContracts.length} pendiente${pendingContracts.length !== 1 ? 's' : ''}` : undefined}
+            onAction={pendingContracts.length > 0 ? () => onNavigate('licitaciones') : undefined}
           />
           <div style={{ marginTop: 8 }}>
-            {SAMPLE_REQUESTS.map((r) => (
-              <div
-                key={r.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '12px 0',
-                  borderBottom: `1px solid ${Z.divider}`,
-                }}
-              >
+            {pendingContracts.length === 0 ? (
+              <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textMuted, padding: '12px 0' }}>
+                Sin solicitudes pendientes
+              </p>
+            ) : (
+              pendingContracts.slice(0, 3).map((c) => (
                 <div
+                  key={c.id}
                   style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: r.urgent ? Z.orange : Z.blue,
-                    flexShrink: 0,
-                    marginTop: 2,
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 0', borderBottom: `1px solid ${Z.divider}`,
                   }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.text }}>
-                    {r.title}{r.urgent && (
-                      <svg width="14" height="16" viewBox="0 0 24 24" fill="none" style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 4 }}>
-                        <path d="M12 2s4 4 4 8a4 4 0 11-8 0c0-2 1-3 1-3s-2 2-2 5a6 6 0 0012 0c0-5-7-10-7-10z" stroke={Z.orange} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
-                      </svg>
-                    )}
+                >
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: Z.orange, flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.text }}>
+                      {c.description ?? 'Solicitud de contrato'}
+                    </div>
+                    <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: Z.textMuted, marginTop: 2 }}>
+                      {c.constructor?.name ?? 'Constructor'}{c.budget ? ` · Bs ${c.budget.toLocaleString()}` : ''}
+                    </div>
                   </div>
-                  <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: Z.textMuted, marginTop: 2 }}>
-                    {r.client} · Bs {r.budget.toLocaleString()}
-                  </div>
+                  {c.city && (
+                    <span style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {c.city}
+                    </span>
+                  )}
                 </div>
-                <span style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  {r.location}
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

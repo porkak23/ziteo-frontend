@@ -4,15 +4,15 @@
 
 @layer base {
   :root {
-    /* Brand */
-    --color-primary:                   #D94F00;
-    --color-primary-container:         #FF6820;
-    --color-primary-fixed:             #FFE8DC;
-    --color-primary-fixed-dim:         #FFB899;
+    /* Brand — handoff Z tokens: CTA #A43700 (orangeDark), accent #E8733A (orange) */
+    --color-primary:                   #A43700;
+    --color-primary-container:         #E8733A;
+    --color-primary-fixed:             #FFF0EB;
+    --color-primary-fixed-dim:         #FFEADF;
     --color-on-primary:                #ffffff;
     --color-on-primary-fixed:          #3A0E00;
-    --color-on-primary-fixed-variant:  #A83800;
-    --color-inverse-primary:           #FF7A40;
+    --color-on-primary-fixed-variant:  #A43700;
+    --color-inverse-primary:           #E8733A;
 
     /* Secondary — industrial grey */
     --color-secondary:                 #374151;
@@ -45,7 +45,7 @@
     --color-surface-container-highest: #DDDDD7;
     --color-surface-container-lowest:  #FFFFFF;
     --color-surface-variant:           #E9E9E3;
-    --color-surface-tint:              #D94F00;
+    --color-surface-tint:              #A43700;
 
     /* Text — true near-black for maximum contrast */
     --color-on-background:             #0D0D0D;
@@ -67,7 +67,7 @@
     --color-driver-surface:            #141E2B;
 
     /* Misc */
-    --color-project-center:            #FFF3EE;
+    --color-project-center:            #FFF0EB;
 
     /* Status tokens */
     --color-status-pending-bg:   #FEF3C7;
@@ -90,7 +90,7 @@
     --color-background-dark:     #0A0A0A;
 
     /* Extended brand — for gradients */
-    --color-primary-dark:        #A83800;
+    --color-primary-dark:        #A43700;
     --color-success:             #16A34A;
     --color-success-dark:        #166534;
 
@@ -99,7 +99,7 @@
     --z-surface:       #FFFFFF;
     --z-text:          #1A1A2E;
     --z-text-sec:      #64748B;
-    --z-text-muted:    #94A3B8;
+    --z-text-muted:    #637585;
     --z-border:        #E2E8F0;
     --z-divider:       #F1F5F9;
     --z-error:         #BA1A1A;
@@ -118,15 +118,15 @@
   }
 
   .dark {
-    /* Brand */
-    --color-primary:                   #FF7040;
+    /* Brand — handoff oranges on dark: bright #E8733A leads, #A43700 as inverse */
+    --color-primary:                   #E8733A;
     --color-primary-container:         #6B2300;
-    --color-primary-fixed:             #FFE8DC;
-    --color-primary-fixed-dim:         #FFAA88;
+    --color-primary-fixed:             #FFF0EB;
+    --color-primary-fixed-dim:         #FFCDB3;
     --color-on-primary:                #1A0700;
     --color-on-primary-fixed:          #3A0E00;
-    --color-on-primary-fixed-variant:  #A83800;
-    --color-inverse-primary:           #D94F00;
+    --color-on-primary-fixed-variant:  #A43700;
+    --color-inverse-primary:           #A43700;
 
     /* Secondary — warm grey for dark */
     --color-secondary:                 #A39890;
@@ -159,7 +159,7 @@
     --color-surface-container-highest: #30241B;
     --color-surface-container-lowest:  #100D0A;
     --color-surface-variant:           #261C15;
-    --color-surface-tint:              #FF7040;
+    --color-surface-tint:              #E8733A;
 
     /* Text — warm off-white */
     --color-on-background:             #EDE8E3;
@@ -206,7 +206,7 @@
     --z-surface:       #171210;
     --z-text:          #EDE8E3;
     --z-text-sec:      #9C938C;
-    --z-text-muted:    #6E6158;
+    --z-text-muted:    #A09080;
     --z-border:        #342720;
     --z-divider:       #1D1410;
     --z-error:         #FF7575;
@@ -309,7 +309,7 @@
 }
 @keyframes zPulseGlow {
   0%, 100% { box-shadow: 0 8px 32px rgba(232,115,58,0.3); }
-  50%       { box-shadow: 0 8px 40px rgba(232,115,58,0.5), 0 0 60px rgba(58,123,213,0.15); }
+  50%       { box-shadow: 0 8px 40px rgba(232,115,58,0.5); }
 }
 @keyframes driverPulse {
   0%   { box-shadow: 0 0 0 0 rgba(164,55,0,0.5); }

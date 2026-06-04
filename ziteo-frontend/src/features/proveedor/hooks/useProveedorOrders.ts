@@ -13,6 +13,12 @@ export interface OrderItem {
     id: string
     name: string
   } | null
+  is_rental?: boolean | null
+  rental_start_date?: string | null
+  rental_end_date?: string | null
+  rental_days?: number | null
+  rental_status?: string | null
+  rental_deposit?: number | null
 }
 
 export interface ProveedorOrder {
@@ -133,11 +139,48 @@ export function useUpdateOrderStatus() {
         .from('orders')
         .update({ status })
         .eq('id', orderId)
-      
+
       if (error) throw error
     },
     onSuccess: (_, { providerId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.incomingOrders(providerId) })
     }
+  })
+}
+
+export function useMarkRentalInUse() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ orderId, providerId }: { orderId: string; providerId: string }) => {
+      void providerId // used in onSuccess invalidation
+      // Mark all rental items in this order as in_use
+      const { error } = await supabase
+        .from('order_items')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update({ rental_status: 'in_use' } as any)
+        .eq('order_id', orderId)
+      if (error) throw error
+    },
+    onSuccess: (_, { providerId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.incomingOrders(providerId) })
+    },
+  })
+}
+
+export function useConfirmRentalReturn() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ orderItemId, providerId }: { orderItemId: string; providerId: string }) => {
+      void providerId // used in onSuccess invalidation
+      const { error } = await supabase
+        .from('order_items')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update({ rental_status: 'returned' } as any)
+        .eq('id', orderItemId)
+      if (error) throw error
+    },
+    onSuccess: (_, { providerId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.incomingOrders(providerId) })
+    },
   })
 }

@@ -43,3 +43,11 @@ export interface AcceptDeliveryResult {
   message?: string
   delivery_id?: string
 }
+
+export interface DriverLocation {
+  driver_id: string
+  lat: number
+  lng: number
+  heading: number | null
+  updated_at: string
+}

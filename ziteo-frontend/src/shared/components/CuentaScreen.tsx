@@ -45,15 +45,15 @@ export function CuentaScreen({ onClose }: CuentaScreenProps) {
 
   // ── Queries & Effects ───────────────────────────────────────────────────────
   const { data: qrStatus, refetch: refetchQr } = useQuery<{ payment_qr_url: string | null }>({
-    queryKey: ['vendedor-qr-status', user?.user_id],
-    enabled: !!user?.user_id && role === 'proveedor',
+    queryKey: ['qr-status', user?.user_id, role],
+    enabled: !!user?.user_id && (role === 'proveedor' || role === 'constructor'),
     staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_roles')
         .select('payment_qr_url')
         .eq('user_id', user!.user_id)
-        .eq('role', 'proveedor')
+        .eq('role', role)
         .maybeSingle()
       if (error) throw error
       return data ?? { payment_qr_url: null }
@@ -152,7 +152,7 @@ export function CuentaScreen({ onClose }: CuentaScreenProps) {
       if (error) throw error
       setShowPinModal(false)
       showToast('PIN actualizado correctamente', 'success')
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al actualizar el PIN'
       showToast(msg, 'error')
     } finally {
@@ -190,8 +190,8 @@ export function CuentaScreen({ onClose }: CuentaScreenProps) {
           </div>
         </div>
 
-        {/* Sección: QR de Cobranza (Solo Proveedores) */}
-        {role === 'proveedor' && (
+        {/* Sección: QR de Cobranza (Proveedores y Constructores) */}
+        {(role === 'proveedor' || role === 'constructor') && (
           <div>
             <div style={{
               fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.textMuted,

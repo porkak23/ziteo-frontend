@@ -5,7 +5,7 @@ import type { UserRole } from '../../features/auth/store/authStore'
 import { useNavStore } from '../store/navStore'
 import { useThemeStore } from '../hooks/useTheme'
 import { supabase } from '../../lib/supabaseClient'
-import { addRole as addRoleService } from '../../features/auth/services/authService'
+import { addRole as addRoleService, removeRole as removeRoleService } from '../../features/auth/services/authService'
 
 const ROLE_ICONS: Record<UserRole, string> = {
   constructor: 'engineering',
@@ -45,7 +45,9 @@ export default function AvatarMenu({ isOpen, onClose, extraItems, onSettingsClic
   const { mode, setMode } = useThemeStore()
   const [addedToast, setAddedToast] = useState<string | null>(null)
   const [addingRole, setAddingRole] = useState<UserRole | null>(null)
+  const [removingRole, setRemovingRole] = useState<UserRole | null>(null)
   const [roleError, setRoleError] = useState<string | null>(null)
+  const removeRoleStore = useAuthStore((s) => s.removeRole)
 
   if (!isOpen || !user) return null
 
@@ -73,6 +75,25 @@ export default function AvatarMenu({ isOpen, onClose, extraItems, onSettingsClic
       setRoleError('No se pudo agregar el rol.')
     } finally {
       setAddingRole(null)
+    }
+  }
+
+  const handleRemoveRole = async (role: UserRole) => {
+    if (!user || user.roles.length <= 1 || removingRole) return
+    const confirmed = window.confirm(`¿Estás seguro de que quieres eliminar tu perfil de ${ROLE_LABELS[role]}? Se borrarán todos tus datos de este perfil.`)
+    if (!confirmed) return
+
+    setRemovingRole(role)
+    setRoleError(null)
+    try {
+      await removeRoleService(role)
+      removeRoleStore(role)
+      setAddedToast(`Rol "${ROLE_LABELS[role]}" eliminado`)
+      setTimeout(() => setAddedToast(null), 2500)
+    } catch {
+      setRoleError('No se pudo eliminar el rol.')
+    } finally {
+      setRemovingRole(null)
     }
   }
 
@@ -127,35 +148,51 @@ export default function AvatarMenu({ isOpen, onClose, extraItems, onSettingsClic
             Mis roles
           </p>
           <div className="flex flex-col gap-1.5">
-            {user.roles.map((role) => {
-              const isActive = role === user.active_role
-              return (
-                <button
-                  key={role}
-                  onClick={() => handleRoleSelect(role)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all w-full ${
-                    isActive
-                      ? 'bg-primary text-on-primary shadow-sm'
-                      : 'bg-surface-container-high text-on-surface hover:bg-outline-variant/20'
-                  }`}
-                >
-                  <span
-                    className={`material-symbols-outlined text-[18px] shrink-0 ${isActive ? 'text-on-primary' : 'text-on-surface-variant'}`}
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    {ROLE_ICONS[role]}
-                  </span>
-                  <span className="font-label text-[13px] font-semibold flex-1">
-                    {ROLE_LABELS[role]}
-                  </span>
-                  {isActive && (
-                    <span className="material-symbols-outlined text-[16px] text-on-primary">
-                      check_circle
-                    </span>
-                  )}
-                </button>
-              )
-            })}
+             {user.roles.map((role) => {
+               const isActive = role === user.active_role
+               const canRemove = user.roles.length > 1
+               const isRemoving = removingRole === role
+               return (
+                 <div key={role} className="flex items-center gap-1.5 w-full">
+                   <button
+                     onClick={() => handleRoleSelect(role)}
+                     disabled={!!removingRole}
+                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all flex-1 ${
+                       isActive
+                         ? 'bg-primary text-on-primary shadow-sm'
+                         : 'bg-surface-container-high text-on-surface hover:bg-outline-variant/20'
+                     }`}
+                   >
+                     <span
+                       className={`material-symbols-outlined text-[18px] shrink-0 ${isActive ? 'text-on-primary' : 'text-on-surface-variant'}`}
+                       style={{ fontVariationSettings: "'FILL' 1" }}
+                     >
+                       {ROLE_ICONS[role]}
+                     </span>
+                     <span className="font-label text-[13px] font-semibold flex-1">
+                       {ROLE_LABELS[role]}
+                     </span>
+                     {isActive && (
+                       <span className="material-symbols-outlined text-[16px] text-on-primary">
+                         check_circle
+                       </span>
+                     )}
+                   </button>
+                   {canRemove && (
+                     <button
+                       onClick={() => handleRemoveRole(role)}
+                       disabled={!!removingRole}
+                       className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-high text-error hover:bg-error/10 transition-colors border border-outline-variant/10 disabled:opacity-50"
+                       title={`Eliminar perfil de ${ROLE_LABELS[role]}`}
+                     >
+                       <span className={`material-symbols-outlined text-[17px] ${isRemoving ? 'animate-spin' : ''}`}>
+                         {isRemoving ? 'sync' : 'delete'}
+                       </span>
+                     </button>
+                   )}
+                 </div>
+               )
+             })}
           </div>
 
           {/* Agregar nuevos roles */}

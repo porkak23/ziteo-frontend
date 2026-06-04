@@ -380,6 +380,10 @@ export type Database = {
           payment_rejection_reason: string | null
           expires_at: string | null
           estimated_delivery_at: string | null
+          delivery_method: 'pickup' | 'delivery' | null
+          delivery_address: string | null
+          delivery_lat: number | null
+          delivery_lng: number | null
         }
         Insert: {
           constructor_id: string
@@ -402,6 +406,10 @@ export type Database = {
           payment_rejection_reason?: string | null
           expires_at?: string | null
           estimated_delivery_at?: string | null
+          delivery_method?: 'pickup' | 'delivery' | null
+          delivery_address?: string | null
+          delivery_lat?: number | null
+          delivery_lng?: number | null
         }
         Update: {
           constructor_id?: string
@@ -424,6 +432,10 @@ export type Database = {
           payment_rejection_reason?: string | null
           expires_at?: string | null
           estimated_delivery_at?: string | null
+          delivery_method?: 'pickup' | 'delivery' | null
+          delivery_address?: string | null
+          delivery_lat?: number | null
+          delivery_lng?: number | null
         }
         Relationships: [
           {
@@ -1316,6 +1328,87 @@ export type Database = {
           },
         ]
       }
+      transport_requests: {
+        Row: {
+          id: string
+          requester_id: string
+          requester_role: string
+          cargo_type: 'light' | 'heavy'
+          pickup_address: string
+          dropoff_address: string
+          pickup_lat: number | null
+          pickup_lng: number | null
+          dropoff_lat: number | null
+          dropoff_lng: number | null
+          description: string | null
+          city: string | null
+          status: 'pending' | 'accepted' | 'in_transit' | 'completed' | 'cancelled'
+          driver_id: string | null
+          accepted_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          requester_id: string
+          requester_role: string
+          cargo_type: 'light' | 'heavy'
+          pickup_address: string
+          dropoff_address: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          description?: string | null
+          city?: string | null
+          status?: 'pending' | 'accepted' | 'in_transit' | 'completed' | 'cancelled'
+          driver_id?: string | null
+          accepted_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          requester_id?: string
+          requester_role?: string
+          cargo_type?: 'light' | 'heavy'
+          pickup_address?: string
+          dropoff_address?: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          description?: string | null
+          city?: string | null
+          status?: 'pending' | 'accepted' | 'in_transit' | 'completed' | 'cancelled'
+          driver_id?: string | null
+          accepted_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      driver_locations: {
+        Row: {
+          driver_id: string
+          lat: number
+          lng: number
+          heading: number | null
+          updated_at: string
+        }
+        Insert: {
+          driver_id: string
+          lat: number
+          lng: number
+          heading?: number | null
+          updated_at?: string
+        }
+        Update: {
+          driver_id?: string
+          lat?: number
+          lng?: number
+          heading?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deliveries: {
         Row: {
           id: string
@@ -1493,8 +1586,20 @@ export type Database = {
           p_provider_id: string
           p_total: number
           p_items: { product_id: string; quantity: number; price_unit: number }[]
+          p_delivery_method?: string
+          p_delivery_address?: string | null
+          p_delivery_lat?: number | null
+          p_delivery_lng?: number | null
         }
         Returns: string
+      }
+      upsert_driver_location: {
+        Args: {
+          p_lat: number
+          p_lng: number
+          p_heading?: number
+        }
+        Returns: undefined
       }
       accept_delivery: {
         Args: { p_delivery_id: string }

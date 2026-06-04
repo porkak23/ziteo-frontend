@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { Z } from '@/shared/design/tokens'
 import { ZIcon } from '@/shared/design/components/ZIcon'
 import { SummaryCard } from '@/shared/design/shell/SummaryCard'
 import { SectionTitle } from '@/shared/design/shell/SectionTitle'
 import { ActivityItem } from '@/shared/design/shell/ActivityItem'
 import { useAuthStore } from '@/features/auth/store/authStore'
+import GlobalSearchBar from '@/shared/components/GlobalSearchBar'
+import { AdBanner } from '@/shared/components/AdBanner'
 
 // ── Inline sub-icons ────────────────────────────────────────────────────────
 function IconStore({ color = Z.textMuted, size = 22 }: { color?: string; size?: number }) {
@@ -23,6 +26,16 @@ function IconTruck({ color = Z.textMuted, size = 22 }: { color?: string; size?: 
       <path d="M15 9h4l3 4v4h-7V9z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill="none" />
       <circle cx="6" cy="18.5" r="2" stroke={color} strokeWidth="1.8" fill="none" />
       <circle cx="19" cy="18.5" r="2" stroke={color} strokeWidth="1.8" fill="none" />
+    </svg>
+  )
+}
+
+function IconBox({ color = Z.textMuted, size = 22 }: { color?: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M21 8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16V8z" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M17 5v3.5l-5 2.88" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -74,6 +87,7 @@ export function ConstructorHomeTab({ onNavigate }: ConstructorHomeTabProps) {
   const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches'
   const firstName = user?.name ? user.name.split(' ')[0] : 'Constructor'
   const city = user?.city ?? 'Bolivia'
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
 
   return (
     <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -93,6 +107,7 @@ export function ConstructorHomeTab({ onNavigate }: ConstructorHomeTabProps) {
       {/* Search */}
       <button
         type="button"
+        onClick={() => setIsSearchOpen(true)}
         aria-label="Buscar materiales y trabajadores"
         style={{
           display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
@@ -161,6 +176,32 @@ export function ConstructorHomeTab({ onNavigate }: ConstructorHomeTabProps) {
           </svg>
         </button>
 
+        {/* Vender / Alquilar CTA */}
+        <button
+          onClick={() => onNavigate('vender')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px',
+            borderRadius: Z.r.lg, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
+            width: '100%', background: Z.surface, textAlign: 'left', outline: 'none',
+          }}
+        >
+          <div style={{
+            width: 40, height: 40, borderRadius: 12, background: Z.orangeLight,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <IconBox color={Z.orangeDark} size={22} />
+          </div>
+          <div>
+            <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>Vender / Alquilar</div>
+            <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: Z.textMuted, marginTop: 1 }}>
+              Publica herramientas o materiales sobrantes
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" style={{ marginLeft: 'auto' }}>
+            <path d="M9 18l6-6-6-6" stroke={Z.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </svg>
+        </button>
+
         {/* Two-button row */}
         <div style={{ display: 'flex', gap: 10 }}>
           <button
@@ -204,6 +245,8 @@ export function ConstructorHomeTab({ onNavigate }: ConstructorHomeTabProps) {
           </button>
         </div>
       </div>
+
+      <AdBanner variant="card" />
 
       {/* Resumen */}
       <div>
@@ -250,6 +293,8 @@ export function ConstructorHomeTab({ onNavigate }: ConstructorHomeTabProps) {
           />
         </div>
       </div>
+
+      {isSearchOpen && <GlobalSearchBar onClose={() => setIsSearchOpen(false)} />}
     </div>
   )
 }

@@ -45,16 +45,21 @@ export default function InstallSuggestion({ onContinue }: InstallSuggestionProps
     }
   }, [onContinue])
 
+  useEffect(() => {
+    if (deferredPrompt) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState((s) => (s === 'preparing' ? 'idle' : s))
+    }
+  }, [deferredPrompt])
+
   // On Android, if the event hasn't arrived yet, wait up to 3s before
   // marking the browser as unsupported. This avoids the user tapping
   // "Instalar" into a dead button on a slow race.
   useEffect(() => {
     if (ios || desktop) return
-    if (deferredPrompt) {
-      setState((s) => (s === 'preparing' ? 'idle' : s))
-      return
-    }
+    if (deferredPrompt) return
     if (state !== 'preparing') return
+
     const t = setTimeout(() => {
       if (!getDeferredInstallPrompt()) setState('unsupported')
     }, 3000)

@@ -3,6 +3,9 @@ import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 import { queryKeys } from '../../../shared/query/keys'
 
+export type LicitacionType = 'labor' | 'material' | 'equipment'
+export type LicitacionIntent = 'buy' | 'rent'
+
 export interface Licitacion {
   id: string
   constructor_id: string
@@ -14,6 +17,9 @@ export interface Licitacion {
   budget_max: number | null
   status: string
   created_at: string
+  type: LicitacionType
+  item_category: string | null
+  intent: LicitacionIntent | null
   constructor: { name: string; avatar_url: string | null } | null
   _postulaciones_count?: number
   _ya_postulado?: boolean
@@ -37,6 +43,9 @@ export interface CreateLicitacionPayload {
   city?: string
   budget_min?: number
   budget_max?: number
+  type?: LicitacionType
+  item_category?: string
+  intent?: LicitacionIntent
 }
 
 // Maestro: ver licitaciones abiertas
@@ -106,20 +115,70 @@ export function usePostulantesDeLicitacion(licitacionId: string) {
   })
 }
 
-// Constructor: crear licitación
+// Constructor: crear licitación. Para licitaciones de material/equipo se hace
+// broadcast a los proveedores relacionados (notificación in-app + web push).
 export function useCrearLicitacion() {
   const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   return useMutation({
     mutationFn: async (payload: CreateLicitacionPayload) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('licitaciones')
         .insert({ ...payload, constructor_id: user!.user_id, status: 'open' })
+        .select('id, title, city')
+        .single()
       if (error) throw error
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const typed = data as any
+      // Broadcast solo para solicitudes de material/equipo.
+      if (typed && (typed.type === 'material' || typed.type === 'equipment')) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: bErr } = await (supabase.rpc as any)('broadcast_licitacion', { p_licitacion_id: typed.id })
+        if (bErr) console.warn('[broadcast_licitacion] failed:', bErr.message)
+
+        // Best-effort: web push a los proveedores se entrega vía la notif in-app;
+        // el push masivo se delega al edge function si está configurado.
+        supabase.functions.invoke('notifications/broadcast-push', {
+          body: { licitacion_id: typed.id, title: typed.title, city: typed.city },
+        }).catch(() => { /* push opcional — requiere VAPID keys */ })
+      }
+      return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mis-licitaciones'] })
     },
+  })
+}
+
+// Proveedor: ver solicitudes abiertas de material / equipo (las que le llegan por broadcast).
+export function useLicitacionesProveedor(filters?: { city?: string; item_category?: string }) {
+  const user = useAuthStore((s) => s.user)
+  return useQuery<Licitacion[]>({
+    queryKey: ['licitaciones-proveedor', filters?.city ?? null, filters?.item_category ?? null],
+    enabled: !!user?.user_id,
+    queryFn: async () => {
+      let q = supabase
+        .from('licitaciones')
+        .select('*, constructor:profiles!licitaciones_constructor_id_fkey(name, avatar_url)')
+        .eq('status', 'open')
+        .in('type', ['material', 'equipment'])
+        .order('created_at', { ascending: false })
+      if (filters?.city) q = q.eq('city', filters.city)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (filters?.item_category) q = (q as any).eq('item_category', filters.item_category)
+      const { data, error } = await q.limit(50)
+      if (error) throw error
+      if (!data?.length) return []
+      // Marcar las que ya respondí (reutilizamos licitacion_postulaciones; maestro_id = responder).
+      const { data: mias } = await supabase
+        .from('licitacion_postulaciones')
+        .select('licitacion_id')
+        .eq('maestro_id', user!.user_id)
+      const yaRespondidas = new Set((mias ?? []).map((r: { licitacion_id: string }) => r.licitacion_id))
+      return (data as Licitacion[]).map(l => ({ ...l, _ya_postulado: yaRespondidas.has(l.id) }))
+    },
+    staleTime: 30_000,
   })
 }
 
@@ -157,8 +216,8 @@ export function usePostularse() {
       queryClient.invalidateQueries({ queryKey: queryKeys.licitacionesAbiertas() })
 
       if (res.licitacion?.constructor_id) {
-        const notifTitle = 'Nueva postulacion'
-        const notifBody  = `Un maestro ha postulado a tu licitacion "${res.licitacion.title}".`
+        const notifTitle = 'Nueva respuesta'
+        const notifBody  = `Alguien respondió a tu solicitud "${res.licitacion.title}".`
         await supabase.rpc('send_notification', {
           p_user_id: res.licitacion.constructor_id,
           p_type:    'contract',

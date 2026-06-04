@@ -19,6 +19,22 @@ export function useCategories() {
   })
 }
 
+export function useCategorias() {
+  return useQuery<Pick<Category, 'id' | 'name' | 'icon_name'>[]>({
+    queryKey: ['categorias'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, icon_name')
+        .eq('active', true)
+        .order('order_index')
+      if (error) throw error
+      return (data ?? []) as Pick<Category, 'id' | 'name' | 'icon_name'>[]
+    },
+    staleTime: 1000 * 60 * 60,
+  })
+}
+
 export function useProducts(filters: TiendaFilters, offset: number) {
   return useQuery<ProductCard[]>({
     queryKey: queryKeys.products(filters, offset),

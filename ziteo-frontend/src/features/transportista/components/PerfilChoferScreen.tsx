@@ -154,7 +154,7 @@ function Divider() {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function PerfilRepartidor() {
+export function PerfilChoferScreen() {
   const user = useAuthStore((s) => s.user)
   const { data: driverProfile, isLoading: loadingVehicle } = useDriverProfile()
   const { mutateAsync: saveVehicle } = useSaveVehicleType()

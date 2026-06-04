@@ -8,8 +8,11 @@ import {
   type LicitacionPostulacion,
 } from '../hooks/useLicitaciones'
 import { NuevaLicitacionForm } from './NuevaLicitacionForm'
+import { MaestroPublicProfile } from '../../maestro/components/MaestroPublicProfile'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
+import { AdBanner } from '../../../shared/components/AdBanner'
+import { Z } from '../../../shared/design/tokens'
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'open') {
@@ -29,9 +32,11 @@ function StatusBadge({ status }: { status: string }) {
 function PostulanteCard({
   postulacion,
   onShowToast,
+  onVerPerfil,
 }: {
   postulacion: LicitacionPostulacion
   onShowToast: (msg: string, type: 'success' | 'error') => void
+  onVerPerfil: (maestroId: string) => void
 }) {
   const { mutate: actualizar, isPending } = useActualizarPostulacion()
 
@@ -63,6 +68,13 @@ function PostulanteCard({
             </span>
           )}
         </div>
+        <button
+          onClick={() => onVerPerfil(postulacion.maestro_id)}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-surface border border-outline-variant text-on-surface-variant text-[11px] font-label font-semibold shrink-0 active:opacity-70 transition-opacity"
+        >
+          <span className="material-symbols-outlined text-[12px]">person</span>
+          Ver perfil
+        </button>
         {postulacion.status !== 'pending' && (
           <span className={`text-[11px] font-label font-semibold px-2 py-0.5 rounded-full ${
             postulacion.status === 'accepted'
@@ -101,9 +113,11 @@ function PostulanteCard({
 function LicitacionCard({
   licitacion,
   onShowToast,
+  onVerPerfil,
 }: {
   licitacion: Licitacion
   onShowToast: (msg: string, type: 'success' | 'error') => void
+  onVerPerfil: (maestroId: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const { data: postulantes = [], isLoading: isLoadingPostulantes } = usePostulantesDeLicitacion(
@@ -176,7 +190,7 @@ function LicitacionCard({
           ) : (
             <div className="flex flex-col gap-2">
               {postulantes.map((p) => (
-                <PostulanteCard key={p.id} postulacion={p} onShowToast={onShowToast} />
+                <PostulanteCard key={p.id} postulacion={p} onShowToast={onShowToast} onVerPerfil={onVerPerfil} />
               ))}
             </div>
           )}
@@ -199,6 +213,7 @@ function LicitacionCard({
 export function MisLicitacionesScreen() {
   const { data: licitaciones = [], isLoading } = useMisLicitaciones()
   const [showForm, setShowForm] = useState(false)
+  const [selectedMaestroId, setSelectedMaestroId] = useState<string | null>(null)
   const { toasts, showToast, removeToast } = useToast()
 
   return (
@@ -214,6 +229,10 @@ export function MisLicitacionesScreen() {
           <span className="material-symbols-outlined text-[18px]">add</span>
           Nueva
         </button>
+      </div>
+
+      <div className="px-4">
+        <AdBanner variant="banner" />
       </div>
 
       <div className="flex flex-col gap-3 px-4">
@@ -236,7 +255,7 @@ export function MisLicitacionesScreen() {
           </div>
         ) : (
           licitaciones.map((lic) => (
-            <LicitacionCard key={lic.id} licitacion={lic} onShowToast={showToast} />
+            <LicitacionCard key={lic.id} licitacion={lic} onShowToast={showToast} onVerPerfil={setSelectedMaestroId} />
           ))
         )}
       </div>
@@ -246,6 +265,16 @@ export function MisLicitacionesScreen() {
           onClose={() => setShowForm(false)}
           onSuccess={() => setShowForm(false)}
         />
+      )}
+
+      {selectedMaestroId && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: Z.bg }}>
+          <MaestroPublicProfile
+            maestroId={selectedMaestroId}
+            isOwn={false}
+            onBack={() => setSelectedMaestroId(null)}
+          />
+        </div>
       )}
     </div>
   )

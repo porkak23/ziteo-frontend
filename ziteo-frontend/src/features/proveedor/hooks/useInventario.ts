@@ -34,7 +34,7 @@ export interface ProductoInventario {
 }
 
 // Validation helpers shared between the form and the hook
-export function validateProductoForm(price: string, stock: string): string | null {
+export function validateProductoForm(price: string, stock: string, listing_type?: string, rental_daily_rate?: string): string | null {
   const priceNum = parseFloat(price)
   const stockNum = parseInt(stock, 10)
 
@@ -43,6 +43,12 @@ export function validateProductoForm(price: string, stock: string): string | nul
   }
   if (isNaN(stockNum) || stockNum < 0) {
     return 'El stock no puede ser negativo'
+  }
+  if (listing_type === 'rent') {
+    const dailyRateNum = parseFloat(rental_daily_rate || '0')
+    if (isNaN(dailyRateNum) || dailyRateNum <= 0) {
+      return 'La tarifa diaria es obligatoria y debe ser mayor a cero'
+    }
   }
   return null
 }

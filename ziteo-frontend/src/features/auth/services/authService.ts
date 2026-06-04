@@ -124,7 +124,7 @@ export async function registerAnonymous(input: AnonymousRegisterInput): Promise<
     try {
       // Intentamos iniciar sesión con la contraseña determinista
       return await loginBeta(input.phone)
-    } catch (loginErr) {
+    } catch {
       // Si falla, significa que el usuario es un usuario anónimo antiguo sin credencial de contraseña
       // Procedemos a crear su cuenta de Auth determinista y migrar su perfil antiguo
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -139,7 +139,8 @@ export async function registerAnonymous(input: AnonymousRegisterInput): Promise<
       const newUserId = signUpData.user.id
 
       // Llamamos a la función RPC de la base de datos para actualizar todas las referencias relacionales
-      const { error: rpcError } = await (supabase as any).rpc('migrate_anonymous_profile', {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: rpcError } = await (supabase.rpc as any)('migrate_anonymous_profile', {
         p_old_uid: existingProfile.user_id,
         p_new_uid: newUserId,
         p_phone: input.phone,
@@ -248,6 +249,78 @@ export async function addRole(_accessToken: string, role: UserRole): Promise<voi
   })
   if (error && !/duplicate|unique/i.test(error.message)) {
     throw new AuthServiceError('ROLE_ADD_FAILED', error.message)
+  }
+}
+
+export async function removeRole(role: UserRole): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getUser()
+  const userId = sessionData.user?.id
+  if (!userId) throw new AuthServiceError('NOT_AUTHENTICATED')
+  
+  // 1. Delete from user_roles
+  const { error } = await supabase
+    .from('user_roles')
+    .delete()
+    .eq('user_id', userId)
+    .eq('role', role)
+    
+  if (error) {
+    throw new AuthServiceError('ROLE_REMOVE_FAILED', error.message)
+  }
+
+  // 2. Clean up specific tables and files depending on the role
+  if (role === 'maestro') {
+    // Delete from maestro_profiles
+    const { error: profileError } = await supabase
+      .from('maestro_profiles')
+      .delete()
+      .eq('user_id', userId)
+    if (profileError) {
+      console.error('Error deleting maestro profile:', profileError.message)
+    }
+
+    // Delete from maestro_habilidades
+    const { error: habError } = await supabase
+      .from('maestro_habilidades')
+      .delete()
+      .eq('maestro_id', userId)
+    if (habError) {
+      console.error('Error deleting maestro habilidades:', habError.message)
+    }
+
+    // Reset bio in profiles (shared table)
+    const { error: bioError } = await supabase
+      .from('profiles')
+      .update({ bio: null })
+      .eq('user_id', userId)
+    if (bioError) {
+      console.error('Error resetting bio in profiles:', bioError.message)
+    }
+
+    // Delete QR code file from storage
+    try {
+      const filePath = `${userId}/qr.png`
+      await supabase.storage.from('payment-qrs').remove([filePath])
+    } catch (storageErr) {
+      console.error('Error deleting payment QR from storage:', storageErr)
+    }
+  } else if (role === 'proveedor') {
+    // Delete all products for the provider
+    const { error: productsError } = await supabase
+      .from('products')
+      .delete()
+      .eq('provider_id', userId)
+    if (productsError) {
+      console.error('Error deleting provider products:', productsError.message)
+    }
+
+    // Delete QR code file from storage
+    try {
+      const filePath = `${userId}/qr.png`
+      await supabase.storage.from('payment-qrs').remove([filePath])
+    } catch (storageErr) {
+      console.error('Error deleting provider QR from storage:', storageErr)
+    }
   }
 }
 

@@ -10,3 +10,6 @@ export { ZPinInput } from './ZPinInput';
 export { ZOTPInput } from './ZOTPInput';
 export { ZRoleCard } from './ZRoleCard';
 export { ZStepBar } from './ZStepBar';
+export { SaveCancelRow } from './SaveCancelRow';
+export { SectionCard } from './SectionCard';
+export { SectionLabel } from './SectionLabel';

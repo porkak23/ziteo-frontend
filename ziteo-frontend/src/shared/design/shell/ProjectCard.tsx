@@ -11,10 +11,8 @@ interface ProjectCardProps {
   onTap?: () => void;
 }
 
-// Z.success (#16A34A) is in tokens; success badge bg (#DCFCE7) is a semantic tint derived from it,
-// not a brand hex — acceptable as a one-off literal here.
 const STATUS_STYLES: Record<ProjectStatus, { bg: string; text: string }> = {
-  Activo:       { bg: '#DCFCE7', text: Z.success },
+  Activo:       { bg: Z.successBg, text: Z.success },
   Planificación: { bg: Z.blueLight, text: Z.blueDark },
   Completo:     { bg: Z.divider, text: Z.textMuted },
 };

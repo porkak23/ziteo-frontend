@@ -54,6 +54,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             onClick={() => onTabChange(tab.id)}
             className="flex flex-col items-center justify-center flex-1 gap-0.5 cursor-pointer transition-[color,opacity] duration-200 relative"
             aria-label={tab.label}
+            aria-current={isActive ? 'page' : undefined}
           >
             {isActive && (
               <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] bg-primary rounded-b-full" />

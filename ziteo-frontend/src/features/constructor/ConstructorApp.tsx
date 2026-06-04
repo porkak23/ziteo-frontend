@@ -1,5 +1,4 @@
 import React, { lazy, Suspense, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { Z } from '../../shared/design/tokens'
 import {
   NavIconHome,
@@ -10,12 +9,9 @@ import {
 import { DashHeader } from '../../shared/design/shell'
 import { RoleDashNav } from '../../shared/design/shell/RoleDashNav'
 import { useNavStore } from '../../shared/store/navStore'
-import { useAuthStore } from '../auth/store/authStore'
-import { supabase } from '../../lib/supabaseClient'
 import AvatarMenu from '../../shared/components/AvatarMenu'
 import { TransporteSubScreen } from './sub/TransporteSubScreen'
 import { WorkerSearchSubScreen } from './sub/WorkerSearchSubScreen'
-import { NotificationsScreen } from '../notifications/components/NotificationsScreen'
 
 const ConstructorHomeTab = lazy(() =>
   import('./ConstructorHomeTab').then((m) => ({ default: m.ConstructorHomeTab }))
@@ -58,24 +54,8 @@ export function ConstructorApp() {
   const globalTab = useNavStore((s) => s.activeTab)
   const setGlobalTab = useNavStore((s) => s.setTab)
   const [showAccount, setShowAccount] = useState(false)
-  const [showNotifs, setShowNotifs] = useState(false)
   const [subScreen, setSubScreen] = useState<SubScreen>(null)
   const [proyectosOpenForm, setProyectosOpenForm] = useState(false)
-  const userId = useAuthStore((s) => s.user?.user_id) ?? ''
-
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ['notif-unread', userId],
-    enabled: !!userId,
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('is_read', false)
-      return count ?? 0
-    },
-    staleTime: 30_000,
-  })
 
   const resolveTab = (): ConstructorTab => {
     if (globalTab === 'tienda' || globalTab === 'proyectos' || globalTab === 'licitaciones') {
@@ -128,19 +108,8 @@ export function ConstructorApp() {
       position: 'fixed', inset: 0, background: Z.bg,
       display: 'flex', flexDirection: 'column',
     }}>
-      <DashHeader
-        onProfile={() => setShowAccount(true)}
-        onTrack={() => {/* seguimiento: próximamente */}}
-        onBell={() => setShowNotifs(true)}
-        unreadCount={unreadCount}
-      />
+      <DashHeader onProfile={() => setShowAccount(true)} onChat={() => setGlobalTab('chat')} />
       <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
-
-      {showNotifs && (
-        <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 40, overflowY: 'auto' }}>
-          <NotificationsScreen onClose={() => setShowNotifs(false)} />
-        </div>
-      )}
 
       <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 96 }}>
         <Suspense fallback={<TabSkeleton />}>

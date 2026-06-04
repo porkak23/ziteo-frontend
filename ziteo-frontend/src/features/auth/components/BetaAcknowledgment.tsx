@@ -86,8 +86,8 @@ export function BetaAcknowledgment() {
             onClick={() => setChecked((v) => !v)}
             className="mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
             style={{
-              borderColor: checked ? 'var(--color-primary, #D94F00)' : 'var(--color-outline, #94A3B8)',
-              background: checked ? 'var(--color-primary, #D94F00)' : 'transparent',
+              borderColor: checked ? 'var(--color-primary, #A43700)' : 'var(--color-outline, #94A3B8)',
+              background: checked ? 'var(--color-primary, #A43700)' : 'transparent',
             }}
           >
             {checked && (
@@ -106,7 +106,7 @@ export function BetaAcknowledgment() {
           onClick={handleContinue}
           disabled={!checked || saving}
           className="w-full py-3.5 rounded-xl text-sm font-bold text-on-primary transition-opacity disabled:opacity-40"
-          style={{ background: 'var(--color-primary, #D94F00)' }}
+          style={{ background: 'var(--color-primary, #A43700)' }}
         >
           {saving ? 'Guardando...' : 'Continuar'}
         </button>

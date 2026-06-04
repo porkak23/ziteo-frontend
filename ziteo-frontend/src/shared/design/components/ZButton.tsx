@@ -20,7 +20,7 @@ const variantStyles: Record<ButtonVariant, React.CSSProperties> = {
   blue:      { background: Z.blueDark, color: '#FFFFFF', border: 'none' },
   ghost:     { background: 'transparent', color: Z.textSec, border: 'none' },
   social:    { background: Z.surface, color: Z.text, border: `1.5px solid ${Z.border}` },
-  danger:    { background: '#FFF1F1', color: Z.error, border: '1.5px solid #FECACA' },
+  danger:    { background: Z.errorBg, color: Z.error, border: `1.5px solid var(--color-error-container)` },
 };
 
 export function ZButton({

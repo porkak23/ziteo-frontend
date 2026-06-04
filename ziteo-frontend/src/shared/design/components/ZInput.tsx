@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { Z } from '../tokens';
 
 interface ZInputProps {
@@ -11,6 +11,7 @@ interface ZInputProps {
   error?: string;
   suffix?: React.ReactNode;
   style?: React.CSSProperties;
+  id?: string;
 }
 
 export function ZInput({
@@ -23,13 +24,18 @@ export function ZInput({
   error,
   suffix,
   style = {},
+  id: idProp,
 }: ZInputProps) {
   const [focused, setFocused] = useState(false);
+  const autoId = useId();
+  const inputId = idProp ?? `zinput-${autoId.replace(/:/g, '')}`;
+  const errorId = error ? `${inputId}-error` : undefined;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, ...style }}>
       {label && (
         <label
+          htmlFor={inputId}
           style={{
             fontFamily: Z.font,
             fontSize: 13,
@@ -67,12 +73,15 @@ export function ZInput({
           </span>
         )}
         <input
+          id={inputId}
           type={type}
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
           className="z-input-inner"
           style={{
             flex: 1,
@@ -92,6 +101,8 @@ export function ZInput({
       </div>
       {error && (
         <span
+          id={errorId}
+          role="alert"
           style={{
             fontFamily: Z.font,
             fontSize: 12,

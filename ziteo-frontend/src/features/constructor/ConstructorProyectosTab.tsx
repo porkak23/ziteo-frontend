@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { useAuthStore } from '../auth/store/authStore'
 import { useProyectos, useCreateProyecto } from '../proyectos/hooks/useProyectos'
 import type { ProjectCard as ProjectRow, ProjectStatus } from '../proyectos/types/proyectosTypes'
+import { AdBanner } from '@/shared/components/AdBanner'
 
 // ── Status label helpers ──────────────────────────────────────────────────────
 const STATUS_LABEL: Record<ProjectStatus, string> = {
@@ -634,6 +635,8 @@ export function ConstructorProyectosTab({ openForm = false, onFormOpened, onNavi
         })}
       </div>
 
+      <AdBanner variant="banner" />
+
       {/* List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {isLoading ? (
@@ -648,7 +651,7 @@ export function ConstructorProyectosTab({ openForm = false, onFormOpened, onNavi
               {filter === 'Todos' && !cityFilter ? 'Aún no tienes proyectos' : 'No hay proyectos en esta categoría'}
             </p>
             {filter === 'Todos' && !cityFilter && (
-              <div style={{ marginTop: 12 }}>
+              <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
                 <ZButton fullWidth={false} onClick={() => setScreen('form')}>Crear primer proyecto</ZButton>
               </div>
             )}

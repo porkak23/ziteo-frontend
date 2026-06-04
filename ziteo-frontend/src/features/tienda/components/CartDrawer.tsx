@@ -58,7 +58,7 @@ function OrderProgressBar({ sellerItems }: OrderProgressBarProps) {
 
   if (hasMin && !reachedMin) {
     progressValue = minOrder > 0 ? Math.min(subtotal / minOrder, 1) : 0
-    barColor = 'bg-[#D94F00]'
+    barColor = 'bg-[#A43700]'
     const remaining = (minOrder - subtotal).toFixed(2)
     message = `Te faltan Bs. ${remaining} para el pedido mínimo (Bs. ${minOrder.toLocaleString('es-BO')})`
   } else if (freeShipping != null && !reachedFree) {

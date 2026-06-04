@@ -29,21 +29,23 @@ export function WorkerCard({ name, specialty, experience, rating, verified, onTa
       }}
     >
       <div
+        aria-hidden="true"
         style={{
           width: 50,
           height: 50,
           borderRadius: 14,
           flexShrink: 0,
-          background: `linear-gradient(135deg, ${Z.divider}, ${Z.orangeLight})`,
+          background: Z.orangeLight,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontFamily: 'monospace',
-          fontSize: 9,
-          color: Z.textMuted,
+          fontFamily: Z.font,
+          fontSize: 16,
+          fontWeight: 700,
+          color: Z.orangeDark,
         }}
       >
-        foto
+        {name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { NotificationsScreen } from '@/features/notifications/components/NotificationsScreen'
 import { Z } from '@/shared/design/tokens'
 import { DashHeader } from '@/shared/design/shell/DashHeader'
 import AvatarMenu from '@/shared/components/AvatarMenu'
@@ -26,11 +25,8 @@ import { Toast } from '@/shared/components/Toast'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabaseClient'
 import { ProveedorOnboardingWizard } from '@/features/proveedor/components/ProveedorOnboardingWizard'
-import { OfertasEspecialesScreen } from '@/features/proveedor/components/OfertasEspecialesScreen'
-import { useLicitacionesProveedor } from '@/features/licitaciones/hooks/useLicitaciones'
-import { SolicitudesProveedorFeed } from '@/features/licitaciones/components/SolicitudesProveedorFeed'
 
-type VendedorTab = 'home' | 'inventario' | 'pedidos' | 'cotizaciones' | 'solicitudes' | 'ofertas'
+type VendedorTab = 'home' | 'inventario' | 'pedidos' | 'cotizaciones'
 
 // ─── Nav Icons ───────────────────────────────────────────────────────────────
 
@@ -75,29 +71,11 @@ function VNavIconQuotes({ color = Z.textMuted, size = 22 }: { color?: string; si
   )
 }
 
-function VNavIconSolicitudes({ color = Z.textMuted, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M3 11l18-5v12L3 14v-3z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill="none" />
-      <path d="M11.6 16.8L11 21l-4-1 .6-4.2" stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill="none" />
-    </svg>
-  )
-}
-
-function VNavIconOfertas({ color = Z.textMuted, size = 22 }: { color?: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
-        stroke={color} strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 const VENDEDOR_TABS: Tab[] = [
-  { key: 'home',        label: 'Inicio',     Icon: VNavIconHome },
-  { key: 'inventario',  label: 'Inventario', Icon: VNavIconInventory },
-  { key: 'pedidos',     label: 'Pedidos',    Icon: VNavIconOrders },
-  { key: 'ofertas',     label: 'Ofertas',    Icon: VNavIconOfertas },
+  { key: 'home',         label: 'Inicio',      Icon: VNavIconHome },
+  { key: 'inventario',   label: 'Inventario',  Icon: VNavIconInventory },
+  { key: 'pedidos',      label: 'Pedidos',     Icon: VNavIconOrders },
+  { key: 'cotizaciones', label: 'Cotizaciones', Icon: VNavIconQuotes },
 ]
 
 
@@ -192,28 +170,6 @@ function HomeTab({
   const pendingCount = orders.filter((o) => o.status === 'pending').length
   const { data: products = [] } = useInventario(0)
 
-  const { data: homeQuotations = [] } = useQuery<{ status: string }[]>({
-    queryKey: ['proveedor-quotations', providerId],
-    enabled: !!providerId,
-    staleTime: 30_000,
-    queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
-        .from('quotations')
-        .select('status')
-        .eq('provider_id', providerId)
-        .order('created_at', { ascending: false })
-      if (error) {
-        if (error.code === '42P01') return []
-        throw error
-      }
-      return (data ?? []) as { status: string }[]
-    },
-  })
-  const pendingCotizacionesCount = homeQuotations.filter((q) => q.status === 'pending').length
-  const { data: licitaciones = [] } = useLicitacionesProveedor()
-  const openLicitacionesCount: number = licitaciones.filter((l) => !l._ya_postulado).length
-
   const recentOrders = orders.slice(0, 3)
 
   return (
@@ -292,79 +248,47 @@ function HomeTab({
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button
+            onClick={() => onNavigate('inventario')}
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '16px',
+              borderRadius: Z.r.md, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
+              background: Z.surface, textAlign: 'left', outline: 'none',
+            }}
+          >
+            <div style={{
+              width: 38, height: 38, borderRadius: 11, background: Z.blueLight,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <VNavIconInventory color={Z.blueDark} size={20} />
+            </div>
+            <div>
+              <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>Inventario</div>
+              <div style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted }}>
+                {products.length} productos
+              </div>
+            </div>
+          </button>
+
+          <button
             onClick={() => onNavigate('cotizaciones')}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '16px',
               borderRadius: Z.r.md, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
-              background: Z.surface, textAlign: 'left', outline: 'none', position: 'relative',
+              background: Z.surface, textAlign: 'left', outline: 'none',
             }}
           >
-            <div style={{ width: 38, height: 38, borderRadius: 11, background: Z.orangeLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: 11, background: Z.orangeLight,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
               <VNavIconQuotes color={Z.orangeDark} size={20} />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div>
               <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>Cotizaciones</div>
-              <div style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted }}>
-                {pendingCotizacionesCount > 0 ? `${pendingCotizacionesCount} pendiente${pendingCotizacionesCount !== 1 ? 's' : ''}` : 'Ver cotizaciones'}
-              </div>
+              <div style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted }}>Ver solicitudes</div>
             </div>
-            {pendingCotizacionesCount > 0 && (
-              <span style={{ position: 'absolute', top: -5, right: -5, background: Z.orange, color: '#fff', fontFamily: Z.font, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
-                {pendingCotizacionesCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => onNavigate('solicitudes')}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '16px',
-              borderRadius: Z.r.md, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
-              background: Z.surface, textAlign: 'left', outline: 'none', position: 'relative',
-            }}
-          >
-            <div style={{ width: 38, height: 38, borderRadius: 11, background: Z.blueLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <VNavIconSolicitudes color={Z.blueDark} size={20} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>Solicitudes</div>
-              <div style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted }}>
-                {openLicitacionesCount > 0 ? `${openLicitacionesCount} nueva${openLicitacionesCount !== 1 ? 's' : ''}` : 'Ver solicitudes'}
-              </div>
-            </div>
-            {openLicitacionesCount > 0 && (
-              <span style={{ position: 'absolute', top: -5, right: -5, background: Z.blue, color: '#fff', fontFamily: Z.font, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
-                {openLicitacionesCount}
-              </span>
-            )}
           </button>
         </div>
-
-        {/* Ofertas Especiales — botón independiente */}
-        <button
-          onClick={() => onNavigate('ofertas')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px',
-            borderRadius: Z.r.lg, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
-            width: '100%', background: Z.surface, textAlign: 'left', outline: 'none',
-          }}
-        >
-          <div style={{
-            width: 40, height: 40, borderRadius: 12, background: Z.orangeLight,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <VNavIconOfertas color={Z.orangeDark} size={22} />
-          </div>
-          <div>
-            <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>Ofertas Especiales</div>
-            <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: Z.textMuted, marginTop: 1 }}>
-              Aplica descuentos a tu inventario
-            </div>
-          </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" style={{ marginLeft: 'auto' }}>
-            <path d="M9 18l6-6-6-6" stroke={Z.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          </svg>
-        </button>
       </div>
 
       <div>
@@ -1438,7 +1362,7 @@ function EnviosScreen({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <ZScreen bg={Z.bg} style={{ position: 'fixed', zIndex: 30 }}>
+    <ZScreen bg={Z.bg} style={{ position: 'fixed' }}>
       <Toast toasts={toasts} onRemove={removeToast} />
       <ZHeader title="Gestión de Envíos" onBack={onClose} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1791,7 +1715,7 @@ function GestionEnvioScreen({
 
 // ─── COTIZACIONES TAB ─────────────────────────────────────────────────────────
 
-type CotizacionesSubTab = 'Pendientes' | 'Enviadas' | 'Historial'
+type CotizacionesSubTab = 'Solicitudes' | 'Enviadas' | 'Historial'
 
 interface QuotationItem {
   product_id: string
@@ -1842,10 +1766,11 @@ function CotizacionesTab() {
   const providerId = user?.user_id ?? ''
   const { toasts, showToast, removeToast } = useToast()
   const queryClient = useQueryClient()
-  const [tab, setTab] = useState<CotizacionesSubTab>('Pendientes')
+  const [tab, setTab] = useState<CotizacionesSubTab>('Solicitudes')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [offerModal, setOfferModal] = useState<{ id: string; buyerName: string } | null>(null)
   const [offerPrice, setOfferPrice] = useState('')
+
   const { data: quotations = [], isLoading } = useProveedorQuotations(providerId)
 
   const { mutate: acceptQuotation, isPending: accepting } = useMutation({
@@ -2048,7 +1973,7 @@ function CotizacionesTab() {
           Cotizaciones
         </h2>
         <FilterBar
-          options={['Pendientes', 'Enviadas', 'Historial']}
+          options={['Solicitudes', 'Enviadas', 'Historial']}
           active={tab}
           onChange={(v) => setTab(v as CotizacionesSubTab)}
         />
@@ -2059,12 +1984,12 @@ function CotizacionesTab() {
               <div key={i} style={{ height: 120, borderRadius: Z.r.md, background: Z.divider }} />
             ))}
           </div>
-        ) : tab === 'Pendientes' ? (
+        ) : tab === 'Solicitudes' ? (
           pending.length === 0 ? (
             <div style={{ padding: '48px 0', textAlign: 'center' }}>
               <VNavIconQuotes color={Z.textMuted} size={40} />
               <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textMuted, marginTop: 12 }}>
-                No hay cotizaciones pendientes
+                No hay solicitudes pendientes
               </p>
             </div>
           ) : (
@@ -2273,27 +2198,11 @@ export function VendedorApp() {
   const [activeTab, setActiveTab] = useState<VendedorTab>('home')
   const [showAccount, setShowAccount] = useState(false)
   const [showEnvios, setShowEnvios] = useState(false)
-  const [showNotifs, setShowNotifs] = useState(false)
   const settingsTab = useNavStore((s) => s.activeTab)
   const setNavTab = useNavStore((s) => s.setTab)
   const showSettings = settingsTab === 'settings' || settingsTab === 'perfil'
   const needsOnboarding = useProveedorOnboardingCheck()
   const [onboardingDone, setOnboardingDone] = useState(false)
-  const userId = useAuthStore((s) => s.user?.user_id) ?? ''
-
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ['notif-unread', userId],
-    enabled: !!userId,
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('is_read', false)
-      return count ?? 0
-    },
-    staleTime: 30_000,
-  })
 
   // While we check onboarding status, render nothing to avoid flash
   if (needsOnboarding === null) return null
@@ -2312,20 +2221,9 @@ export function VendedorApp() {
         flexDirection: 'column',
       }}
     >
-      <DashHeader
-        onProfile={() => setShowAccount(true)}
-        onTrack={() => {/* seguimiento: próximamente */}}
-        onBell={() => setShowNotifs(true)}
-        unreadCount={unreadCount}
-      />
+      <DashHeader onProfile={() => setShowAccount(true)} />
       <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
       {showSettings && <VendedorCuentaScreen onClose={() => setNavTab('home')} />}
-
-      {showNotifs && (
-        <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 40, overflowY: 'auto' }}>
-          <NotificationsScreen onClose={() => setShowNotifs(false)} />
-        </div>
-      )}
 
       {showEnvios && <EnviosScreen onClose={() => setShowEnvios(false)} />}
 
@@ -2336,19 +2234,10 @@ export function VendedorApp() {
           paddingBottom: 96,
         }}
       >
-        {activeTab === 'home'          && <HomeTab onNavigate={setActiveTab} onShowEnvios={() => setShowEnvios(true)} />}
-        {activeTab === 'inventario'    && <InventarioTab />}
-        {activeTab === 'pedidos'       && <PedidosTab />}
-        {activeTab === 'cotizaciones'  && <CotizacionesTab />}
-        {activeTab === 'solicitudes'   && (
-          <div style={{ padding: '16px 20px 20px' }}>
-            <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: '0 0 16px' }}>
-              Solicitudes
-            </h2>
-            <SolicitudesProveedorFeed />
-          </div>
-        )}
-        {activeTab === 'ofertas'       && <OfertasEspecialesScreen onBack={() => setActiveTab('home')} />}
+        {activeTab === 'home'         && <HomeTab onNavigate={setActiveTab} onShowEnvios={() => setShowEnvios(true)} />}
+        {activeTab === 'inventario'   && <InventarioTab />}
+        {activeTab === 'pedidos'      && <PedidosTab />}
+        {activeTab === 'cotizaciones' && <CotizacionesTab />}
       </main>
 
       <RoleDashNav

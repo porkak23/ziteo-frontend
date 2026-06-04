@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMaestroProfile, useUpdateMaestroProfile, useBootstrapMaestroRole } from '../hooks/useMaestroProfile'
 import { supabase } from '../../../lib/supabaseClient'
-import { useHabilidades } from '../hooks/useHabilidades'
+import { useHabilidades, useUpsertHabilidad, useDeleteHabilidad, SKILLS_DISPONIBLES } from '../hooks/useHabilidades'
+import { usePaymentQr } from '../../proveedor/hooks/usePaymentQr'
 import { useProfileReviews } from '../../../shared/hooks/useReviews'
 import { useUploadPhoto } from '../../../shared/hooks/useUploadPhoto'
 import { useAuthStore } from '../../auth/store/authStore'
@@ -10,6 +11,8 @@ import { Toast } from '../../../shared/components/Toast'
 import { StarRating } from '../../../shared/components/StarRating'
 import { ReviewCard } from '../../../shared/components/ReviewCard'
 import { ReviewForm } from '../../../shared/components/ReviewForm'
+import { SaveCancelRow } from '../../../shared/design/components/SaveCancelRow'
+import { SectionLabel } from '../../../shared/design/components/SectionLabel'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -33,42 +36,6 @@ export interface MaestroPublicProfileProps {
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="font-label text-[11px] uppercase tracking-[0.14em] font-semibold text-on-surface-variant/50">
-      {children}
-    </span>
-  )
-}
-
-function SaveCancelRow({
-  onSave,
-  onCancel,
-  saving,
-}: {
-  onSave: () => void
-  onCancel: () => void
-  saving: boolean
-}) {
-  return (
-    <div className="flex gap-2 mt-1">
-      <button
-        onClick={onCancel}
-        className="flex-1 rounded-xl py-2.5 text-sm font-label border border-outline-variant text-on-surface-variant active:opacity-70"
-      >
-        Cancelar
-      </button>
-      <button
-        onClick={onSave}
-        disabled={saving}
-        className="flex-1 bg-primary text-on-primary rounded-xl py-2.5 text-sm font-label font-semibold disabled:opacity-50 active:opacity-80"
-      >
-        {saving ? 'Guardando...' : 'Guardar'}
-      </button>
-    </div>
-  )
-}
 
 // Card gradient backgrounds used as photo placeholders until Phase B
 const CARD_GRADIENTS = [
@@ -110,6 +77,10 @@ export function MaestroPublicProfile({
   const { toasts, showToast, removeToast } = useToast()
   const photoInputRef = useRef<HTMLInputElement>(null)
   const currentUser = useAuthStore((s) => s.user)
+  const qrInputRef = useRef<HTMLInputElement>(null)
+  const { uploadQr, getSignedQrUrl, uploading: qrUploading } = usePaymentQr()
+  const [qrUrl, setQrUrl] = useState<string | null>(null)
+  const [editBank, setEditBank] = useState<string | null>(null)
 
   // Auto-create user_roles row on first open if missing (isOwn only)
   useEffect(() => {
@@ -120,12 +91,26 @@ export function MaestroPublicProfile({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwn, !!profile])
 
+  useEffect(() => {
+    if (profile?.payment_qr_url) {
+      getSignedQrUrl(maestroId, 'maestro').then((url) => setQrUrl(url))
+    } else {
+      setQrUrl(null)
+    }
+  }, [profile?.payment_qr_url, maestroId, getSignedQrUrl])
+
   // Inline edit state
   const [editBio, setEditBio] = useState<string | null>(null)
   const [editSpecialty, setEditSpecialty] = useState<string | null>(null)
   const [editYears, setEditYears] = useState<number | null | undefined>(undefined)
   const [editRate, setEditRate] = useState<number | null | undefined>(undefined)
   const [savingField, setSavingField] = useState<string | null>(null)
+
+  // Habilidades edit states
+  const [editingHabilidades, setEditingHabilidades] = useState(false)
+  const { mutateAsync: upsertHabilidad } = useUpsertHabilidad()
+  const { mutateAsync: deleteHabilidad } = useDeleteHabilidad()
+  const [savingHabilidad, setSavingHabilidad] = useState<string | null>(null)
 
   // Reviews
   const [showReviewForm, setShowReviewForm] = useState(false)
@@ -157,6 +142,9 @@ export function MaestroPublicProfile({
         hourly_rate: null,
         is_available: false,
         is_verified: false,
+        payment_qr_url: null,
+        payment_cash: false,
+        payment_bank_transfer: null,
       }
     : null
 
@@ -208,6 +196,21 @@ export function MaestroPublicProfile({
     }
   }
 
+  async function handleQrChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const filePath = await uploadQr(file)
+      showToast('QR de cobro cargado con éxito', 'success')
+      await handleSave('payment_qr_url', filePath)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No se pudo subir el QR'
+      showToast(msg, 'error')
+    } finally {
+      if (qrInputRef.current) qrInputRef.current.value = ''
+    }
+  }
+
   async function handleSave(field: string, value: unknown) {
     setSavingField(field)
     try {
@@ -217,16 +220,39 @@ export function MaestroPublicProfile({
       if (field === 'years_experience') vars.years_experience = value as number | null
       if (field === 'hourly_rate') vars.hourly_rate = value as number | null
       if (field === 'is_available') vars.is_available = value as boolean
+      if (field === 'payment_qr_url') vars.payment_qr_url = value as string | null
+      if (field === 'payment_cash') vars.payment_cash = value as boolean
+      if (field === 'payment_bank_transfer') vars.payment_bank_transfer = value as string | null
       await updateProfile(vars)
       showToast('Guardado', 'success')
       if (field === 'bio') setEditBio(null)
       if (field === 'specialty') setEditSpecialty(null)
       if (field === 'years_experience') setEditYears(undefined)
       if (field === 'hourly_rate') setEditRate(undefined)
+      if (field === 'payment_bank_transfer') setEditBank(null)
     } catch {
       showToast('Error al guardar', 'error')
     } finally {
       setSavingField(null)
+    }
+  }
+
+  async function handleToggleSkill(skillName: string) {
+    if (savingHabilidad) return
+    setSavingHabilidad(skillName)
+    try {
+      const existing = habilidades.find((h) => h.skill === skillName)
+      if (existing) {
+        await deleteHabilidad({ id: existing.id, maestro_id: maestroId })
+        showToast('Especialidad eliminada', 'success')
+      } else {
+        await upsertHabilidad({ maestro_id: maestroId, skill: skillName, porcentaje: 100 })
+        showToast('Especialidad agregada', 'success')
+      }
+    } catch {
+      showToast('Error al actualizar especialidad', 'error')
+    } finally {
+      setSavingHabilidad(null)
     }
   }
 
@@ -525,8 +551,47 @@ export function MaestroPublicProfile({
         {/* ── ESPECIALIDADES (habilidades como chips) ─────────────────────── */}
         {(habilidades.length > 0 || isOwn) && (
           <div className="bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
-            <SectionLabel>Especialidades</SectionLabel>
-            {habilidades.length > 0 ? (
+            <div className="flex items-center justify-between">
+              <SectionLabel>Especialidades</SectionLabel>
+              {isOwn && (
+                <button
+                  onClick={() => setEditingHabilidades(!editingHabilidades)}
+                  className="font-label text-xs text-primary font-semibold active:opacity-70"
+                >
+                  {editingHabilidades ? 'Cerrar' : '+ Editar'}
+                </button>
+              )}
+            </div>
+
+            {editingHabilidades && isOwn ? (
+              <div className="flex flex-col gap-3 bg-surface-container rounded-2xl p-3">
+                <span className="font-label text-[10px] text-on-surface-variant/70 uppercase tracking-wider font-semibold">
+                  Selecciona tus especialidades:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {SKILLS_DISPONIBLES.map((skillName) => {
+                    const existing = habilidades.find((h) => h.skill === skillName)
+                    const isSaving = savingHabilidad === skillName
+                    return (
+                      <button
+                        key={skillName}
+                        disabled={!!savingHabilidad}
+                        onClick={() => handleToggleSkill(skillName)}
+                        className={`font-label text-xs px-3 py-2 rounded-full border transition-all flex items-center gap-1.5 active:opacity-75 ${
+                          existing
+                            ? 'bg-primary text-on-primary border-primary font-semibold'
+                            : 'bg-background text-on-surface-variant border-outline-variant hover:border-primary/50'
+                        }`}
+                      >
+                        {skillName}
+                        {existing && <span className="text-[10px]">✓</span>}
+                        {isSaving && <span className="animate-spin text-[10px]">…</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : habilidades.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {habilidades.map((h) => (
                   <span
@@ -538,9 +603,19 @@ export function MaestroPublicProfile({
                 ))}
               </div>
             ) : (
-              <p className="font-body text-sm text-on-surface-variant">
-                Agrega tus especialidades desde la pestaña Habilidades.
-              </p>
+              <div className="flex flex-col items-center gap-2 py-4 text-center">
+                <p className="font-body text-sm text-on-surface-variant/70">
+                  Aún no has agregado especialidades a tu perfil.
+                </p>
+                {isOwn && (
+                  <button
+                    onClick={() => setEditingHabilidades(true)}
+                    className="bg-primary/10 text-primary border border-primary/25 rounded-xl px-4 py-2 font-label text-xs font-semibold active:opacity-75"
+                  >
+                    Agregar especialidades
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -656,6 +731,151 @@ export function MaestroPublicProfile({
             </div>
           </div>
         </div>
+
+        {/* ── MÉTODOS DE PAGO ─────────────────────────────────────────────── */}
+        {(isOwn || resolvedProfile.payment_cash || resolvedProfile.payment_bank_transfer || resolvedProfile.payment_qr_url) && (
+          <div className="bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
+            <SectionLabel>Métodos de cobro y pago</SectionLabel>
+            
+            <div className="flex flex-col gap-3.5">
+              {/* Efectivo Option */}
+              <div className="flex items-center justify-between py-2 border-b border-outline-variant/30">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-label text-sm font-semibold text-on-surface">Efectivo</span>
+                  <span className="font-body text-xs text-on-surface-variant">Acepta pago directo en efectivo en la obra</span>
+                </div>
+                {isOwn ? (
+                  <button
+                    role="switch"
+                    aria-checked={resolvedProfile.payment_cash}
+                    onClick={() => handleSave('payment_cash', !resolvedProfile.payment_cash)}
+                    className={`w-11 h-6 rounded-full relative transition-colors ${
+                      resolvedProfile.payment_cash ? 'bg-primary' : 'bg-outline-variant/60'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${
+                        resolvedProfile.payment_cash ? 'left-6' : 'left-1'
+                      }`}
+                    />
+                  </button>
+                ) : (
+                  <span className={`font-label text-xs px-2.5 py-1 rounded-full ${
+                    resolvedProfile.payment_cash ? 'bg-green-500/15 text-green-500' : 'bg-outline-variant/30 text-on-surface-variant/50'
+                  }`}>
+                    {resolvedProfile.payment_cash ? 'Aceptado' : 'No aceptado'}
+                  </span>
+                )}
+              </div>
+
+              {/* Transferencia Bancaria Option */}
+              <div className="flex flex-col gap-1.5 py-2 border-b border-outline-variant/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-label text-sm font-semibold text-on-surface">Transferencia Bancaria</span>
+                    <span className="font-body text-xs text-on-surface-variant">Datos de transferencia para tus depósitos</span>
+                  </div>
+                  {isOwn && editBank === null && (
+                    <button
+                      onClick={() => setEditBank(resolvedProfile.payment_bank_transfer ?? '')}
+                      className="font-label text-xs text-primary font-semibold active:opacity-75"
+                    >
+                      {resolvedProfile.payment_bank_transfer ? 'Editar' : '+ Configurar'}
+                    </button>
+                  )}
+                </div>
+
+                {isOwn && editBank !== null ? (
+                  <div className="flex flex-col gap-2 mt-2">
+                    <textarea
+                      value={editBank}
+                      onChange={(e) => setEditBank(e.target.value)}
+                      placeholder="Escribe tus datos (ej. Banco Unión, Cuenta Ahorros: 12345678, Titular: Juan Pérez, CI: 8765432)"
+                      rows={3}
+                      className="rounded-xl border border-outline-variant bg-surface-container px-3 py-2.5 text-sm font-body text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary resize-none"
+                    />
+                    <SaveCancelRow
+                      onSave={() => handleSave('payment_bank_transfer', editBank)}
+                      onCancel={() => setEditBank(null)}
+                      saving={savingField === 'payment_bank_transfer'}
+                    />
+                  </div>
+                ) : (
+                  resolvedProfile.payment_bank_transfer ? (
+                    <div className="bg-surface-container rounded-xl p-3 border border-outline-variant/40 mt-1">
+                      <p className="font-body text-xs text-on-surface leading-relaxed whitespace-pre-wrap">
+                        {resolvedProfile.payment_bank_transfer}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="font-body text-xs text-on-surface-variant/50 italic mt-0.5">
+                      {isOwn ? 'Aún no has configurado tus datos bancarios.' : 'No acepta transferencias bancarias.'}
+                    </p>
+                  )
+                )}
+              </div>
+
+              {/* QR de Pago Option */}
+              <div className="flex flex-col gap-2 py-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-label text-sm font-semibold text-on-surface">Código QR de cobro</span>
+                    <span className="font-body text-xs text-on-surface-variant">Sube tu QR de Simple o de tu banco para pagos rápidos</span>
+                  </div>
+                  {isOwn && resolvedProfile.payment_qr_url && (
+                    <button
+                      onClick={() => qrInputRef.current?.click()}
+                      className="font-label text-xs text-primary font-semibold active:opacity-75"
+                    >
+                      Cambiar QR
+                    </button>
+                  )}
+                </div>
+
+                {qrUrl ? (
+                  <div className="flex flex-col items-center gap-3 mt-2">
+                    <div className="relative w-48 h-48 bg-white p-2 rounded-2xl shadow-sm border border-outline-variant/60">
+                      <img src={qrUrl} alt="QR de Pago" className="w-full h-full object-contain" />
+                      {isOwn && (
+                        <button
+                          onClick={() => handleSave('payment_qr_url', null)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center font-bold text-sm shadow-md active:opacity-85"
+                          title="Eliminar QR"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  isOwn ? (
+                    <div 
+                      onClick={() => !qrUploading && qrInputRef.current?.click()}
+                      className="border-2 border-dashed border-outline-variant hover:border-primary/50 transition-colors rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer mt-1"
+                    >
+                      <span className="text-2xl">📷</span>
+                      <span className="font-label text-xs font-semibold text-on-surface-variant">
+                        {qrUploading ? 'Subiendo código...' : 'Cargar imagen de tu QR de Pago'}
+                      </span>
+                      <span className="font-body text-[10px] text-on-surface-variant/40">PNG, JPG o WEBP (máx 5MB)</span>
+                      <input
+                        ref={qrInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleQrChange}
+                      />
+                    </div>
+                  ) : (
+                    <p className="font-body text-xs text-on-surface-variant/50 italic mt-0.5">
+                      No tiene un código QR configurado.
+                    </p>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── ESPECIALIDAD PRINCIPAL (solo para dueño) ─────────────────────── */}
         {isOwn && (

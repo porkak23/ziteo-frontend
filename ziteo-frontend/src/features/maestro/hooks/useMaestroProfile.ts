@@ -12,6 +12,9 @@ export interface MaestroProfile {
   hourly_rate: number | null
   is_available: boolean
   is_verified: boolean
+  payment_qr_url: string | null
+  payment_cash: boolean
+  payment_bank_transfer: string | null
 }
 
 export function useMaestroProfile(maestroId: string) {
@@ -36,7 +39,8 @@ export function useMaestroProfile(maestroId: string) {
       if (!profileRes.data) throw new Error('PROFILE_NOT_FOUND')
 
       const profile = profileRes.data
-      const role = roleRes.data ?? null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const role = (roleRes.data ?? null) as any
 
       return {
         user_id: profile.user_id,
@@ -49,6 +53,9 @@ export function useMaestroProfile(maestroId: string) {
         hourly_rate: role?.hourly_rate ?? null,
         is_available: role?.is_available ?? false,
         is_verified: role?.is_verified ?? false,
+        payment_qr_url: role?.payment_qr_url ?? null,
+        payment_cash: role?.payment_cash ?? false,
+        payment_bank_transfer: role?.payment_bank_transfer ?? null,
       } satisfies MaestroProfile
     },
   })
@@ -61,12 +68,15 @@ export interface UpdateMaestroProfileVars {
   years_experience?: number | null
   hourly_rate?: number | null
   is_available?: boolean
+  payment_qr_url?: string | null
+  payment_cash?: boolean
+  payment_bank_transfer?: string | null
 }
 
 export function useUpdateMaestroProfile() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ maestroId, bio, specialty, years_experience, hourly_rate, is_available }: UpdateMaestroProfileVars) => {
+    mutationFn: async ({ maestroId, bio, specialty, years_experience, hourly_rate, is_available, payment_qr_url, payment_cash, payment_bank_transfer }: UpdateMaestroProfileVars) => {
       if (bio !== undefined) {
         const { error } = await supabase
           .from('profiles')
@@ -80,12 +90,32 @@ export function useUpdateMaestroProfile() {
       if (years_experience !== undefined) roleUpdate.years_experience = years_experience
       if (hourly_rate !== undefined) roleUpdate.hourly_rate = hourly_rate
       if (is_available !== undefined) roleUpdate.is_available = is_available
+      if (payment_qr_url !== undefined) roleUpdate.payment_qr_url = payment_qr_url
+      if (payment_cash !== undefined) roleUpdate.payment_cash = payment_cash
+      if (payment_bank_transfer !== undefined) roleUpdate.payment_bank_transfer = payment_bank_transfer
 
       if (Object.keys(roleUpdate).length > 0) {
         // Upsert so the row is created if it didn't exist yet
         const { error } = await supabase
           .from('user_roles')
           .upsert({ user_id: maestroId, role: 'maestro', ...roleUpdate }, { onConflict: 'user_id,role' })
+        if (error) throw error
+      }
+
+      // Sincronizar automáticamente con la tabla maestro_profiles para búsquedas del comprador
+      const mProfileUpdate: Record<string, unknown> = {}
+      if (specialty !== undefined) {
+        mProfileUpdate.specialties = specialty.split(', ').map(s => s.trim()).filter(Boolean)
+      }
+      if (years_experience !== undefined) mProfileUpdate.experience_years = years_experience
+      if (hourly_rate !== undefined) mProfileUpdate.rate_amount = hourly_rate ?? 0
+      if (is_available !== undefined) mProfileUpdate.available = is_available
+
+      if (Object.keys(mProfileUpdate).length > 0) {
+        const { error } = await supabase
+          .from('maestro_profiles')
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .upsert({ user_id: maestroId, ...mProfileUpdate } as any, { onConflict: 'user_id' })
         if (error) throw error
       }
     },

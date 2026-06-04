@@ -295,7 +295,7 @@ export function ProjectDetailScreen({ project, onBack }: ProjectDetailScreenProp
               max="100"
               value={localProgress}
               onChange={(e) => handleProgressChange(Number(e.target.value))}
-              className="w-full accent-[var(--color-primary,#D94F00)] h-2 rounded-full cursor-pointer"
+              className="w-full accent-[var(--color-primary,#A43700)] h-2 rounded-full cursor-pointer"
               aria-label="Progreso del proyecto"
             />
           ) : (

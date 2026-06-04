@@ -9,6 +9,8 @@ const POLL_INTERVAL_MS = 30_000
 interface QrPagoModalProps {
   providerId: string
   orderId: string
+  /** Payment method the buyer chose at checkout. Defaults to QR. */
+  method?: 'qr' | 'transfer'
   /** Called when provider has confirmed the payment */
   onConfirmed: () => void
   onClose: () => void
@@ -16,23 +18,27 @@ interface QrPagoModalProps {
 
 type Step = 'qr' | 'upload' | 'waiting' | 'confirmed'
 
-export function QrPagoModal({ providerId, orderId, onConfirmed, onClose }: QrPagoModalProps) {
-  const { getSignedQrUrl, uploadPaymentEvidence, uploading } = usePaymentQr()
+export function QrPagoModal({ providerId, orderId, method = 'qr', onConfirmed, onClose }: QrPagoModalProps) {
+  const { getSignedQrUrl, getProviderPaymentMethods, uploadPaymentEvidence, uploading } = usePaymentQr()
   const queryClient = useQueryClient()
 
   const [step, setStep]         = useState<Step>('qr')
   const [signedUrl, setSignedUrl] = useState<string | null | undefined>(undefined)
+  const [bankInfo, setBankInfo] = useState<{ bankTransfer: string | null; cash: boolean } | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // ── Load the provider's QR on mount ──────────────────────────────────────────
+  // ── Load the provider's QR + bank details on mount ───────────────────────────
   useEffect(() => {
     let cancelled = false
     getSignedQrUrl(providerId).then((url) => {
       if (!cancelled) setSignedUrl(url)
+    })
+    getProviderPaymentMethods(providerId).then((info) => {
+      if (!cancelled) setBankInfo(info)
     })
     return () => { cancelled = true }
   }, [providerId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -103,7 +109,7 @@ export function QrPagoModal({ providerId, orderId, onConfirmed, onClose }: QrPag
         {/* ── Header ──────────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between">
           <h3 className="font-headline font-semibold text-lg text-on-surface">
-            {step === 'qr'        && 'QR de Pago'}
+            {step === 'qr'        && (method === 'transfer' ? 'Datos de transferencia' : 'QR de Pago')}
             {step === 'upload'    && 'Subir comprobante'}
             {step === 'waiting'   && 'Esperando confirmacion'}
             {step === 'confirmed' && 'Pago confirmado'}
@@ -117,13 +123,66 @@ export function QrPagoModal({ providerId, orderId, onConfirmed, onClose }: QrPag
           </button>
         </div>
 
-        {/* ── Step: QR display ────────────────────────────────────────────────── */}
-        {step === 'qr' && (
-          <div className="flex flex-col items-center gap-4 py-2">
-            {isLoading ? (
-              <div className="w-48 h-48 bg-surface-container animate-pulse rounded-2xl" />
-            ) : signedUrl ? (
-              <>
+        {/* ── Step: QR / bank display ─────────────────────────────────────────── */}
+        {step === 'qr' && (() => {
+          // Show bank details when the buyer chose "Transferencia", or as a
+          // fallback when the provider has no QR configured.
+          const noQr = signedUrl === null
+          const hasBank = Boolean(bankInfo?.bankTransfer)
+          const showBank = method === 'transfer' || (noQr && hasBank)
+
+          if (isLoading) {
+            return (
+              <div className="flex flex-col items-center gap-4 py-2">
+                <div className="w-48 h-48 bg-surface-container animate-pulse rounded-2xl" />
+              </div>
+            )
+          }
+
+          // Bank-transfer view
+          if (showBank) {
+            if (!hasBank) {
+              return (
+                <div className="flex flex-col items-center gap-4 py-2">
+                  <p className="font-body text-sm text-center text-on-surface-variant py-8">
+                    El proveedor aun no ha configurado una cuenta para transferencias. Contacta directamente con la tienda.
+                  </p>
+                  <button
+                    onClick={onClose}
+                    className="w-full bg-surface-container text-on-surface font-label font-semibold px-6 py-3 rounded-2xl"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )
+            }
+            return (
+              <div className="flex flex-col gap-4 py-2">
+                <div className="rounded-2xl border border-outline-variant bg-surface-container p-4">
+                  <p className="font-label font-semibold text-xs uppercase tracking-wide text-on-surface-variant mb-1">
+                    Cuenta para transferencia
+                  </p>
+                  <p className="font-body text-sm text-on-surface whitespace-pre-line">
+                    {bankInfo?.bankTransfer}
+                  </p>
+                </div>
+                <p className="font-body text-sm text-center text-on-surface-variant">
+                  Realiza la transferencia a esta cuenta. Luego sube tu comprobante para que el proveedor lo verifique.
+                </p>
+                <button
+                  onClick={() => setStep('upload')}
+                  className="w-full bg-primary text-on-primary font-label font-semibold px-6 py-3 rounded-2xl"
+                >
+                  Ya pague — subir comprobante
+                </button>
+              </div>
+            )
+          }
+
+          // QR view
+          if (signedUrl) {
+            return (
+              <div className="flex flex-col items-center gap-4 py-2">
                 <img
                   src={signedUrl}
                   alt="QR de pago del proveedor"
@@ -147,22 +206,25 @@ export function QrPagoModal({ providerId, orderId, onConfirmed, onClose }: QrPag
                 >
                   Ya pague — subir comprobante
                 </button>
-              </>
-            ) : (
-              <>
-                <p className="font-body text-sm text-center text-on-surface-variant py-8">
-                  El proveedor aun no ha configurado su QR de cobro. Contacta directamente con la tienda.
-                </p>
-                <button
-                  onClick={onClose}
-                  className="w-full bg-surface-container text-on-surface font-label font-semibold px-6 py-3 rounded-2xl"
-                >
-                  Cerrar
-                </button>
-              </>
-            )}
-          </div>
-        )}
+              </div>
+            )
+          }
+
+          // No QR and no bank
+          return (
+            <div className="flex flex-col items-center gap-4 py-2">
+              <p className="font-body text-sm text-center text-on-surface-variant py-8">
+                El proveedor aun no ha configurado su QR de cobro. Contacta directamente con la tienda.
+              </p>
+              <button
+                onClick={onClose}
+                className="w-full bg-surface-container text-on-surface font-label font-semibold px-6 py-3 rounded-2xl"
+              >
+                Cerrar
+              </button>
+            </div>
+          )
+        })()}
 
         {/* ── Step: Upload comprobante ────────────────────────────────────────── */}
         {step === 'upload' && (
