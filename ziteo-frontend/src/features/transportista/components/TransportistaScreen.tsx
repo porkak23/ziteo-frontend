@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 import { usePendingDeliveries, useMyDeliveries } from '../hooks/useDeliveries'
 import { useDriverEarnings } from '../hooks/useDriverEarnings'
@@ -277,6 +278,22 @@ export function TransportistaScreen() {
     (d) => d.status === 'accepted' || d.status === 'in_transit'
   )
   const completedToday = myDeliveries.filter((d) => d.status === 'delivered').length
+
+  // Publica la posición GPS del chofer cada 30s mientras está en línea.
+  const latestPosRef = useRef(geo.position)
+  latestPosRef.current = geo.position
+  useEffect(() => {
+    if (!isOnline) return
+    const publish = () => {
+      const pos = latestPosRef.current
+      if (!pos) return
+      supabase.rpc('upsert_driver_location', { p_lat: pos.lat, p_lng: pos.lng }).then(undefined, () => {})
+    }
+    publish()
+    const id = setInterval(publish, 30_000)
+    return () => clearInterval(id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline])
 
   // Auto-detect arrival: if driver is within 200m of active delivery's dropoff
   useEffect(() => {

@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { Z } from '@/shared/design/tokens'
 import { ZHeader } from '@/shared/design/components/ZHeader'
 import { ZButton } from '@/shared/design/components/ZButton'
-import { ZIcon } from '@/shared/design/components/ZIcon'
+import { ZSelect } from '@/shared/design/components/ZSelect'
+import { MapPicker, type MapPickerValue } from '@/shared/components/MapPicker'
+import { Toast } from '@/shared/components/Toast'
+import { useToast } from '@/shared/hooks/useToast'
+import { useAuthStore } from '../../auth/store/authStore'
+import { useProyectos } from '../../proyectos/hooks/useProyectos'
+import { useCreateTransportRequest } from '../../transporte/hooks/useTransportRequests'
 
 function IconTruck({ color = Z.textSec, size = 28 }: { color?: string; size?: number }) {
   return (
@@ -31,41 +37,70 @@ interface Props {
 }
 
 const TRANSPORT_OPTIONS = [
-  {
-    key: 'pesado',
-    title: 'Transporte Pesado',
-    desc: 'Camiones, volquetas',
-    Icon: IconTruck,
-  },
-  {
-    key: 'ligero',
-    title: 'Transporte Ligero',
-    desc: 'Motos, camionetas',
-    Icon: IconVan,
-  },
+  { key: 'pesado', title: 'Transporte Pesado', desc: 'Camiones, volquetas', Icon: IconTruck },
+  { key: 'ligero', title: 'Transporte Ligero', desc: 'Motos, camionetas', Icon: IconVan },
 ] as const
 
 type TransportKey = 'pesado' | 'ligero' | ''
+type DestMode = 'proyecto' | 'otra'
 
 export function TransporteSubScreen({ onBack }: Props) {
+  const user = useAuthStore((s) => s.user)
+  const { toasts, showToast, removeToast } = useToast()
+  const { data: proyectos = [] } = useProyectos({ constructor_id: user?.user_id })
+  const { mutate: createRequest, isPending } = useCreateTransportRequest()
+
   const [type, setType] = useState<TransportKey>('')
   const [desc, setDesc] = useState('')
+  const [pickup, setPickup] = useState<MapPickerValue | null>(null)
+  const [destMode, setDestMode] = useState<DestMode>('proyecto')
+  const [projectId, setProjectId] = useState('')
+  const [dropoff, setDropoff] = useState<MapPickerValue | null>(null)
 
-  const canSubmit = type !== '' && desc.trim() !== ''
+  const selectedProject = proyectos.find((p) => p.id === projectId)
+
+  // Dirección/coords de destino según el modo
+  const dropoffAddress =
+    destMode === 'proyecto'
+      ? selectedProject?.location_address ?? selectedProject?.city ?? ''
+      : dropoff?.address ?? ''
+  const dropoffLat = destMode === 'proyecto' ? selectedProject?.location_lat ?? null : dropoff?.lat || null
+  const dropoffLng = destMode === 'proyecto' ? selectedProject?.location_lng ?? null : dropoff?.lng || null
+
+  const destReady = destMode === 'proyecto' ? !!selectedProject : !!dropoffAddress
+  const canSubmit = type !== '' && desc.trim() !== '' && destReady
 
   function handleSubmit() {
     if (!canSubmit) return
-    // TODO: submit to backend
-    onBack()
+    createRequest(
+      {
+        cargo_type: type === 'pesado' ? 'heavy' : 'light',
+        pickup_address: pickup?.address ?? '',
+        dropoff_address: dropoffAddress,
+        pickup_lat: pickup?.lat || null,
+        pickup_lng: pickup?.lng || null,
+        dropoff_lat: dropoffLat,
+        dropoff_lng: dropoffLng,
+        description: desc.trim(),
+        city: selectedProject?.city ?? user?.city ?? undefined,
+      },
+      {
+        onSuccess: () => {
+          showToast('Solicitud de transporte enviada', 'success')
+          setTimeout(onBack, 800)
+        },
+        onError: (err) => {
+          showToast(err instanceof Error ? err.message : 'Error al solicitar transporte', 'error')
+        },
+      }
+    )
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'zFadeSlideIn 0.25s ease' }}>
+      <Toast toasts={toasts} onRemove={removeToast} />
       <ZHeader title="Solicitar Transporte" onBack={onBack} />
-      <div style={{
-        flex: 1, padding: '8px 20px 24px', display: 'flex', flexDirection: 'column',
-        gap: 20, overflowY: 'auto',
-      }}>
+      <div style={{ flex: 1, padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto' }}>
         <div>
           <h3 style={{ fontFamily: Z.font, fontSize: 18, fontWeight: 800, color: Z.text, margin: 0 }}>
             Tipo de transporte
@@ -102,31 +137,71 @@ export function TransporteSubScreen({ onBack }: Props) {
           })}
         </div>
 
-        {/* Map placeholder */}
+        {/* Punto de recojo */}
+        <MapPicker
+          label="Punto de recojo (origen)"
+          value={pickup}
+          onChange={setPickup}
+          placeholder="¿Dónde se recoge la carga?"
+          height={200}
+        />
+
+        {/* Destino: proyecto registrado o dirección por mapa */}
         <div>
-          <label style={{
-            fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec,
-            display: 'block', marginBottom: 8,
-          }}>
-            Ubicación de entrega
+          <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec, display: 'block', marginBottom: 8 }}>
+            Destino de la entrega
           </label>
-          <div style={{
-            height: 140, borderRadius: Z.r.md, border: `1.5px dashed ${Z.border}`,
-            background: `linear-gradient(135deg, ${Z.blueLight} 0%, ${Z.divider} 100%)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexDirection: 'column', gap: 8,
-          }}>
-            <ZIcon name="map-pin" size={28} color={Z.blue} />
-            <span style={{ fontFamily: 'monospace', fontSize: 11, color: Z.textMuted }}>mapa interactivo</span>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {([
+              { key: 'proyecto' as const, label: 'Un proyecto' },
+              { key: 'otra' as const, label: 'Otra ubicación' },
+            ]).map((opt) => {
+              const active = destMode === opt.key
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => setDestMode(opt.key)}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: Z.r.sm,
+                    border: `1.5px solid ${active ? Z.orange : Z.border}`,
+                    background: active ? Z.orangeLight : Z.surface,
+                    color: active ? Z.orangeDark : Z.textSec,
+                    fontFamily: Z.font, fontSize: 13, fontWeight: 700, cursor: 'pointer', outline: 'none',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
           </div>
+
+          {destMode === 'proyecto' ? (
+            proyectos.length > 0 ? (
+              <ZSelect
+                label=""
+                value={projectId}
+                onChange={setProjectId}
+                placeholder="Selecciona un proyecto"
+                options={proyectos.map((p) => ({ value: p.id, label: p.name }))}
+              />
+            ) : (
+              <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textMuted, margin: 0 }}>
+                No tienes proyectos registrados. Usa "Otra ubicación".
+              </p>
+            )
+          ) : (
+            <MapPicker
+              value={dropoff}
+              onChange={setDropoff}
+              placeholder="Dirección de entrega"
+              height={200}
+            />
+          )}
         </div>
 
         {/* Description */}
         <div>
-          <label style={{
-            fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec,
-            display: 'block', marginBottom: 8,
-          }}>
+          <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec, display: 'block', marginBottom: 8 }}>
             Descripción de la carga *
           </label>
           <textarea
@@ -142,8 +217,8 @@ export function TransporteSubScreen({ onBack }: Props) {
           />
         </div>
 
-        <ZButton disabled={!canSubmit} onClick={handleSubmit}>
-          Solicitar Transporte
+        <ZButton disabled={!canSubmit || isPending} onClick={handleSubmit}>
+          {isPending ? 'Enviando...' : 'Solicitar Transporte'}
         </ZButton>
       </div>
     </div>

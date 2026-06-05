@@ -98,7 +98,11 @@ END $$;
 -- -------------------------------------------------------
 -- 5. Reemplazar place_order para aceptar delivery_method y dirección
 --    (parámetros nuevos son opcionales con defaults para backward compatibility)
+--    Se elimina primero la firma anterior (4 args) para evitar un overload
+--    ambiguo con la nueva firma (que tiene defaults para los 4 args extra).
 -- -------------------------------------------------------
+DROP FUNCTION IF EXISTS public.place_order(uuid, uuid, numeric, jsonb);
+
 CREATE OR REPLACE FUNCTION public.place_order(
   p_constructor_id   uuid,
   p_provider_id      uuid,

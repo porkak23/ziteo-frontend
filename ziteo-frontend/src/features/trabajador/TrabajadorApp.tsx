@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react'
-import { NotificationsScreen } from '../notifications/components/NotificationsScreen'
+import { useQuery } from '@tanstack/react-query'
 import { Z } from '../../shared/design/tokens'
 import {
   NavIconHome,
@@ -14,15 +14,13 @@ import { useAuthStore } from '../auth/store/authStore'
 import AvatarMenu from '../../shared/components/AvatarMenu'
 import { supabase } from '../../lib/supabaseClient'
 import { MaestroOnboardingWizard } from '../maestro/components/MaestroOnboardingWizard'
+import { NotificationsScreen } from '../notifications/components/NotificationsScreen'
 
 const HomeTabTrabajador = lazy(() =>
   import('./HomeTabTrabajador').then((m) => ({ default: m.HomeTabTrabajador }))
 )
-const TrabajosScreen = lazy(() =>
-  import('../maestro/components/TrabajosScreen').then((m) => ({ default: m.TrabajosScreen }))
-)
-const OcasionScreen = lazy(() =>
-  import('../ocasion/components/OcasionScreen').then((m) => ({ default: m.OcasionScreen }))
+const LicitacionesTabTrabajador = lazy(() =>
+  import('./LicitacionesTabTrabajador').then((m) => ({ default: m.LicitacionesTabTrabajador }))
 )
 const ProyectosTabTrabajador = lazy(() =>
   import('./ProyectosTabTrabajador').then((m) => ({ default: m.ProyectosTabTrabajador }))
@@ -85,6 +83,22 @@ export function TrabajadorApp() {
   const setGlobalTab = useNavStore((s) => s.setTab)
   const needsOnboarding = useMaestroOnboardingCheck()
   const [onboardingDone, setOnboardingDone] = useState(false)
+  const [showNotifs, setShowNotifs] = useState(false)
+  const userId = useAuthStore((s) => s.user?.user_id) ?? ''
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notif-unread', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_read', false)
+      return count ?? 0
+    },
+    staleTime: 30_000,
+  })
 
   const toTrabajadorTab = (tab: string): TrabajadorTab => {
     if (tab === 'licitaciones' || tab === 'proyectos' || tab === 'perfil') {
@@ -95,7 +109,6 @@ export function TrabajadorApp() {
 
   const [localTab, setLocalTab] = useState<TrabajadorTab>(toTrabajadorTab(globalTab))
   const [showAccount, setShowAccount] = useState(false)
-  const [subScreen, setSubScreen] = useState<'vender' | 'notificaciones' | null>(null)
 
   // 'perfil' is intentionally excluded from globalTab sync — App.tsx intercepts
   // that key and shows the generic PerfilScreen. Maestro profile lives inside
@@ -115,7 +128,6 @@ export function TrabajadorApp() {
   }
 
   const handleNavigate = (dest: string) => {
-    if (dest === 'vender') { setSubScreen('vender'); return }
     const isTrabajadorTab = dest === 'home' || dest === 'licitaciones' || dest === 'proyectos' || dest === 'perfil'
     if (isTrabajadorTab) {
       handleTabChange(dest as TrabajadorTab)
@@ -130,38 +142,29 @@ export function TrabajadorApp() {
     return <MaestroOnboardingWizard onComplete={() => setOnboardingDone(true)} />
   }
 
-  if (subScreen === 'vender') {
-    return (
-      <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 30, animation: 'zFadeSlideIn 0.25s ease' }}>
-        <Suspense fallback={<div />}>
-          <OcasionScreen onBack={() => setSubScreen(null)} />
-        </Suspense>
-      </div>
-    )
-  }
-  if (subScreen === 'notificaciones') {
-    return (
-      <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 40, overflowY: 'auto' }}>
-        <NotificationsScreen onClose={() => setSubScreen(null)} />
-      </div>
-    )
-  }
-
   return (
     <div style={{ minHeight: '100vh', paddingBottom: 92, background: Z.bg }}>
       <DashHeader
         onProfile={() => setShowAccount(true)}
-        onBell={() => setSubScreen('notificaciones')}
+        onTrack={() => {/* seguimiento: próximamente */}}
+        onBell={() => setShowNotifs(true)}
+        unreadCount={unreadCount}
       />
 
       <AvatarMenu isOpen={showAccount} onClose={() => setShowAccount(false)} />
+
+      {showNotifs && (
+        <div style={{ position: 'fixed', inset: 0, background: Z.bg, zIndex: 40, overflowY: 'auto' }}>
+          <NotificationsScreen onClose={() => setShowNotifs(false)} />
+        </div>
+      )}
 
       <div>
         <Suspense fallback={<TabSkeleton />}>
           {activeTab === 'home' && (
             <HomeTabTrabajador onNavigate={handleNavigate} />
           )}
-          {activeTab === 'licitaciones' && <TrabajosScreen />}
+          {activeTab === 'licitaciones' && <LicitacionesTabTrabajador />}
           {activeTab === 'proyectos' && <ProyectosTabTrabajador />}
           {activeTab === 'perfil' && <PerfilTabTrabajador />}
         </Suspense>

@@ -15,6 +15,8 @@ interface SupabaseProjectRow {
   needs_materials: boolean
   constructor_id: string
   city: string | null
+  location_lat: number | null
+  location_lng: number | null
   created_at: string
   constructor: { name: string } | null
   applications: { count: number }[]
@@ -58,6 +60,8 @@ export function useProjectDetail(projectId: string) {
         needs_materials: row.needs_materials,
         constructor_id: row.constructor_id,
         city: row.city,
+        location_lat: row.location_lat ?? null,
+        location_lng: row.location_lng ?? null,
         created_at: row.created_at,
         constructor_name: row.constructor?.name ?? '',
         application_count: row.applications?.[0]?.count ?? 0,

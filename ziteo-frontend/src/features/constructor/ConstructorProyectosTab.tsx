@@ -11,6 +11,7 @@ import { SectionTitle } from '@/shared/design/shell/SectionTitle'
 import { CIUDADES_ACTIVAS } from '@/shared/constants/geography'
 import { Toast } from '@/shared/components/Toast'
 import { useToast } from '@/shared/hooks/useToast'
+import { MapPicker, type MapPickerValue } from '@/shared/components/MapPicker'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthStore } from '../auth/store/authStore'
 import { useProyectos, useCreateProyecto } from '../proyectos/hooks/useProyectos'
@@ -381,6 +382,7 @@ function NewProjectForm({ onBack, onCreated }: { onBack: () => void; onCreated: 
   const [desc, setDesc] = useState('')
   const [city, setCity] = useState(user?.city ?? '')
   const [budget, setBudget] = useState('')
+  const [loc, setLoc] = useState<MapPickerValue | null>(null)
   const [needsMaestro, setNeedsMaestro] = useState(false)
   const [needsMaterials, setNeedsMaterials] = useState(false)
 
@@ -399,7 +401,9 @@ function NewProjectForm({ onBack, onCreated }: { onBack: () => void; onCreated: 
         constructor_id: user.user_id,
         name: name.trim(),
         description: desc.trim() || null,
-        location_address: null,
+        location_address: loc?.address || null,
+        location_lat: loc?.lat || null,
+        location_lng: loc?.lng || null,
         estimated_budget: budget ? Number(budget) : null,
         status: 'planning',
         photo_url: null,
@@ -438,6 +442,15 @@ function NewProjectForm({ onBack, onCreated }: { onBack: () => void; onCreated: 
         </div>
 
         <ZSelect label="Ciudad" value={city} onChange={setCity} placeholder="Selecciona ciudad" options={[...CIUDADES_ACTIVAS]} />
+
+        <MapPicker
+          label="Ubicación de la obra (GPS o pin en el mapa)"
+          value={loc}
+          onChange={setLoc}
+          placeholder="Ej: Av. Las Américas #456"
+          height={240}
+        />
+
         <ZInput label="Presupuesto estimado (Bs)" type="number" placeholder="Ej: 50000" value={budget} onChange={setBudget} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

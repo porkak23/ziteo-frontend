@@ -196,7 +196,7 @@ function evidenceState(order: OrderWithItems): 'idle' | 'waiting' {
   return 'idle'
 }
 
-export function MisPedidosScreen() {
+export function MisPedidosScreen({ onTrackOrder }: { onTrackOrder?: (orderId: string, driverId: string) => void } = {}) {
   const { data: orders = [], isLoading, refetch } = useMyOrders()
   const { mutate: cancelOrder, isPending: cancelling } = useCancelOrder()
 
@@ -276,6 +276,24 @@ export function MisPedidosScreen() {
                   {badge.label}
                 </div>
               ) : null
+            })()}
+
+            {/* Seguir pedido en vivo — cuando hay un transportista asignado */}
+            {(() => {
+              if (!onTrackOrder) return null
+              const driverId = (order.deliveries ?? []).find((d) => d.driver_id !== null)?.driver_id
+              if (!driverId) return null
+              return (
+                <button
+                  onClick={() => onTrackOrder(order.id, driverId)}
+                  className="mt-2 w-full bg-primary text-on-primary rounded-2xl py-3 text-sm font-label font-semibold transition-opacity active:opacity-70 flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">
+                    navigation
+                  </span>
+                  Seguir mi pedido
+                </button>
+              )
             })()}
 
             {/* Rejection reason from provider */}

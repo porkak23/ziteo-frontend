@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuthStore } from '../../auth/store/authStore'
 import type { ProjectStatus } from '../types/proyectosTypes'
 import { ImagePicker } from '../../../shared/components/ImagePicker'
+import { MapPicker } from '../../../shared/components/MapPicker'
 import { useCreateProyecto } from '../hooks/useProyectos'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
@@ -15,6 +16,8 @@ interface FormState {
   name: string
   description: string
   location_address: string
+  location_lat: number | null
+  location_lng: number | null
   city: string
   estimated_budget: string
   needs_maestro: boolean
@@ -34,6 +37,8 @@ export function NuevoProyectoForm({ onSuccess, onCancel }: NuevoProyectoFormProp
     name: '',
     description: '',
     location_address: '',
+    location_lat: null,
+    location_lng: null,
     city: '',
     estimated_budget: '',
     needs_maestro: false,
@@ -42,7 +47,7 @@ export function NuevoProyectoForm({ onSuccess, onCancel }: NuevoProyectoFormProp
   })
   const [errors, setErrors] = useState<FormErrors>({})
 
-  const set = (field: keyof FormState, value: string | boolean) =>
+  const set = (field: keyof FormState, value: string | boolean | number | null) =>
     setForm((f) => ({ ...f, [field]: value }))
 
   const validate = (): boolean => {
@@ -60,6 +65,8 @@ export function NuevoProyectoForm({ onSuccess, onCancel }: NuevoProyectoFormProp
         name: form.name.trim(),
         description: form.description.trim() || null,
         location_address: form.location_address.trim() || null,
+        location_lat: form.location_lat,
+        location_lng: form.location_lng,
         city: form.city.trim() || null,
         estimated_budget: form.estimated_budget ? Number(form.estimated_budget) : null,
         status: 'planning' as ProjectStatus,
@@ -151,18 +158,31 @@ export function NuevoProyectoForm({ onSuccess, onCancel }: NuevoProyectoFormProp
           />
         </div>
 
-        {/* Dirección */}
+        {/* Ubicación / Dirección — mapa (GPS o pin) con fallback a texto sin API key */}
         <div>
-          <label htmlFor="proyecto-address" className="font-label text-sm text-on-surface-variant block mb-1">
-            Dirección
+          <label className="font-label text-sm text-on-surface-variant block mb-1">
+            Ubicación del proyecto
           </label>
-          <input
-            id="proyecto-address"
-            type="text"
-            value={form.location_address}
-            onChange={(e) => set('location_address', e.target.value)}
+          <MapPicker
+            value={
+              form.location_address || form.location_lat != null
+                ? {
+                    lat: form.location_lat ?? 0,
+                    lng: form.location_lng ?? 0,
+                    address: form.location_address,
+                  }
+                : null
+            }
+            onChange={(v) =>
+              setForm((f) => ({
+                ...f,
+                location_address: v.address,
+                location_lat: v.lat || null,
+                location_lng: v.lng || null,
+              }))
+            }
             placeholder="Ej: Calle Junín #123"
-            className="w-full border border-outline-variant rounded-2xl px-4 py-3 font-body text-on-surface bg-surface-container-low outline-none focus:border-primary text-sm"
+            height={240}
           />
         </div>
 

@@ -16,6 +16,8 @@ interface SupabaseProjectRow {
   needs_materials: boolean
   constructor_id: string
   city: string | null
+  location_lat: number | null
+  location_lng: number | null
   created_at: string
   constructor: { name: string } | null
   applications: { count: number }[]
@@ -35,7 +37,7 @@ export function useProyectos(filters?: { status?: string; constructor_id?: strin
     queryFn: async () => {
       let query = supabase
         .from('projects')
-        .select('id, name, description, status, location_address, estimated_budget, photo_url, start_date, needs_maestro, needs_materials, constructor_id, city, created_at, constructor:profiles!projects_constructor_id_fkey(name), applications:project_applications(count)')
+        .select('id, name, description, status, location_address, estimated_budget, photo_url, start_date, needs_maestro, needs_materials, constructor_id, city, location_lat, location_lng, created_at, constructor:profiles!projects_constructor_id_fkey(name), applications:project_applications(count)')
 
       if (active_role === 'maestro') {
         query = query.eq('needs_maestro', true).in('status', ['active', 'planning'])
@@ -71,6 +73,8 @@ export function useProyectos(filters?: { status?: string; constructor_id?: strin
         needs_materials: p.needs_materials,
         constructor_id: p.constructor_id,
         city: p.city ?? null,
+        location_lat: p.location_lat ?? null,
+        location_lng: p.location_lng ?? null,
         created_at: p.created_at,
         constructor_name: p.constructor?.name ?? '',
         application_count: p.applications?.[0]?.count ?? 0,
@@ -97,6 +101,8 @@ export function useCreateProyecto() {
           needs_maestro: payload.needs_maestro,
           needs_materials: payload.needs_materials,
           city: payload.city ?? null,
+          location_lat: payload.location_lat ?? null,
+          location_lng: payload.location_lng ?? null,
         })
         .select()
         .single()
