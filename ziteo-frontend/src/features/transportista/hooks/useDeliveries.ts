@@ -48,7 +48,8 @@ export function usePendingDeliveries(cargoCapability?: CargoCapability | null) {
 
   // Realtime: listen for new pending deliveries and deletions/updates
   useEffect(() => {
-    const channelName = `deliveries:pool${cargoCapability ? `:${cargoCapability}` : ''}`
+    const uid = Math.random().toString(36).slice(2, 8)
+    const channelName = `deliveries:pool${cargoCapability ? `:${cargoCapability}` : ''}:${uid}`
     const channel = supabase
       .channel(channelName)
       .on(
@@ -105,8 +106,9 @@ export function useMyDeliveries() {
   // Realtime: reflect status changes of own deliveries
   useEffect(() => {
     if (!driverId) return
+    const uid = Math.random().toString(36).slice(2, 8)
     const channel = supabase
-      .channel(`deliveries:driver:${driverId}`)
+      .channel(`deliveries:driver:${driverId}:${uid}`)
       .on(
         'postgres_changes',
         {

@@ -19,8 +19,9 @@ export function useDriverLocation(driverId: string | null) {
       })
 
     // Suscripcion realtime
+    const uid = Math.random().toString(36).slice(2, 8)
     const channel = supabase
-      .channel(`driver_location:${driverId}`)
+      .channel(`driver_location:${driverId}:${uid}`)
       .on(
         'postgres_changes',
         {

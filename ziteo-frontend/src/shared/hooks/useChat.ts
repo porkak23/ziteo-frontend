@@ -92,8 +92,9 @@ export function useChat(currentUserId: string, otherUserId: string) {
   useEffect(() => {
     if (!currentUserId || !otherUserId) return
 
+    const uid = Math.random().toString(36).slice(2, 8)
     const channel = supabase
-      .channel(`chat_${[currentUserId, otherUserId].sort().join('_')}`)
+      .channel(`chat_${[currentUserId, otherUserId].sort().join('_')}:${uid}`)
       .on(
         'postgres_changes',
         {

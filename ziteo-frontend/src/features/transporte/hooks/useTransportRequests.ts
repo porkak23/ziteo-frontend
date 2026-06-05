@@ -91,8 +91,9 @@ export function usePendingTransportRequests() {
   })
 
   useEffect(() => {
+    const uid = Math.random().toString(36).slice(2, 8)
     const channel = supabase
-      .channel('transport-requests:pool')
+      .channel(`transport-requests:pool:${uid}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transport_requests', filter: 'status=eq.pending' }, () => {
         queryClientRef.current.invalidateQueries({ queryKey: ['transport-requests', 'pool'] })
       })

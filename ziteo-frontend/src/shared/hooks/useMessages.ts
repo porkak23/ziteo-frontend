@@ -56,8 +56,9 @@ export function useMessages(otherUserId: string) {
   useEffect(() => {
     if (!conversationId || !currentUser) return
 
+    const uid = Math.random().toString(36).slice(2, 8)
     const channel = supabase
-      .channel(`messages:${conversationId}`)
+      .channel(`messages:${conversationId}:${uid}`)
       .on(
         'postgres_changes',
         {
@@ -124,8 +125,9 @@ export function useUnreadCount() {
 
     fetchCount()
 
+    const uid = Math.random().toString(36).slice(2, 8)
     const channel = supabase
-      .channel('unread_messages_count')
+      .channel(`unread_messages_count:${uid}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

@@ -59,8 +59,9 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps = {}) 
   useEffect(() => {
     if (!user?.user_id) return
 
+    const uid = Math.random().toString(36).slice(2, 8)
     const channel = supabase
-      .channel(`notifications:${user.user_id}`)
+      .channel(`notifications:${user.user_id}:${uid}`)
       .on(
         'postgres_changes',
         {
