@@ -1,7 +1,9 @@
 node_modules/
+# Ignora TODOS los archivos de entorno (incl. .env.server, .env.production, .env.local)
+# excepto las plantillas .env.example, que sí deben versionarse como documentación.
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 dist/
 build/
 .DS_Store
