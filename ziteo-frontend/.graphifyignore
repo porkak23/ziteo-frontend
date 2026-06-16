@@ -1,0 +1,24 @@
+# Ignore mobile app platform builds (Capacitor)
+android/
+ios/
+
+# Ignore web builds and deployment folders
+dist/
+.vercel/
+
+# Ignore Playwright test reports and artifacts
+playwright-report/
+test-results/
+
+# Ignore dependencies and configurations
+node_modules/
+.vscode/
+.claude/
+.git/
+.github/
+
+# Ignore static design mockups (.jsx maquetas) — contaminan el namespace del código real
+design/
+
+# Ignore graphify outputs
+graphify-out/

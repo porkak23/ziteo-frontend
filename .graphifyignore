@@ -1,0 +1,33 @@
+# Ignore mobile app platform builds (Capacitor)
+android/
+ios/
+ziteo-frontend/android/
+ziteo-frontend/ios/
+
+# Ignore web builds and deployment folders
+dist/
+ziteo-frontend/dist/
+.vercel/
+ziteo-frontend/.vercel/
+
+# Ignore Playwright test reports and artifacts
+playwright-report/
+ziteo-frontend/playwright-report/
+test-results/
+ziteo-frontend/test-results/
+
+# Ignore dependencies and configurations
+node_modules/
+ziteo-frontend/node_modules/
+.vscode/
+.claude/
+.git/
+.github/
+
+# Ignore static design mockups (.jsx maquetas) — contaminan el namespace del código real
+design/
+ziteo-frontend/design/
+
+# Ignore graphify outputs
+graphify-out/
+ziteo-frontend/graphify-out/

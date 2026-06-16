@@ -10,3 +10,5 @@ build/
 *.log
 .vite/
 .vercel/
+# Graphify generated artifacts (graph.json ~2MB, graph.html ~2MB)
+graphify-out/
