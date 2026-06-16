@@ -12,6 +12,8 @@ interface ZButtonProps {
   style?: React.CSSProperties;
   icon?: React.ReactNode;
   type?: 'button' | 'submit' | 'reset';
+  /** Applied as data-testid on the <button> for stable E2E selectors. */
+  testId?: string;
 }
 
 const variantStyles: Record<ButtonVariant, React.CSSProperties> = {
@@ -32,6 +34,7 @@ export function ZButton({
   style = {},
   icon,
   type = 'button',
+  testId,
 }: ZButtonProps) {
   const [pressed, setPressed] = useState(false);
   const v = variantStyles[variant];
@@ -39,6 +42,7 @@ export function ZButton({
   return (
     <button
       type={type}
+      data-testid={testId}
       onPointerDown={() => setPressed(true)}
       onPointerUp={() => setPressed(false)}
       onPointerLeave={() => setPressed(false)}

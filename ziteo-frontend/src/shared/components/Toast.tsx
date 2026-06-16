@@ -38,7 +38,7 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: strin
                                'info'
 
   return (
-    <div className={`pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-2xl shadow-md w-full max-w-sm ${bgClass}`}>
+    <div data-testid={`toast-${toast.type}`} className={`pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-2xl shadow-md w-full max-w-sm ${bgClass}`}>
       <span className="material-symbols-outlined text-base leading-none" style={{ fontVariationSettings: "'FILL' 1" }}>
         {icon}
       </span>

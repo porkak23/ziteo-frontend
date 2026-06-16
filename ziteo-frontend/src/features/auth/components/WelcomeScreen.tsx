@@ -87,6 +87,7 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
 
         <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }}>
           <button
+            data-testid="welcome-register-btn"
             onClick={() => onNavigate('register')}
             style={{
               fontFamily: Z.font, fontWeight: 700, fontSize: 14,
@@ -100,6 +101,7 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
             Registrarme
           </button>
           <button
+            data-testid="welcome-login-btn"
             onClick={() => onNavigate('already-registered')}
             style={{
               fontFamily: Z.font, fontWeight: 700, fontSize: 14,

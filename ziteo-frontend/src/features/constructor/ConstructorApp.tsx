@@ -164,7 +164,7 @@ export function ConstructorApp() {
         </Suspense>
       </main>
 
-      <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => handleTabChange(k as ConstructorTab)} />
+      <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => handleTabChange(k as ConstructorTab)} testIdPrefix="constructor-nav" />
     </div>
   )
 }

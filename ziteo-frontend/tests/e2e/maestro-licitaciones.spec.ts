@@ -32,7 +32,7 @@ test.describe('Maestro - Licitaciones', () => {
   })
 
   test('login como Mario Maestro llega al dashboard', async ({ page }) => {
-    await loginAs(page, MAESTRO.phone, MAESTRO.pin)
+    await loginAs(page, MAESTRO.phone)
 
     // TrabajadorApp renders a bottom nav with tabs: Home, Trabajos, Proyectos, Mi Perfil
     // The "Trabajos" tab (licitaciones key) confirms the maestro dashboard loaded.
@@ -42,7 +42,7 @@ test.describe('Maestro - Licitaciones', () => {
   })
 
   test('navegar a Trabajos/Licitaciones muestra lista o estado vacio', async ({ page }) => {
-    await loginAs(page, MAESTRO.phone, MAESTRO.pin)
+    await loginAs(page, MAESTRO.phone)
 
     // Click the "Trabajos" nav tab
     // TODO data-testid: add data-testid="trabajador-nav-licitaciones"
@@ -71,7 +71,7 @@ test.describe('Maestro - Licitaciones', () => {
   })
 
   test('si hay licitaciones abrir una muestra el detalle con campo de oferta', async ({ page }) => {
-    await loginAs(page, MAESTRO.phone, MAESTRO.pin)
+    await loginAs(page, MAESTRO.phone)
 
     // Navigate to Trabajos tab
     const trabajosTab = page.getByRole('button', { name: /^trabajos$/i })

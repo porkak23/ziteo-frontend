@@ -8,6 +8,7 @@ import { InstallPrompt } from './shared/components/InstallPrompt'
 import SplashScreen from './features/auth/components/SplashScreen'
 import WelcomeScreen from './features/auth/components/WelcomeScreen'
 import RegisterForm from './features/auth/components/RegisterForm'
+import AlreadyRegisteredNotice from './features/auth/components/AlreadyRegisteredNotice'
 import OnboardingScreen from './features/auth/components/OnboardingScreen'
 import type { OAuthUserData } from './features/auth/types/authTypes'
 import AppLayout from './shared/components/AppLayout'
@@ -61,7 +62,7 @@ function TabSkeleton() {
   )
 }
 
-type AppScreen = 'splash' | 'welcome' | 'register' | 'onboarding' | 'oauth-setup' | 'app'
+type AppScreen = 'splash' | 'welcome' | 'register' | 'already-registered' | 'onboarding' | 'oauth-setup' | 'app'
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('splash')
@@ -181,6 +182,18 @@ export default function App() {
             setScreen('onboarding')
           }}
           onNavigate={(dest: string) => setScreen(dest as AppScreen)}
+        />
+      </div>
+    )
+  }
+
+  if (screen === 'already-registered') {
+    return (
+      <div className="animate-[fadeSlideUp_0.3s_ease-out]">
+        <AlreadyRegisteredNotice
+          onBack={() => setScreen('welcome')}
+          onRegisterAnyway={() => setScreen('register')}
+          onSuccess={() => setScreen('app')}
         />
       </div>
     )

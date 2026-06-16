@@ -12,6 +12,8 @@ interface ZInputProps {
   suffix?: React.ReactNode;
   style?: React.CSSProperties;
   id?: string;
+  /** Applied as data-testid on the inner <input> for stable E2E selectors. */
+  testId?: string;
 }
 
 export function ZInput({
@@ -25,6 +27,7 @@ export function ZInput({
   suffix,
   style = {},
   id: idProp,
+  testId,
 }: ZInputProps) {
   const [focused, setFocused] = useState(false);
   const autoId = useId();
@@ -74,6 +77,7 @@ export function ZInput({
         )}
         <input
           id={inputId}
+          data-testid={testId}
           type={type}
           value={value}
           onChange={e => onChange(e.target.value)}

@@ -92,6 +92,7 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
               <span style={{ padding: '0 0 0 14px', fontFamily: Z.font, fontSize: 15, fontWeight: 600, color: Z.textSec, whiteSpace: 'nowrap' }}>+591</span>
               <input
                 id="login-phone"
+                data-testid="login-phone-input"
                 ref={phoneRef}
                 type="tel"
                 inputMode="numeric"
@@ -109,11 +110,12 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
                 style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: Z.font, fontSize: 15, fontWeight: 500, color: Z.text, padding: '14px 14px 14px 8px', width: '100%', boxSizing: 'border-box' }}
               />
             </div>
-            {error && <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>{error}</span>}
+            {error && <span data-testid="login-api-error" style={{ fontFamily: Z.font, fontSize: 12, color: Z.error, fontWeight: 500 }}>{error}</span>}
           </div>
 
           <button
             type="submit"
+            data-testid="login-submit-btn"
             disabled={!isValid || submitting}
             style={{
               fontFamily: Z.font,

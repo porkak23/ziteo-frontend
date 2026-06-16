@@ -317,14 +317,14 @@ export function TransportistaScreen() {
   // ── OFFLINE ───────────────────────────────────────────────────────────────
   if (!isOnline) {
     return (
-      <div className="flex flex-col min-h-dvh bg-[--color-driver-bg] pb-16">
+      <div data-testid="radar-offline-panel" className="flex flex-col min-h-dvh bg-[--color-driver-bg] pb-16">
         {/* Header */}
         <div className="px-5 pt-8 pb-4 flex items-start justify-between">
           <div>
             <p className="font-body text-white/40 text-xs tracking-wider uppercase mb-1">Transportista</p>
             <h1 className="font-headline font-black text-white text-3xl leading-none tracking-tight">{firstName}</h1>
           </div>
-          <div className="flex items-center gap-1.5 bg-error/15 border border-error/30 rounded-full px-3 py-1.5">
+          <div data-testid="radar-status-badge" className="flex items-center gap-1.5 bg-error/15 border border-error/30 rounded-full px-3 py-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-error" />
             <span className="font-label font-bold text-error text-xs">Offline</span>
           </div>
@@ -383,6 +383,7 @@ export function TransportistaScreen() {
         {/* CTA principal — toggle gigante estilo InDrive */}
         <div className="px-5 pb-10 flex flex-col items-center gap-4">
           <button
+            data-testid="radar-activar-btn"
             onClick={() => setIsOnline(true)}
             aria-label="Conectarme para recibir trabajos"
             className="w-full bg-primary text-on-primary font-headline font-black text-2xl tracking-tight py-6 rounded-3xl active:scale-[0.98] transition-[transform,opacity] active:opacity-90 shadow-[0_0_40px_var(--color-primary)/25]"
@@ -415,7 +416,7 @@ export function TransportistaScreen() {
         {/* Top bar */}
         <div className="px-4 pt-4 pb-3 flex items-center justify-between">
           <div>
-            <p className="font-body text-white/40 text-xs">Conectado</p>
+            <p data-testid="radar-status-badge" className="font-body text-white/40 text-xs">Conectado</p>
             <div className="flex items-center gap-2">
               <h1 className="font-headline font-black text-white text-xl leading-tight">{firstName}</h1>
               {driverProfile?.vehicle_type && (

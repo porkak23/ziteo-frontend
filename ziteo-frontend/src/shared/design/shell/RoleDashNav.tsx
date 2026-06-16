@@ -10,9 +10,11 @@ interface RoleDashNavProps {
   tabs: Tab[];
   activeTab: string;
   onTabChange: (key: string) => void;
+  /** When set, each tab button gets data-testid={`${testIdPrefix}-${tab.key}`} for stable E2E selectors. */
+  testIdPrefix?: string;
 }
 
-export function RoleDashNav({ tabs, activeTab, onTabChange }: RoleDashNavProps) {
+export function RoleDashNav({ tabs, activeTab, onTabChange, testIdPrefix }: RoleDashNavProps) {
   return (
     <div
       style={{
@@ -37,6 +39,7 @@ export function RoleDashNav({ tabs, activeTab, onTabChange }: RoleDashNavProps) 
         return (
           <button
             key={key}
+            data-testid={testIdPrefix ? `${testIdPrefix}-${key}` : undefined}
             onClick={() => onTabChange(key)}
             aria-label={label}
             aria-pressed={active}

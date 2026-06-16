@@ -2362,6 +2362,7 @@ export function VendedorApp() {
         tabs={VENDEDOR_TABS}
         activeTab={activeTab}
         onTabChange={(k) => { setShowEnvios(false); setActiveTab(k as VendedorTab) }}
+        testIdPrefix="vendedor-nav"
       />
 
     </div>

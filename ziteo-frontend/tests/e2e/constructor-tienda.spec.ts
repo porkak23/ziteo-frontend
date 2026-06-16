@@ -30,7 +30,7 @@ test.describe('Constructor - Tienda y Pedido', () => {
   })
 
   test('login como Carlos Constructor llega al dashboard', async ({ page }) => {
-    await loginAs(page, CONSTRUCTOR.phone, CONSTRUCTOR.pin)
+    await loginAs(page, CONSTRUCTOR.phone)
 
     // ConstructorApp renders a bottom nav with tabs: Home, Tienda, Proyectos, Licitar
     // The presence of the "Tienda" tab confirms the constructor dashboard loaded.
@@ -40,7 +40,7 @@ test.describe('Constructor - Tienda y Pedido', () => {
   })
 
   test('navegar a Tienda muestra productos o estado vacio', async ({ page }) => {
-    await loginAs(page, CONSTRUCTOR.phone, CONSTRUCTOR.pin)
+    await loginAs(page, CONSTRUCTOR.phone)
 
     // Navigate to Tienda tab
     const tiendaTab = page.getByRole('button', { name: /^tienda$/i })
@@ -68,7 +68,7 @@ test.describe('Constructor - Tienda y Pedido', () => {
   })
 
   test('si hay productos agregar uno al carrito aumenta el badge', async ({ page }) => {
-    await loginAs(page, CONSTRUCTOR.phone, CONSTRUCTOR.pin)
+    await loginAs(page, CONSTRUCTOR.phone)
 
     // Navigate to Tienda
     const tiendaTab = page.getByRole('button', { name: /^tienda$/i })
@@ -106,7 +106,7 @@ test.describe('Constructor - Tienda y Pedido', () => {
   })
 
   test('abrir carrito verificar resumen y flujo de Confirmar Pedido', async ({ page }) => {
-    await loginAs(page, CONSTRUCTOR.phone, CONSTRUCTOR.pin)
+    await loginAs(page, CONSTRUCTOR.phone)
 
     // Navigate to Tienda
     const tiendaTab = page.getByRole('button', { name: /^tienda$/i })

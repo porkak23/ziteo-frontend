@@ -114,6 +114,7 @@ export function ChofersApp() {
           tabs={CHOFER_TABS}
           activeTab={activeTab}
           onTabChange={handleTabChange}
+          testIdPrefix="repartidor-nav"
         />
       </div>
     )
@@ -147,6 +148,7 @@ export function ChofersApp() {
         tabs={CHOFER_TABS}
         activeTab={activeTab}
         onTabChange={handleTabChange}
+        testIdPrefix="repartidor-nav"
       />
     </div>
   )

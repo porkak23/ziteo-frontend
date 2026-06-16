@@ -170,7 +170,7 @@ export function TrabajadorApp() {
         </Suspense>
       </div>
 
-      <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => handleTabChange(k as TrabajadorTab)} />
+      <RoleDashNav tabs={TABS} activeTab={activeTab} onTabChange={(k) => handleTabChange(k as TrabajadorTab)} testIdPrefix="trabajador-nav" />
     </div>
   )
 }

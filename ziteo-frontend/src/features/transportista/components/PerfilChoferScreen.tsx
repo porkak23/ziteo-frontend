@@ -3,6 +3,7 @@ import { Z } from '@/shared/design/tokens'
 import { ZAvatar } from '@/shared/design/components/ZAvatar'
 import { useAuthStore } from '@/features/auth/store/authStore'
 import { useDriverProfile, useSaveVehicleType } from '@/features/transportista/hooks/useDriverProfile'
+import { useMyDeliveries } from '@/features/transportista/hooks/useDeliveries'
 import { supabase } from '@/lib/supabaseClient'
 import { useToast } from '@/shared/hooks/useToast'
 import { Toast } from '@/shared/components/Toast'
@@ -160,6 +161,12 @@ export function PerfilChoferScreen() {
   const { mutateAsync: saveVehicle } = useSaveVehicleType()
   const { toasts, showToast, removeToast } = useToast()
 
+  // Viajes reales = entregas completadas del chofer (mismo filtro que useDriverEarnings).
+  // La calificación no tiene fuente de datos todavía (no existe sistema de ratings),
+  // así que mostramos un placeholder honesto en vez de una cifra inventada.
+  const { data: myDeliveries, isLoading: loadingDeliveries } = useMyDeliveries()
+  const completedTrips = (myDeliveries ?? []).filter((d) => d.status === 'delivered').length
+
   const displayName = user?.name ?? '—'
   const city = user?.city ?? '—'
 
@@ -287,12 +294,14 @@ export function PerfilChoferScreen() {
           background: Z.surface, border: `1px solid ${Z.border}`,
         }}>
           <div style={{ textAlign: 'center', padding: '10px 24px' }}>
-            <div style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text }}>4.9</div>
+            <div style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text }}>Nuevo</div>
             <div style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted, fontWeight: 500 }}>calificación</div>
           </div>
           <div style={{ width: 1, background: Z.border }} />
           <div style={{ textAlign: 'center', padding: '10px 24px' }}>
-            <div style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text }}>247</div>
+            <div style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text }}>
+              {loadingDeliveries ? '—' : completedTrips}
+            </div>
             <div style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted, fontWeight: 500 }}>viajes</div>
           </div>
         </div>

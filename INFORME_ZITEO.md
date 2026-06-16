@@ -208,3 +208,24 @@ Ziteo elimina las llamadas, los intermediarios y el desorden del proceso de cons
 ---
 
 *Informe generado el 21 de mayo de 2026 · Versión Beta · Operando en Sucre, Potosí y Santa Cruz*
+
+---
+
+# Addendum técnico interno — Gaps Beta 0.1 (revisión 2026-06-16)
+
+> Esta sección es **interna** (no para presentación a usuarios). Documenta hallazgos de la revisión de calidad previa al lanzamiento de Beta 0.1.
+
+## Resuelto en esta revisión
+- **Login de usuarios registrados estaba roto (P0)**: `WelcomeScreen` navegaba a `'already-registered'` pero `App.tsx` no renderizaba esa pantalla (caía a "Cargando…"). Se cableó `AlreadyRegisteredNotice` en `App.tsx`. El login beta es **solo-teléfono** vía `loginBeta` (sin PIN ni OTP).
+- **Perfil del chofer desmockeado**: la calificación `4.9` y `247 viajes` hardcodeadas en `PerfilChoferScreen` se reemplazaron por viajes reales (entregas `delivered` vía `useMyDeliveries`) y un placeholder honesto `Nuevo` para la calificación.
+- **data-testids**: se añadieron selectores estables al flujo de auth, a la navegación de los 4 roles (`RoleDashNav` con `testIdPrefix`), al radar del chofer, a `Toast`, y soporte `testId` en `ZInput`/`ZButton`.
+- **Suite de tests reescrito al flujo real**: `tests/helpers/auth.ts` ahora hace login solo-teléfono; el spec del radar (`chofer-radar.spec.ts`) se actualizó al estado real (botón "CONECTARME" → "Conectado").
+- **Graphify**: se excluyó `design/` del grafo y se dejó de versionar `graphify-out/`; se eliminó la carpeta `src/` raíz obsoleta.
+
+## Pendiente / observaciones
+- **Sistema de ratings de choferes**: no existe fuente de datos (ninguna columna de rating). La UI muestra `Nuevo` hasta que se implemente la feature.
+- **Tests E2E restantes desfasados**: `constructor-tienda`, `maestro-licitaciones` y `proveedor-inventario` usan selectores de texto/rol que pueden no coincidir con las pantallas rediseñadas; conviene revisarlos y migrarlos a los `data-testid` ya disponibles. Requieren correrse contra un despliegue con cuentas de prueba sembradas.
+- **data-testids restantes**: faltan en los formularios profundos (inventario en `VendedorApp`, tienda/checkout del constructor, licitaciones del maestro). La infraestructura (`ZInput`/`ZButton` `testId`, `RoleDashNav` prefix) ya está lista para conectarlos incrementalmente.
+- **Emojis en UI (viola la regla de no-emojis)**: `TransportistaScreen` muestra badges de vehículo con emojis (🛵/🚛/🚗/🛻). Reemplazar por iconos vectoriales.
+- **Doc desactualizado**: las secciones "Registro e Inicio de Sesión" y "Seguridad" de este informe describen "contraseña de 8 dígitos + OTP", que no coincide con el flujo beta real (solo-teléfono). Actualizar antes de usar el doc externamente.
+- **Go/no-go Beta 0.1**: requiere correr `npm run test:smoke` y `npm run test:e2e` reales contra staging con cuentas sembradas; typecheck y lint ya están en verde.
