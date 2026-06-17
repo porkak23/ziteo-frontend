@@ -420,10 +420,13 @@ export function TransportistaScreen() {
             <div className="flex items-center gap-2">
               <h1 className="font-headline font-black text-white text-xl leading-tight">{firstName}</h1>
               {driverProfile?.vehicle_type && (
-                <span className="font-label text-[11px] font-semibold bg-white/10 text-white/70 px-2 py-0.5 rounded-full">
-                  {driverProfile.vehicle_type === 'moto' ? '🛵 Moto' :
-                   driverProfile.vehicle_type === 'camion' ? '🚛 Camión' :
-                   driverProfile.vehicle_type === 'camioneta' ? '🚗 Camioneta' : '🛻 Pickup'}
+                <span className="font-label text-[11px] font-semibold bg-white/10 text-white/70 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[13px] leading-none" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">
+                    {driverProfile.vehicle_type === 'moto' ? 'two_wheeler' : 'local_shipping'}
+                  </span>
+                  {driverProfile.vehicle_type === 'moto' ? 'Moto' :
+                   driverProfile.vehicle_type === 'camion' ? 'Camión' :
+                   driverProfile.vehicle_type === 'camioneta' ? 'Camioneta' : 'Pickup'}
                 </span>
               )}
             </div>

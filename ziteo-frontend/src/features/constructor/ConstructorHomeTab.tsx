@@ -1,12 +1,29 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Z } from '@/shared/design/tokens'
 import { ZIcon } from '@/shared/design/components/ZIcon'
 import { SummaryCard } from '@/shared/design/shell/SummaryCard'
 import { SectionTitle } from '@/shared/design/shell/SectionTitle'
 import { ActivityItem } from '@/shared/design/shell/ActivityItem'
 import { useAuthStore } from '@/features/auth/store/authStore'
+import { useProyectos } from '@/features/proyectos/hooks/useProyectos'
+import { useMyOrders } from '@/features/tienda/hooks/useOrders'
+import { useNotifications } from '@/shared/hooks/useNotifications'
+import { supabase } from '@/lib/supabaseClient'
 import GlobalSearchBar from '@/shared/components/GlobalSearchBar'
 import { AdBanner } from '@/shared/components/AdBanner'
+
+// Relative time formatter (es) for the activity feed.
+function relativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const min = Math.floor(diffMs / 60_000)
+  if (min < 1) return 'Ahora'
+  if (min < 60) return `Hace ${min}m`
+  const hrs = Math.floor(min / 60)
+  if (hrs < 24) return `Hace ${hrs}h`
+  const days = Math.floor(hrs / 24)
+  return days === 1 ? 'Ayer' : `Hace ${days}d`
+}
 
 // ── Inline sub-icons ────────────────────────────────────────────────────────
 function IconStore({ color = Z.textMuted, size = 22 }: { color?: string; size?: number }) {
@@ -83,11 +100,42 @@ interface ConstructorHomeTabProps {
 
 export function ConstructorHomeTab({ onNavigate }: ConstructorHomeTabProps) {
   const user = useAuthStore((s) => s.user)
+  const userId = user?.user_id ?? ''
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches'
   const firstName = user?.name ? user.name.split(' ')[0] : 'Constructor'
   const city = user?.city ?? 'Bolivia'
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+
+  // ── Datos reales del resumen ────────────────────────────────────────────────
+  const { data: proyectos = [] } = useProyectos({ constructor_id: userId })
+  const activeProjectsCount = proyectos.filter((p) => p.status === 'active').length
+
+  const { data: orders = [] } = useMyOrders(userId)
+  const pendingOrdersCount = orders.filter((o) => o.status === 'pending').length
+
+  // "Contratados": contratos aceptados donde el usuario es el constructor.
+  const { data: hiredCount = 0 } = useQuery<number>({
+    queryKey: ['constructor-hired-count', userId],
+    enabled: !!userId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('contracts')
+        .select('id', { count: 'exact', head: true })
+        .eq('constructor_id', userId)
+        .eq('status', 'accepted')
+      if (error) {
+        if (error.code === '42P01') return 0
+        throw error
+      }
+      return count ?? 0
+    },
+  })
+
+  // Actividad reciente real desde notificaciones.
+  const { notifications } = useNotifications(userId)
+  const recentActivity = notifications.slice(0, 5)
 
   return (
     <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -254,43 +302,41 @@ export function ConstructorHomeTab({ onNavigate }: ConstructorHomeTabProps) {
         <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
           <SummaryCard
             icon={<IconCart color={Z.orange} size={18} />}
-            label="Pedidos pendientes" value="3" color={Z.orange}
+            label="Pedidos pendientes" value={String(pendingOrdersCount)} color={Z.orange}
           />
           <SummaryCard
             icon={<IconProjects color={Z.blue} size={18} />}
-            label="Proyectos activos" value="2" color={Z.blue}
+            label="Proyectos activos" value={String(activeProjectsCount)} color={Z.blue}
           />
           <SummaryCard
             icon={<IconUsers color={Z.blue} size={18} />}
-            label="Contratados" value="5" color={Z.blue}
+            label="Contratados" value={String(hiredCount)} color={Z.blue}
           />
         </div>
       </div>
 
       {/* Actividad Reciente */}
       <div>
-        <SectionTitle title="Actividad Reciente" action="Ver todo" />
+        <SectionTitle title="Actividad Reciente" />
         <div style={{ marginTop: 8 }}>
-          <ActivityItem
-            title="50 bolsas de Cemento IP-30"
-            subtitle="Pedido confirmado · Ferretería San José"
-            time="Hace 2h" color={Z.orange}
-          />
-          <ActivityItem
-            title="Licitación: Electricista para obra"
-            subtitle="3 nuevas ofertas recibidas"
-            time="Hace 5h" color={Z.blue}
-          />
-          <ActivityItem
-            title="Proyecto 'Casa Norte' actualizado"
-            subtitle="Nuevo pedido de materiales agregado"
-            time="Ayer" color={Z.orange}
-          />
-          <ActivityItem
-            title="Recojo de escombros completado"
-            subtitle="Camión volqueta · Zona Norte"
-            time="Hace 3d" color={Z.textMuted}
-          />
+          {recentActivity.length === 0 ? (
+            <div style={{
+              fontFamily: Z.font, fontSize: 13, color: Z.textMuted,
+              padding: '16px 0', textAlign: 'center',
+            }}>
+              Sin actividad reciente
+            </div>
+          ) : (
+            recentActivity.map((n) => (
+              <ActivityItem
+                key={n.id}
+                title={n.title}
+                subtitle={n.body}
+                time={relativeTime(n.created_at)}
+                color={n.type === 'order' ? Z.orange : n.type === 'contract' ? Z.blue : Z.textMuted}
+              />
+            ))
+          )}
         </div>
       </div>
 

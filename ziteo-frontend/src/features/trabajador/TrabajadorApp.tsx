@@ -146,7 +146,6 @@ export function TrabajadorApp() {
     <div style={{ minHeight: '100vh', paddingBottom: 92, background: Z.bg }}>
       <DashHeader
         onProfile={() => setShowAccount(true)}
-        onTrack={() => {/* seguimiento: próximamente */}}
         onBell={() => setShowNotifs(true)}
         unreadCount={unreadCount}
       />

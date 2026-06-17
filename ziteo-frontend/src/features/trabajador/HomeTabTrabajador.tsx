@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Z } from '../../shared/design/tokens'
 import { SummaryCard, SectionTitle } from '../../shared/design/shell'
 import { IconStar } from '../../shared/design/shell'
 import { useAuthStore } from '../auth/store/authStore'
+import { useEarnings } from '../maestro/hooks/useEarnings'
+import { useTrabajos } from '../maestro/hooks/useTrabajos'
 import { supabase } from '../../lib/supabaseClient'
 
 interface HomeTabTrabajadorProps {
@@ -35,16 +38,44 @@ function DollarIcon({ color = Z.orange }: { color?: string }) {
   )
 }
 
-const SAMPLE_PROJECT = { id: 1, name: 'Casa Norte', client: 'Juan Mamani', progress: 60 }
-const SAMPLE_REQUESTS = [
-  { id: 1, title: 'Albañilería segundo piso', client: 'Juan Mamani', budget: 3000, location: 'Zona Norte', urgent: true },
-  { id: 2, title: 'Reparación de techo filtraciones', client: 'María López', budget: 800, location: 'Zona Sur', urgent: false },
-]
+interface AcceptedContract {
+  id: string
+  description: string | null
+  constructor: { name: string } | null
+}
 
 export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
   const [isActive, setIsActive] = useState(false)
   const [togglePending, setTogglePending] = useState(false)
   const user = useAuthStore((s) => s.user)
+  const maestroId = user?.user_id ?? ''
+
+  // ── Datos reales ──────────────────────────────────────────────────────────
+  const { data: earnings } = useEarnings(maestroId)
+  const { data: trabajos = [] } = useTrabajos()
+  const requests = trabajos.slice(0, 5)
+
+  // Proyecto activo: contrato aceptado más reciente del maestro.
+  const { data: currentContract = null } = useQuery<AcceptedContract | null>({
+    queryKey: ['maestro-current-contract', maestroId],
+    enabled: !!maestroId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('id, description, constructor:profiles!contracts_constructor_id_fkey(name)')
+        .eq('maestro_id', maestroId)
+        .eq('status', 'accepted')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) {
+        if (error.code === '42P01') return null
+        throw error
+      }
+      return (data as unknown as AcceptedContract | null) ?? null
+    },
+  })
 
   useEffect(() => {
     if (!user?.user_id) return
@@ -186,19 +217,19 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
           <SummaryCard
             icon={<IconStar color="#F59E0B" size={18} />}
             label="Calificación"
-            value="4.8"
+            value="Nuevo"
             color="#F59E0B"
           />
           <SummaryCard
             icon={<WNavIconHardhat color={Z.blue} size={17} />}
-            label="Trabajos mes"
-            value="5"
+            label="Trabajos"
+            value={String(earnings?.completedCount ?? 0)}
             color={Z.blue}
           />
           <SummaryCard
             icon={<DollarIcon color={Z.orange} />}
             label="Ganancias"
-            value="12.5k"
+            value={`${((earnings?.totalEarned ?? 0) / 1000).toFixed(1)}k`}
             color={Z.orange}
           />
         </div>
@@ -206,94 +237,110 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
         <div>
           <SectionTitle title="Agenda de Hoy" />
           <div style={{ marginTop: 10 }}>
-            <button
-              onClick={() => onNavigate('proyectos')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '14px',
-                borderRadius: Z.r.md,
-                border: `2px solid ${Z.orange}`,
-                background: Z.orangeLight,
-                width: '100%',
-                cursor: 'pointer',
-                outline: 'none',
-                textAlign: 'left',
-              }}
-            >
-              <div
+            {currentContract ? (
+              <button
+                onClick={() => onNavigate('proyectos')}
                 style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 12,
-                  background: Z.gradOrange,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
+                  gap: 14,
+                  padding: '14px',
+                  borderRadius: Z.r.md,
+                  border: `2px solid ${Z.orange}`,
+                  background: Z.orangeLight,
+                  width: '100%',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  textAlign: 'left',
                 }}
               >
-                <WNavIconHardhat color="#fff" size={22} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>
-                  {SAMPLE_PROJECT.name}
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 12,
+                    background: Z.gradOrange,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <WNavIconHardhat color="#fff" size={22} />
                 </div>
-                <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 2 }}>
-                  {SAMPLE_PROJECT.client} · {SAMPLE_PROJECT.progress}% completado
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>
+                    {currentContract.description ?? 'Proyecto en curso'}
+                  </div>
+                  <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 2 }}>
+                    {currentContract.constructor?.name ?? 'Constructor'}
+                  </div>
                 </div>
+                <ChevronRight color={Z.orangeDark} />
+              </button>
+            ) : (
+              <div style={{
+                fontFamily: Z.font, fontSize: 13, color: Z.textMuted,
+                padding: '16px 0', textAlign: 'center',
+              }}>
+                No tienes proyectos activos
               </div>
-              <ChevronRight color={Z.orangeDark} />
-            </button>
+            )}
           </div>
         </div>
 
         <div>
           <SectionTitle
             title="Nuevas Solicitudes"
-            action={`${SAMPLE_REQUESTS.length} disponibles`}
+            action={`${requests.length} disponibles`}
             onAction={() => onNavigate('licitaciones')}
           />
           <div style={{ marginTop: 8 }}>
-            {SAMPLE_REQUESTS.map((r) => (
-              <div
-                key={r.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '12px 0',
-                  borderBottom: `1px solid ${Z.divider}`,
-                }}
-              >
-                <div
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: r.urgent ? Z.orange : Z.blue,
-                    flexShrink: 0,
-                    marginTop: 2,
-                  }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.text }}>
-                    {r.title}{r.urgent && (
-                      <svg width="14" height="16" viewBox="0 0 24 24" fill="none" style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 4 }}>
-                        <path d="M12 2s4 4 4 8a4 4 0 11-8 0c0-2 1-3 1-3s-2 2-2 5a6 6 0 0012 0c0-5-7-10-7-10z" stroke={Z.orange} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
-                      </svg>
-                    )}
-                  </div>
-                  <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: Z.textMuted, marginTop: 2 }}>
-                    {r.client} · Bs {r.budget.toLocaleString()}
-                  </div>
-                </div>
-                <span style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  {r.location}
-                </span>
+            {requests.length === 0 ? (
+              <div style={{
+                fontFamily: Z.font, fontSize: 13, color: Z.textMuted,
+                padding: '16px 0', textAlign: 'center',
+              }}>
+                No hay solicitudes disponibles por ahora
               </div>
-            ))}
+            ) : (
+              requests.map((r) => (
+                <div
+                  key={r.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '12px 0',
+                    borderBottom: `1px solid ${Z.divider}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: Z.blue,
+                      flexShrink: 0,
+                      marginTop: 2,
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.text }}>
+                      {r.name}
+                    </div>
+                    <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: Z.textMuted, marginTop: 2 }}>
+                      {r.constructor?.name ?? 'Constructor'}{r.estimated_budget != null ? ` · Bs ${r.estimated_budget.toLocaleString()}` : ''}
+                    </div>
+                  </div>
+                  {r.location_address && (
+                    <span style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {r.location_address}
+                    </span>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

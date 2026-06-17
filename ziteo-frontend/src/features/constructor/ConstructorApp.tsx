@@ -143,7 +143,6 @@ export function ConstructorApp() {
     }}>
       <DashHeader
         onProfile={() => setShowAccount(true)}
-        onTrack={() => {/* seguimiento: próximamente */}}
         onBell={() => setShowNotifs(true)}
         unreadCount={unreadCount}
       />
