@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabaseClient'
+import { Preferences } from '@capacitor/preferences'
 import type { AuthUser, UserRole } from '../types/authTypes'
 
 export class AuthServiceError extends Error {
@@ -11,18 +12,51 @@ export class AuthServiceError extends Error {
   }
 }
 
-export interface AnonymousRegisterInput {
+export interface RegisterInput {
   name: string
   phone: string
   email?: string
   company_name?: string
-  role: UserRole
+  initial_role: UserRole
   city?: string | null
   terms_accepted_at?: string
 }
 
-// Genera credenciales deterministas e invisibles para la beta a partir del teléfono
-export function getBetaCredentials(phone: string) {
+/** @deprecated — use RegisterInput */
+export type AnonymousRegisterInput = RegisterInput
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+function buildAuthUser(data: {
+  user_id: string
+  name: string
+  phone: string
+  active_role: string
+  roles: string[]
+  access_token: string
+  refresh_token: string
+  avatar_url?: string | null
+  city?: string | null
+  email?: string | null
+}): AuthUser {
+  return {
+    user_id: data.user_id,
+    name: data.name,
+    phone: data.phone,
+    active_role: data.active_role as UserRole,
+    roles: (data.roles as UserRole[]),
+    access_token: data.access_token,
+    refresh_token: data.refresh_token ?? '',
+    avatar_url: data.avatar_url ?? undefined,
+    city: data.city ?? null,
+    email: data.email ?? undefined,
+  }
+}
+
+// Legacy beta credentials (deterministic, used only for backward compat)
+function getBetaCredentials(phone: string) {
   const cleanPhone = phone.replace(/\D/g, '')
   return {
     email: `${cleanPhone}@gmail.com`,
@@ -30,10 +64,10 @@ export function getBetaCredentials(phone: string) {
   }
 }
 
-// Inicia sesión usando el teléfono con sus credenciales deterministas y obtiene los datos del perfil
-export async function loginBeta(phone: string): Promise<AuthUser> {
+// Internal — not exported. Tries the old signInWithPassword scheme for beta testers.
+async function loginLegacyBeta(phone: string): Promise<AuthUser> {
   const { email, password } = getBetaCredentials(phone)
-  
+
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -46,25 +80,23 @@ export async function loginBeta(phone: string): Promise<AuthUser> {
   const userId = signInData.user.id
   const session = signInData.session
 
-  // Obtener perfil de la base de datos
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('*')
+    .select('user_id, name, phone, email, active_role, avatar_url, city')
     .eq('user_id', userId)
     .maybeSingle()
 
   if (profileError || !profile) {
-    throw new AuthServiceError('PROFILE_FETCH_FAILED', profileError?.message ?? 'No se encontró el perfil para este usuario.')
+    throw new AuthServiceError('PROFILE_FETCH_FAILED', profileError?.message ?? 'No se encontró el perfil.')
   }
 
-  // Obtener roles de la base de datos
   const { data: userRoles, error: rolesError } = await supabase
     .from('user_roles')
     .select('role')
     .eq('user_id', userId)
 
   if (rolesError || !userRoles || userRoles.length === 0) {
-    throw new AuthServiceError('ROLES_FETCH_FAILED', rolesError?.message ?? 'No se encontraron roles para este usuario.')
+    throw new AuthServiceError('ROLES_FETCH_FAILED', rolesError?.message ?? 'No se encontraron roles.')
   }
 
   const roles = userRoles.map((ur) => ur.role as UserRole)
@@ -83,158 +115,164 @@ export async function loginBeta(phone: string): Promise<AuthUser> {
   }
 }
 
-// Actualiza silenciosamente una sesión anónima activa a una sesión beta determinista
-export async function upgradeAnonymousSession(phone: string): Promise<void> {
+// ---------------------------------------------------------------------------
+// WhatsApp OTP — Forgot PIN flow
+// (For registration, OTP is sent automatically by auth-register)
+// ---------------------------------------------------------------------------
+
+/**
+ * Sends a WhatsApp OTP to a registered phone number (forgot-PIN flow).
+ * Maps to the auth-forgot-pin edge function.
+ */
+export async function startWhatsappVerification(phone: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('auth-forgot-pin', {
+    body: { phone },
+  })
+  if (error) {
+    const code = (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
+    throw new AuthServiceError(code, code)
+  }
+}
+
+/**
+ * Verifies the OTP code for an existing user (post-registration OTP check).
+ * Maps to auth-otp-verify. Does NOT return a full session (access_token is null
+ * in this response). After calling this, call loginWithPin to get a session.
+ */
+export async function checkWhatsappCode(phone: string, code: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('auth-otp-verify', {
+    body: { phone, otp: code },
+  })
+  if (error) {
+    const msg = (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
+    throw new AuthServiceError(msg, msg)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Registration
+// ---------------------------------------------------------------------------
+
+/**
+ * Registra usuario nuevo con PIN.
+ * Calls auth-register which creates the user, inserts profile/role, and sends
+ * an OTP to the phone via WhatsApp. Returns { user_id, phone, requires_otp }
+ * — a session is NOT returned yet. The caller must then verify the OTP via
+ * checkWhatsappCode and call loginWithPin to get a full session.
+ */
+export async function registerWithPin(input: RegisterInput, pin: string): Promise<{ user_id: string; phone: string }> {
+  const { data, error } = await supabase.functions.invoke('auth-register', {
+    body: {
+      phone: input.phone,
+      name: input.name,
+      email: input.email,
+      city: input.city ?? 'Sucre',
+      pin,
+      initial_role: input.initial_role,
+      terms_accepted_at: input.terms_accepted_at ?? new Date().toISOString(),
+    },
+  })
+  if (error) {
+    const msg = (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
+    throw new AuthServiceError(msg, msg)
+  }
+
+  const resp = data as { user_id: string; phone: string; requires_otp: boolean }
+  return { user_id: resp.user_id, phone: resp.phone }
+}
+
+/**
+ * Verifies OTP after registration, then logs in to obtain a full session.
+ * This is the second step after registerWithPin — call this when the user
+ * enters the 6-digit code they received via WhatsApp.
+ */
+export async function verifyOtpAndLogin(phone: string, otp: string, pin: string): Promise<AuthUser> {
+  // Step 1: verify OTP (marks it as used and confirms the phone in Supabase Auth)
+  await checkWhatsappCode(phone, otp)
+
+  // Step 2: login with PIN to get a full session
+  return loginWithPin(phone, pin)
+}
+
+// ---------------------------------------------------------------------------
+// Login
+// ---------------------------------------------------------------------------
+
+/** Login con PIN (llama Edge Function auth-login) */
+export async function loginWithPin(phone: string, pin: string): Promise<AuthUser> {
+  const { data, error } = await supabase.functions.invoke('auth-login', {
+    body: { phone, pin },
+  })
+  if (error) {
+    const msg = (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
+    throw new AuthServiceError(msg, msg)
+  }
+
+  const resp = data as {
+    user_id: string
+    name: string
+    phone: string
+    active_role: string
+    roles: string[]
+    access_token: string
+    refresh_token: string
+    avatar_url?: string | null
+    city?: string | null
+  }
+
+  await supabase.auth.setSession({
+    access_token: resp.access_token,
+    refresh_token: resp.refresh_token,
+  })
+
+  return buildAuthUser(resp)
+}
+
+/**
+ * Intenta login con PIN; si el usuario no existe (USER_NOT_FOUND / 404),
+ * cae en el esquema legacy de beta testers.
+ */
+export async function loginWithPinOrLegacy(phone: string, pin: string): Promise<AuthUser> {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    // Si no hay usuario o ya tiene un correo de la beta, no es necesario actualizar
-    if (!user || user.email?.endsWith('@gmail.com')) {
-      return
-    }
-
-    const { email, password } = getBetaCredentials(phone)
-    const { error } = await supabase.auth.updateUser({ email, password })
-    if (error) {
-      console.warn('Silent upgrade to permanent user failed:', error.message)
-    } else {
-      console.log('Silent upgrade to permanent user succeeded!')
-    }
+    return await loginWithPin(phone, pin)
   } catch (err) {
-    console.warn('Error during silent upgrade:', err)
-  }
-}
-
-// Registro con credenciales deterministas invisibles y soporte de migración/recuperación
-export async function registerAnonymous(input: AnonymousRegisterInput): Promise<AuthUser> {
-  const { email: betaEmail, password: betaPassword } = getBetaCredentials(input.phone)
-
-  // 1. Pre-verificar si el teléfono ya está registrado en la base de datos
-  const { data: existingProfile, error: checkError } = await supabase
-    .from('profiles')
-    .select('user_id, phone')
-    .eq('phone', input.phone)
-    .maybeSingle()
-
-  if (checkError) {
-    throw new AuthServiceError('PROFILE_CHECK_FAILED', checkError.message)
-  }
-
-  // 2. Si ya está registrado en profiles, intentamos recuperar la cuenta
-  if (existingProfile) {
-    try {
-      // Intentamos iniciar sesión con la contraseña determinista
-      return await loginBeta(input.phone)
-    } catch {
-      // Si falla, significa que el usuario es un usuario anónimo antiguo sin credencial de contraseña
-      // Procedemos a crear su cuenta de Auth determinista y migrar su perfil antiguo
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: betaEmail,
-        password: betaPassword,
-      })
-
-      if (signUpError || !signUpData.session || !signUpData.user) {
-        throw new AuthServiceError('ANON_UPGRADE_SIGNUP_FAILED', signUpError?.message ?? 'No se pudo crear la credencial de recuperación.')
-      }
-
-      const newUserId = signUpData.user.id
-
-      // Llamamos a la función RPC de la base de datos para actualizar todas las referencias relacionales
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: rpcError } = await (supabase.rpc as any)('migrate_anonymous_profile', {
-        p_old_uid: existingProfile.user_id,
-        p_new_uid: newUserId,
-        p_phone: input.phone,
-      })
-
-      if (rpcError) {
-        console.warn('RPC migration failed, attempting direct profile update fallback:', rpcError.message)
-        // Fallback directo: intentamos actualizar el user_id del perfil si no hay restricciones complejas
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ user_id: newUserId })
-          .eq('phone', input.phone)
-
-        if (updateError) {
-          throw new AuthServiceError('MIGRATION_FAILED', `No pudimos migrar tu perfil: ${rpcError.message}`)
-        }
-      }
-
-      // Volvemos a iniciar sesión ahora que el perfil está migrado
-      return await loginBeta(input.phone)
+    if (
+      err instanceof AuthServiceError &&
+      (err.code === 'USER_NOT_FOUND' || err.code.includes('404'))
+    ) {
+      // Try legacy beta credentials (ignores the pin — old users have deterministic password)
+      return await loginLegacyBeta(phone)
     }
-  }
-
-  // 3. Si no existe el teléfono, creamos una cuenta nueva desde cero
-  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email: betaEmail,
-    password: betaPassword,
-  })
-
-  if (signUpError) {
-    throw new AuthServiceError('ANON_SIGNIN_FAILED', signUpError.message)
-  }
-
-  if (!signUpData.session || !signUpData.user) {
-    throw new AuthServiceError(
-      'ANON_SIGNIN_FAILED',
-      'Confirmación de correo activa. Por favor, ve a tu panel de Supabase -> Auth -> Providers -> Email y DESACTIVA la opción "Confirm email".'
-    )
-  }
-
-  const userId = signUpData.user.id
-  const session = signUpData.session
-
-  const profilePayload = {
-    user_id: userId,
-    name: input.name,
-    phone: input.phone,
-    email: input.email ?? null,
-    city: input.city || 'Sucre',
-    active_role: input.role,
-    pin_hash: '',
-    terms_accepted_at: input.terms_accepted_at ?? new Date().toISOString(),
-    preferred_auth_method: 'pin',
-  }
-
-  const { error: profileError } = await supabase.from('profiles').insert(profilePayload)
-  if (profileError) {
-    await supabase.auth.signOut().catch(() => undefined)
-    throw new AuthServiceError('PROFILE_CREATE_FAILED', profileError.message)
-  }
-
-  const { error: roleError } = await supabase.from('user_roles').insert({
-    user_id: userId,
-    role: input.role,
-    onboarding_completed: false,
-    is_verified: false,
-  })
-  if (roleError) {
-    throw new AuthServiceError('ROLE_CREATE_FAILED', roleError.message)
-  }
-
-  if (input.company_name) {
-    await supabase
-      .from('profiles')
-      .update({ bio: input.company_name })
-      .eq('user_id', userId)
-      .then(() => undefined, () => undefined)
-  }
-
-  return {
-    user_id: userId,
-    name: input.name,
-    phone: input.phone,
-    email: input.email ?? undefined,
-    active_role: input.role,
-    roles: [input.role],
-    access_token: session.access_token,
-    refresh_token: session.refresh_token ?? '',
-    city: input.city || 'Sucre',
+    throw err
   }
 }
+
+// ---------------------------------------------------------------------------
+// PIN reset
+// ---------------------------------------------------------------------------
+
+/** Resetea PIN via WhatsApp OTP */
+export async function resetPin(phone: string, code: string, newPin: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('auth-reset-pin', {
+    body: { phone, otp: code, new_pin: newPin },
+  })
+  if (error) {
+    const msg = (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
+    throw new AuthServiceError(msg, msg)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Session / Profile management (kept intact)
+// ---------------------------------------------------------------------------
 
 export async function signOut(): Promise<void> {
-  await supabase.auth.signOut()
+  await Promise.all([
+    supabase.auth.signOut(),
+    Preferences.remove({ key: 'ziteo_bio_phone' }),
+    Preferences.remove({ key: 'ziteo_bio_pin' }),
+  ])
+  localStorage.removeItem('ziteo_biometric_enabled')
 }
 
 export async function addRole(_accessToken: string, role: UserRole): Promise<void> {
@@ -256,21 +294,18 @@ export async function removeRole(role: UserRole): Promise<void> {
   const { data: sessionData } = await supabase.auth.getUser()
   const userId = sessionData.user?.id
   if (!userId) throw new AuthServiceError('NOT_AUTHENTICATED')
-  
-  // 1. Delete from user_roles
+
   const { error } = await supabase
     .from('user_roles')
     .delete()
     .eq('user_id', userId)
     .eq('role', role)
-    
+
   if (error) {
     throw new AuthServiceError('ROLE_REMOVE_FAILED', error.message)
   }
 
-  // 2. Clean up specific tables and files depending on the role
   if (role === 'maestro') {
-    // Delete from maestro_profiles
     const { error: profileError } = await supabase
       .from('maestro_profiles')
       .delete()
@@ -279,7 +314,6 @@ export async function removeRole(role: UserRole): Promise<void> {
       console.error('Error deleting maestro profile:', profileError.message)
     }
 
-    // Delete from maestro_habilidades
     const { error: habError } = await supabase
       .from('maestro_habilidades')
       .delete()
@@ -288,7 +322,6 @@ export async function removeRole(role: UserRole): Promise<void> {
       console.error('Error deleting maestro habilidades:', habError.message)
     }
 
-    // Reset bio in profiles (shared table)
     const { error: bioError } = await supabase
       .from('profiles')
       .update({ bio: null })
@@ -297,7 +330,6 @@ export async function removeRole(role: UserRole): Promise<void> {
       console.error('Error resetting bio in profiles:', bioError.message)
     }
 
-    // Delete QR code file from storage
     try {
       const filePath = `${userId}/qr.png`
       await supabase.storage.from('payment-qrs').remove([filePath])
@@ -305,7 +337,6 @@ export async function removeRole(role: UserRole): Promise<void> {
       console.error('Error deleting payment QR from storage:', storageErr)
     }
   } else if (role === 'proveedor') {
-    // Delete all products for the provider
     const { error: productsError } = await supabase
       .from('products')
       .delete()
@@ -314,7 +345,6 @@ export async function removeRole(role: UserRole): Promise<void> {
       console.error('Error deleting provider products:', productsError.message)
     }
 
-    // Delete QR code file from storage
     try {
       const filePath = `${userId}/qr.png`
       await supabase.storage.from('payment-qrs').remove([filePath])
@@ -339,4 +369,3 @@ export async function updateProfile(
     throw new AuthServiceError('PROFILE_UPDATE_FAILED', error.message)
   }
 }
-

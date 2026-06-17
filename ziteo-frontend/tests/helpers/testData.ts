@@ -6,25 +6,25 @@
 export const TEST_ACCOUNTS = {
   constructor: {
     phone: '79999901',
-    pin: '12345678',
+    pin: '123456',
     role: 'constructor' as const,
     label: 'Carlos Constructor',
   },
   proveedor: {
     phone: '79999902',
-    pin: '12345678',
+    pin: '123456',
     role: 'proveedor' as const,
     label: 'Pedro Proveedor',
   },
   maestro: {
     phone: '79999903',
-    pin: '12345678',
+    pin: '123456',
     role: 'maestro' as const,
     label: 'Mario Maestro',
   },
   chofer: {
     phone: '79999904',
-    pin: '12345678',
+    pin: '123456',
     role: 'chofer' as const,
     label: 'Tomas Transportista',
   },

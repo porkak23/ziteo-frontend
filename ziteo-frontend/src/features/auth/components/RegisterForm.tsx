@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { registerAnonymous, AuthServiceError } from '../services/authService'
+import { registerWithPin, verifyOtpAndLogin, AuthServiceError } from '../services/authService'
 import { useAuthStore } from '../store/authStore'
+import { useBiometricAuth } from '../../../shared/hooks/useBiometricAuth'
 import type { UserRole } from '../types/authTypes'
 import { Z } from '@/shared/design/tokens'
 import LegalModal, { type LegalDocType } from '@/shared/components/LegalModal'
 import { track } from '../../../lib/analytics'
+import { OtpVerificationSheet } from './OtpVerificationSheet'
+import type { VerificationStep } from './OtpVerificationSheet'
 
 interface RegisterFormProps {
   onSuccess: () => void
@@ -100,6 +103,7 @@ const inputBase: React.CSSProperties = {
 
 export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProps) {
   const setUser = useAuthStore((s) => s.setUser)
+  const { saveCredential } = useBiometricAuth()
   const [step, setStep] = useState<Step>(1)
 
   useEffect(() => {
@@ -121,9 +125,16 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
   // Step 3 — role
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [registerErr, setRegisterErr] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
   const [legalModal, setLegalModal] = useState<LegalDocType | null>(null)
+
+  // Temporarily holds the confirmed PIN during registration so it can be saved for biometrics
+  const [createdPin, setCreatedPin] = useState<string | null>(null)
+
+  // OTP Verification Sheet state
+  const [showSheet, setShowSheet] = useState(false)
+  const [sheetStep, setSheetStep] = useState<VerificationStep>('pin-create')
+  const [sheetLoading, setSheetLoading] = useState(false)
+  const [sheetError, setSheetError] = useState<string | null>(null)
 
   function goBack() {
     if (step === 1) onNavigate('welcome')
@@ -143,40 +154,101 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
     setStep(3)
   }
 
-  async function handleSubmit() {
+  // Registration flow:
+  // 1. Sheet opens at pin-create (collect PIN first, no backend call yet)
+  // 2. pin-create → pin-confirm (PIN confirmed locally)
+  // 3. pin-confirm complete → sending (calls auth-register, which creates user and sends OTP)
+  // 4. code (user enters OTP) → calls verifyOtpAndLogin → sets user session
+  // 5. biometric (optional)
+
+  function handleOpenSheet() {
     if (!selectedRole || !termsAccepted) return
-    setRegisterErr(null)
-    setSubmitting(true)
+    setSheetError(null)
+    setShowSheet(true)
+    // Start at pin-create so user sets their PIN before we call the backend
+    setSheetStep('pin-create')
+  }
+
+  // Called from the 'code' step once OTP is entered
+  async function handleVerified(code: string) {
+    if (!createdPin || !selectedRole) return
+    setSheetLoading(true)
+    setSheetError(null)
     try {
-      const result = await registerAnonymous({
-        name: name.trim(),
-        phone: '+591' + phone,
-        email: email.trim() || undefined,
-        company_name: company.trim() || undefined,
-        role: selectedRole,
-        city: selectedCity,
-        terms_accepted_at: new Date().toISOString(),
-      })
-      setUser(result)
+      const user = await verifyOtpAndLogin('+591' + phone, code, createdPin)
+      setUser(user)
       track.onboardingComplete(selectedRole)
-      onSuccess()
+      setSheetStep('biometric')
+    } catch (err) {
+      console.error('OTP verification failed:', err)
+      const message = err instanceof Error ? err.message : 'Código incorrecto. Intenta de nuevo.'
+      setSheetError(message)
+    } finally {
+      setSheetLoading(false)
+    }
+  }
+
+  // Called by OtpVerificationSheet for both pin-create and pin-confirm steps
+  function handlePinCreated(pin: string) {
+    if (sheetStep === 'pin-create') {
+      setCreatedPin(pin)
+      setSheetStep('pin-confirm')
+      return
+    }
+    // pin-confirm step — PIN is confirmed; now register the user
+    void handleRegister(pin)
+  }
+
+  async function handleRegister(pin: string) {
+    if (!selectedRole) return
+    setSheetLoading(true)
+    setSheetError(null)
+    setSheetStep('sending')
+    try {
+      await registerWithPin(
+        {
+          name: name.trim(),
+          phone: '+591' + phone,
+          email: email.trim() || undefined,
+          company_name: company.trim() || undefined,
+          initial_role: selectedRole,
+          city: selectedCity,
+          terms_accepted_at: new Date().toISOString(),
+        },
+        pin
+      )
+      // auth-register created the user and sent the OTP — move to code entry
+      setSheetStep('code')
     } catch (err) {
       console.error('Registration failed:', err)
       const code = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
       const message = err instanceof Error ? err.message : 'Error desconocido'
-
-      setRegisterErr(
+      setSheetError(
         code === 'PHONE_ALREADY_REGISTERED'
-          ? 'Este número de teléfono ya está registrado en Ziteo. Por favor, inicia sesión.'
-          : code === 'ANON_SIGNIN_FAILED'
-            ? `No pudimos crear tu sesión: ${message}`
-            : code === 'PROFILE_CREATE_FAILED'
-              ? `No pudimos guardar tu perfil: ${message}`
-              : `Ocurrió un error inesperado: ${message}`
+          ? 'Este número ya está registrado. Por favor, inicia sesión.'
+          : `No pudimos registrarte: ${message}`
       )
+      // Return to pin-create so user can retry
+      setSheetStep('pin-create')
     } finally {
-      setSubmitting(false)
+      setSheetLoading(false)
     }
+  }
+
+  function handleBiometricChoice(enabled: boolean) {
+    localStorage.setItem('ziteo_biometric_enabled', enabled ? 'true' : 'false')
+    if (enabled && createdPin) {
+      // Save credentials to Preferences so biometric login can retrieve them later.
+      // Fire-and-forget: if it fails, the user can still log in with their PIN.
+      void saveCredential('+591' + phone, createdPin)
+    }
+    onSuccess()
+  }
+
+  async function handleResend() {
+    // Re-registration resend is not supported via a separate OTP endpoint;
+    // do nothing (OTPs expire in 5 min; user should wait or restart registration)
+    setSheetError('El código ya fue enviado a tu WhatsApp. Por favor espera 5 minutos si no lo recibiste.')
   }
 
   return (
@@ -420,19 +492,13 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
               </span>
             </div>
 
-            {registerErr && (
-              <div style={{ padding: '12px 16px', borderRadius: Z.r.md, background: Z.errorBg, border: `1px solid ${Z.error}` }}>
-                <span style={{ fontFamily: Z.font, fontSize: 13, color: Z.error }}>{registerErr}</span>
-              </div>
-            )}
-
             <button
               type="button"
-              onClick={handleSubmit}
-              disabled={!selectedRole || !termsAccepted || submitting}
-              style={{ fontFamily: Z.font, fontWeight: 700, fontSize: 14, letterSpacing: '0.3px', textTransform: 'uppercase', padding: '15px 24px', borderRadius: Z.r.md, marginTop: 4, background: Z.orangeDark, color: '#FFFFFF', border: 'none', cursor: !selectedRole || !termsAccepted || submitting ? 'default' : 'pointer', width: '100%', opacity: !selectedRole || !termsAccepted || submitting ? 0.45 : 1, boxSizing: 'border-box' }}
+              onClick={handleOpenSheet}
+              disabled={!selectedRole || !termsAccepted}
+              style={{ fontFamily: Z.font, fontWeight: 700, fontSize: 14, letterSpacing: '0.3px', textTransform: 'uppercase', padding: '15px 24px', borderRadius: Z.r.md, marginTop: 4, background: Z.orangeDark, color: '#FFFFFF', border: 'none', cursor: !selectedRole || !termsAccepted ? 'default' : 'pointer', width: '100%', opacity: !selectedRole || !termsAccepted ? 0.45 : 1, boxSizing: 'border-box' }}
             >
-              {submitting ? 'Entrando...' : 'Entrar a Ziteo'}
+              Entrar a Ziteo
             </button>
           </div>
         )}
@@ -440,6 +506,23 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
       </div>
 
       {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
+
+      {showSheet && (
+        <OtpVerificationSheet
+          phone={'+591' + phone}
+          step={sheetStep}
+          onVerified={handleVerified}
+          onPinCreated={handlePinCreated}
+          onBiometricChoice={handleBiometricChoice}
+          onChangePhone={() => {
+            setShowSheet(false)
+            setSheetStep('pin-create')
+          }}
+          loading={sheetLoading}
+          error={sheetError}
+          onResend={handleResend}
+        />
+      )}
     </div>
   )
 }

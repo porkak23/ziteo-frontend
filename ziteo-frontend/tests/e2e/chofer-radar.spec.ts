@@ -35,7 +35,7 @@ test.describe('Chofer - Radar', () => {
   })
 
   test('login como Tomas Transportista llega al dashboard del chofer', async ({ page }) => {
-    await loginAs(page, CHOFER.phone)
+    await loginAs(page, CHOFER.phone, CHOFER.pin)
 
     // ChofersApp renders a bottom nav whose Radar tab is the default.
     const radarTab = page.getByTestId('repartidor-nav-radar')
@@ -43,7 +43,7 @@ test.describe('Chofer - Radar', () => {
   })
 
   test('estado offline muestra el panel y el boton CONECTARME', async ({ page }) => {
-    await loginAs(page, CHOFER.phone)
+    await loginAs(page, CHOFER.phone, CHOFER.pin)
 
     // TransportistaScreen starts offline.
     await expect(page.getByTestId('radar-offline-panel')).toBeVisible({ timeout: 10_000 })
@@ -54,7 +54,7 @@ test.describe('Chofer - Radar', () => {
   })
 
   test('click en CONECTARME cambia el estado a Conectado', async ({ page }) => {
-    await loginAs(page, CHOFER.phone)
+    await loginAs(page, CHOFER.phone, CHOFER.pin)
 
     const activarBtn = page.getByTestId('radar-activar-btn')
     await expect(activarBtn).toBeVisible({ timeout: 10_000 })

@@ -33,7 +33,7 @@ test.describe('Proveedor - Inventario', () => {
   })
 
   test('login como Pedro Proveedor llega al dashboard de proveedor', async ({ page }) => {
-    await loginAs(page, PROVEEDOR.phone)
+    await loginAs(page, PROVEEDOR.phone, PROVEEDOR.pin)
 
     // The VendedorApp renders a nav tab labeled "Inventario" and "Inicio"
     // and shows a greeting in the HomeTab. We verify at least one of these.
@@ -44,7 +44,7 @@ test.describe('Proveedor - Inventario', () => {
   })
 
   test('navegar a Inventario muestra la lista o estado vacio', async ({ page }) => {
-    await loginAs(page, PROVEEDOR.phone)
+    await loginAs(page, PROVEEDOR.phone, PROVEEDOR.pin)
 
     // Click the Inventario nav tab
     // TODO data-testid: add data-testid="vendedor-nav-inventario" to the tab button
@@ -71,7 +71,7 @@ test.describe('Proveedor - Inventario', () => {
   })
 
   test('abrir formulario de nuevo producto, llenar campos y guardar', async ({ page }) => {
-    await loginAs(page, PROVEEDOR.phone)
+    await loginAs(page, PROVEEDOR.phone, PROVEEDOR.pin)
 
     // Navigate to Inventario tab
     const inventarioTab = page.getByRole('button', { name: /^inventario$/i })

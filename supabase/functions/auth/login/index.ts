@@ -44,9 +44,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return errorResponse('INVALID_PHONE_FORMAT', 'Phone must be a valid Bolivian number', 400)
   }
 
-  // PIN must be 8 numeric digits
-  if (!/^\d{8}$/.test(pin)) {
-    return errorResponse('INVALID_PIN_FORMAT', 'PIN must be exactly 8 digits', 400)
+  // PIN must be 6 numeric digits
+  if (!/^\d{6}$/.test(pin)) {
+    return errorResponse('INVALID_PIN_FORMAT', 'PIN must be exactly 6 digits', 400)
   }
 
   // Use service role client to bypass RLS for auth operations

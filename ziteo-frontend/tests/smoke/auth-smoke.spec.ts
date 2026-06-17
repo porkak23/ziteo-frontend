@@ -28,7 +28,7 @@ import { TEST_ACCOUNTS } from '../helpers/testData'
 test.describe('Smoke — Login all 4 roles', () => {
   test('constructor login redirige a dashboard de constructor', async ({ page }) => {
     await page.goto('/')
-    await loginAs(page, TEST_ACCOUNTS.constructor.phone)
+    await loginAs(page, TEST_ACCOUNTS.constructor.phone, TEST_ACCOUNTS.constructor.pin)
 
     // ConstructorApp nav: Home | Tienda | Proyectos | Licitar
     // At least the "Tienda" tab must be visible
@@ -39,7 +39,7 @@ test.describe('Smoke — Login all 4 roles', () => {
 
   test('proveedor login redirige a dashboard de proveedor', async ({ page }) => {
     await page.goto('/')
-    await loginAs(page, TEST_ACCOUNTS.proveedor.phone)
+    await loginAs(page, TEST_ACCOUNTS.proveedor.phone, TEST_ACCOUNTS.proveedor.pin)
 
     // VendedorApp nav: Inicio | Inventario | Pedidos | Cotizaciones
     // At least the "Inventario" tab must be visible
@@ -50,7 +50,7 @@ test.describe('Smoke — Login all 4 roles', () => {
 
   test('maestro login redirige a dashboard de maestro', async ({ page }) => {
     await page.goto('/')
-    await loginAs(page, TEST_ACCOUNTS.maestro.phone)
+    await loginAs(page, TEST_ACCOUNTS.maestro.phone, TEST_ACCOUNTS.maestro.pin)
 
     // TrabajadorApp nav: Home | Trabajos | Proyectos | Mi Perfil
     // At least the "Trabajos" tab must be visible
@@ -61,7 +61,7 @@ test.describe('Smoke — Login all 4 roles', () => {
 
   test('chofer login redirige a dashboard de chofer', async ({ page }) => {
     await page.goto('/')
-    await loginAs(page, TEST_ACCOUNTS.chofer.phone)
+    await loginAs(page, TEST_ACCOUNTS.chofer.phone, TEST_ACCOUNTS.chofer.pin)
 
     // RepartidorApp: RadarScreen is the default tab
     // The "ACTIVAR RADAR" button confirms the chofer dashboard loaded
