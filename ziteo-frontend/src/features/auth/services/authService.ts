@@ -173,8 +173,10 @@ export async function registerWithPin(input: RegisterInput, pin: string): Promis
     },
   })
   if (error) {
-    const msg = (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
-    throw new AuthServiceError(msg, msg)
+    // supabase.functions.invoke puts the parsed body in error.context on non-2xx responses
+    const ctx = (error as { context?: { error?: string } }).context
+    const code = ctx?.error ?? (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
+    throw new AuthServiceError(code, code)
   }
 
   const resp = data as { user_id: string; phone: string; requires_otp: boolean }

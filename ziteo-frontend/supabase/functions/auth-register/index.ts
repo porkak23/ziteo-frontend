@@ -9,7 +9,7 @@ const corsHeaders = {
 }
 
 const PHONE_REGEX = /^\+591[678]\d{7}$/
-const PIN_REGEX = /^\d{8}$/
+const PIN_REGEX = /^\d{6}$/
 const VALID_ROLES = ['constructor', 'proveedor', 'maestro', 'chofer'] as const
 type Role = typeof VALID_ROLES[number]
 
@@ -72,7 +72,22 @@ serve(async (req) => {
       .maybeSingle()
 
     if (existingProfile) {
-      return jsonResponse({ error: 'PHONE_ALREADY_REGISTERED' }, 409)
+      // Allow re-registration only if onboarding was never completed (incomplete prior attempt)
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('onboarding_completed')
+        .eq('user_id', existingProfile.user_id)
+        .maybeSingle()
+
+      if (existingRole?.onboarding_completed === true) {
+        return jsonResponse({ error: 'PHONE_ALREADY_REGISTERED' }, 409)
+      }
+
+      // Incomplete registration — clean up and allow retry
+      await supabase.from('otps').delete().eq('phone', phone)
+      await supabase.from('user_roles').delete().eq('user_id', existingProfile.user_id)
+      await supabase.from('profiles').delete().eq('user_id', existingProfile.user_id)
+      await supabase.auth.admin.deleteUser(existingProfile.user_id)
     }
 
     // Create user in Supabase Auth (use email derived from phone to avoid needing Phone provider)
