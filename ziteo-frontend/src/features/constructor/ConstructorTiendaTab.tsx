@@ -290,9 +290,9 @@ function CartScreen({ cart, setCart, onBack }: {
           p_total: groupTotal,
           p_items: items,
           p_delivery_method: deliveryMethod,
-          p_delivery_address: deliveryMethod === 'delivery' ? deliveryLoc?.address ?? null : null,
-          p_delivery_lat: deliveryMethod === 'delivery' ? deliveryLoc?.lat || null : null,
-          p_delivery_lng: deliveryMethod === 'delivery' ? deliveryLoc?.lng || null : null,
+          p_delivery_address: deliveryMethod === 'delivery' ? deliveryLoc?.address ?? undefined : undefined,
+          p_delivery_lat: deliveryMethod === 'delivery' ? deliveryLoc?.lat || undefined : undefined,
+          p_delivery_lng: deliveryMethod === 'delivery' ? deliveryLoc?.lng || undefined : undefined,
         })
         if (rpcError) throw rpcError
       }

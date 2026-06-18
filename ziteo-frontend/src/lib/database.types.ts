@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      auth_throttle: {
+        Row: {
+          attempts: number
+          id: number
+          identifier: string
+          window_start: string
+        }
+        Insert: {
+          attempts?: number
+          id?: number
+          identifier: string
+          window_start?: string
+        }
+        Update: {
+          attempts?: number
+          id?: number
+          identifier?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           added_at: string | null
@@ -51,7 +72,21 @@ export type Database = {
             foreignKeyName: "cart_items_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "cart_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "cart_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
             referencedColumns: ["user_id"]
           },
         ]
@@ -129,7 +164,21 @@ export type Database = {
             foreignKeyName: "contract_bids_maestro_id_fkey"
             columns: ["maestro_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "contract_bids_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "contract_bids_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
             referencedColumns: ["user_id"]
           },
         ]
@@ -145,7 +194,6 @@ export type Database = {
           description: string | null
           estimated_end_date: string | null
           id: string
-          initial_amount: number | null
           maestro_id: string
           project_id: string | null
           scope: Json | null
@@ -165,7 +213,6 @@ export type Database = {
           description?: string | null
           estimated_end_date?: string | null
           id?: string
-          initial_amount?: number | null
           maestro_id: string
           project_id?: string | null
           scope?: Json | null
@@ -185,7 +232,6 @@ export type Database = {
           description?: string | null
           estimated_end_date?: string | null
           id?: string
-          initial_amount?: number | null
           maestro_id?: string
           project_id?: string | null
           scope?: Json | null
@@ -200,7 +246,28 @@ export type Database = {
             foreignKeyName: "contracts_constructor_id_fkey"
             columns: ["constructor_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "contracts_constructor_id_fkey"
+            columns: ["constructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "contracts_constructor_id_fkey"
+            columns: ["constructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "contracts_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
             referencedColumns: ["user_id"]
           },
           {
@@ -211,11 +278,429 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "contracts_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "contracts_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      deliveries: {
+        Row: {
+          accepted_at: string | null
+          cargo_type: string
+          created_at: string
+          delivered_at: string | null
+          distance_km: number | null
+          driver_id: string | null
+          dropoff_address: string | null
+          dropoff_lat: number | null
+          dropoff_lng: number | null
+          estimated_fee: number | null
+          id: string
+          notes: string | null
+          order_id: string
+          picked_up_at: string | null
+          pickup_address: string | null
+          pickup_lat: number | null
+          pickup_lng: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          cargo_type?: string
+          created_at?: string
+          delivered_at?: string | null
+          distance_km?: number | null
+          driver_id?: string | null
+          dropoff_address?: string | null
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          estimated_fee?: number | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          picked_up_at?: string | null
+          pickup_address?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          cargo_type?: string
+          created_at?: string
+          delivered_at?: string | null
+          distance_km?: number | null
+          driver_id?: string | null
+          dropoff_address?: string | null
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          estimated_fee?: number | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          picked_up_at?: string | null
+          pickup_address?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliveries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "deliveries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "deliveries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "deliveries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      disputes: {
+        Row: {
+          created_at: string
+          created_by: string
+          details: string
+          id: string
+          order_id: string
+          reason: string
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          details: string
+          id?: string
+          order_id: string
+          reason: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          details?: string
+          id?: string
+          order_id?: string
+          reason?: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "disputes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "disputes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "disputes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_locations: {
+        Row: {
+          driver_id: string
+          heading: number | null
+          lat: number
+          lng: number
+          updated_at: string
+        }
+        Insert: {
+          driver_id: string
+          heading?: number | null
+          lat: number
+          lng: number
+          updated_at?: string
+        }
+        Update: {
+          driver_id?: string
+          heading?: number | null
+          lat?: number
+          lng?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          current_url: string | null
+          description: string
+          id: string
+          user_id: string | null
+          user_role: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          current_url?: string | null
+          description: string
+          id?: string
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          current_url?: string | null
+          description?: string
+          id?: string
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      licitacion_postulaciones: {
+        Row: {
+          created_at: string
+          id: string
+          licitacion_id: string
+          maestro_id: string
+          message: string | null
+          proposed_budget: number | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          licitacion_id: string
+          maestro_id: string
+          message?: string | null
+          proposed_budget?: number | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          licitacion_id?: string
+          maestro_id?: string
+          message?: string | null
+          proposed_budget?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licitacion_postulaciones_licitacion_id_fkey"
+            columns: ["licitacion_id"]
+            isOneToOne: false
+            referencedRelation: "licitaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "licitacion_postulaciones_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "licitacion_postulaciones_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "licitacion_postulaciones_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      licitaciones: {
+        Row: {
+          budget_max: number | null
+          budget_min: number | null
+          city: string | null
+          constructor_id: string
+          created_at: string
+          description: string | null
+          id: string
+          intent: string | null
+          item_category: string | null
+          specialty: string | null
+          status: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          budget_max?: number | null
+          budget_min?: number | null
+          city?: string | null
+          constructor_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          intent?: string | null
+          item_category?: string | null
+          specialty?: string | null
+          status?: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          budget_max?: number | null
+          budget_min?: number | null
+          city?: string | null
+          constructor_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          intent?: string | null
+          item_category?: string | null
+          specialty?: string | null
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licitaciones_constructor_id_fkey"
+            columns: ["constructor_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "licitaciones_constructor_id_fkey"
+            columns: ["constructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "licitaciones_constructor_id_fkey"
+            columns: ["constructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      maestro_habilidades: {
+        Row: {
+          created_at: string
+          id: string
+          maestro_id: string
+          porcentaje: number
+          skill: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          maestro_id: string
+          porcentaje?: number
+          skill: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          maestro_id?: string
+          porcentaje?: number
+          skill?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maestro_habilidades_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "maestro_habilidades_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "maestro_habilidades_maestro_id_fkey"
+            columns: ["maestro_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -264,10 +749,51 @@ export type Database = {
             foreignKeyName: "maestro_profiles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "maestro_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "maestro_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
         ]
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -311,7 +837,21 @@ export type Database = {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
             referencedColumns: ["user_id"]
           },
         ]
@@ -320,26 +860,47 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          is_rental: boolean
           order_id: string
           price_unit: number
           product_id: string
           quantity: number
+          rental_days: number | null
+          rental_deposit: number | null
+          rental_end_date: string | null
+          rental_start_date: string | null
+          rental_status: string | null
+          rental_unit_rate: number | null
         }
         Insert: {
           created_at?: string | null
           id?: string
+          is_rental?: boolean
           order_id: string
           price_unit: number
           product_id: string
           quantity: number
+          rental_days?: number | null
+          rental_deposit?: number | null
+          rental_end_date?: string | null
+          rental_start_date?: string | null
+          rental_status?: string | null
+          rental_unit_rate?: number | null
         }
         Update: {
           created_at?: string | null
           id?: string
+          is_rental?: boolean
           order_id?: string
           price_unit?: number
           product_id?: string
           quantity?: number
+          rental_days?: number | null
+          rental_deposit?: number | null
+          rental_end_date?: string | null
+          rental_start_date?: string | null
+          rental_status?: string | null
+          rental_unit_rate?: number | null
         }
         Relationships: [
           {
@@ -360,90 +921,111 @@ export type Database = {
       }
       orders: {
         Row: {
+          cargo_type: string | null
           constructor_id: string
           created_at: string | null
           delivered_date: string | null
+          delivery_address: string | null
+          delivery_lat: number | null
+          delivery_lng: number | null
+          delivery_method: string | null
           due_date: string | null
+          estimated_delivery_at: string | null
+          expires_at: string
           id: string
           notes: string | null
           order_date: string | null
+          payment_confirmed_at: string | null
+          payment_confirmed_by: string | null
+          payment_evidence_uploaded_at: string | null
+          payment_evidence_url: string | null
+          payment_rejection_reason: string | null
           project_id: string | null
           provider_id: string
           status: string | null
           total: number
           updated_at: string | null
-          cargo_type: 'light' | 'heavy' | null
-          payment_evidence_url: string | null
-          payment_evidence_uploaded_at: string | null
-          payment_confirmed_at: string | null
-          payment_confirmed_by: string | null
-          payment_rejection_reason: string | null
-          expires_at: string | null
-          estimated_delivery_at: string | null
-          delivery_method: 'pickup' | 'delivery' | null
-          delivery_address: string | null
-          delivery_lat: number | null
-          delivery_lng: number | null
         }
         Insert: {
+          cargo_type?: string | null
           constructor_id: string
           created_at?: string | null
           delivered_date?: string | null
+          delivery_address?: string | null
+          delivery_lat?: number | null
+          delivery_lng?: number | null
+          delivery_method?: string | null
           due_date?: string | null
+          estimated_delivery_at?: string | null
+          expires_at?: string
           id?: string
           notes?: string | null
           order_date?: string | null
+          payment_confirmed_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_evidence_uploaded_at?: string | null
+          payment_evidence_url?: string | null
+          payment_rejection_reason?: string | null
           project_id?: string | null
           provider_id: string
           status?: string | null
           total: number
           updated_at?: string | null
-          cargo_type?: 'light' | 'heavy' | null
-          payment_evidence_url?: string | null
-          payment_evidence_uploaded_at?: string | null
-          payment_confirmed_at?: string | null
-          payment_confirmed_by?: string | null
-          payment_rejection_reason?: string | null
-          expires_at?: string | null
-          estimated_delivery_at?: string | null
-          delivery_method?: 'pickup' | 'delivery' | null
-          delivery_address?: string | null
-          delivery_lat?: number | null
-          delivery_lng?: number | null
         }
         Update: {
+          cargo_type?: string | null
           constructor_id?: string
           created_at?: string | null
           delivered_date?: string | null
+          delivery_address?: string | null
+          delivery_lat?: number | null
+          delivery_lng?: number | null
+          delivery_method?: string | null
           due_date?: string | null
+          estimated_delivery_at?: string | null
+          expires_at?: string
           id?: string
           notes?: string | null
           order_date?: string | null
+          payment_confirmed_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_evidence_uploaded_at?: string | null
+          payment_evidence_url?: string | null
+          payment_rejection_reason?: string | null
           project_id?: string | null
           provider_id?: string
           status?: string | null
           total?: number
           updated_at?: string | null
-          cargo_type?: 'light' | 'heavy' | null
-          payment_evidence_url?: string | null
-          payment_evidence_uploaded_at?: string | null
-          payment_confirmed_at?: string | null
-          payment_confirmed_by?: string | null
-          payment_rejection_reason?: string | null
-          expires_at?: string | null
-          estimated_delivery_at?: string | null
-          delivery_method?: 'pickup' | 'delivery' | null
-          delivery_address?: string | null
-          delivery_lat?: number | null
-          delivery_lng?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "orders_constructor_id_fkey"
             columns: ["constructor_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "orders_constructor_id_fkey"
+            columns: ["constructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "orders_constructor_id_fkey"
+            columns: ["constructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "orders_payment_confirmed_by_fkey"
+            columns: ["payment_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "orders_project_id_fkey"
@@ -456,68 +1038,157 @@ export type Database = {
             foreignKeyName: "orders_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "orders_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "orders_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
             referencedColumns: ["user_id"]
           },
         ]
       }
+      otps: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          used: boolean
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          used?: boolean
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          used?: boolean
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active: boolean | null
-          category_id: string
+          bulk_min_qty: number | null
+          bulk_price: number | null
+          bulk_unit: string | null
+          category: string | null
+          category_id: string | null
           construction_stage: string | null
           created_at: string | null
           description: string | null
           id: string
           image_bucket: string | null
           image_url: string | null
+          is_active: boolean | null
           is_deleted: boolean | null
+          item_condition: string | null
           listing_type: string | null
           name: string
           price_unit: number
+          promo_active: boolean
+          promo_price: number | null
+          promo_until: string | null
           provider_id: string
+          rental_daily_rate: number | null
+          rental_deposit: number | null
+          rental_min_days: number | null
+          rental_weekly_rate: number | null
+          seller_type: string
           specs: Json | null
+          stock: number | null
           stock_quantity: number
           unit_type: string
           updated_at: string | null
+          weight_kg: number | null
         }
         Insert: {
           active?: boolean | null
-          category_id: string
+          bulk_min_qty?: number | null
+          bulk_price?: number | null
+          bulk_unit?: string | null
+          category?: string | null
+          category_id?: string | null
           construction_stage?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_bucket?: string | null
           image_url?: string | null
+          is_active?: boolean | null
           is_deleted?: boolean | null
+          item_condition?: string | null
           listing_type?: string | null
           name: string
           price_unit: number
+          promo_active?: boolean
+          promo_price?: number | null
+          promo_until?: string | null
           provider_id: string
+          rental_daily_rate?: number | null
+          rental_deposit?: number | null
+          rental_min_days?: number | null
+          rental_weekly_rate?: number | null
+          seller_type?: string
           specs?: Json | null
+          stock?: number | null
           stock_quantity?: number
           unit_type?: string
           updated_at?: string | null
+          weight_kg?: number | null
         }
         Update: {
           active?: boolean | null
-          category_id?: string
+          bulk_min_qty?: number | null
+          bulk_price?: number | null
+          bulk_unit?: string | null
+          category?: string | null
+          category_id?: string | null
           construction_stage?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_bucket?: string | null
           image_url?: string | null
+          is_active?: boolean | null
           is_deleted?: boolean | null
+          item_condition?: string | null
           listing_type?: string | null
           name?: string
           price_unit?: number
+          promo_active?: boolean
+          promo_price?: number | null
+          promo_until?: string | null
           provider_id?: string
+          rental_daily_rate?: number | null
+          rental_deposit?: number | null
+          rental_min_days?: number | null
+          rental_weekly_rate?: number | null
+          seller_type?: string
           specs?: Json | null
+          stock?: number | null
           stock_quantity?: number
           unit_type?: string
           updated_at?: string | null
+          weight_kg?: number | null
         }
         Relationships: [
           {
@@ -531,7 +1202,21 @@ export type Database = {
             foreignKeyName: "products_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "products_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "products_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
             referencedColumns: ["user_id"]
           },
         ]
@@ -632,7 +1317,21 @@ export type Database = {
             foreignKeyName: "project_applications_applicant_id_fkey"
             columns: ["applicant_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "project_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "project_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
             referencedColumns: ["user_id"]
           },
           {
@@ -735,7 +1434,28 @@ export type Database = {
             foreignKeyName: "project_shares_shared_by_id_fkey"
             columns: ["shared_by_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "project_shares_shared_by_id_fkey"
+            columns: ["shared_by_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "project_shares_shared_by_id_fkey"
+            columns: ["shared_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "project_shares_shared_with_id_fkey"
+            columns: ["shared_with_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
             referencedColumns: ["user_id"]
           },
           {
@@ -743,6 +1463,13 @@ export type Database = {
             columns: ["shared_with_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "project_shares_shared_with_id_fkey"
+            columns: ["shared_with_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
             referencedColumns: ["user_id"]
           },
         ]
@@ -766,7 +1493,6 @@ export type Database = {
           progress: number | null
           start_date: string | null
           status: string | null
-          title: string | null
           updated_at: string | null
         }
         Insert: {
@@ -787,7 +1513,6 @@ export type Database = {
           progress?: number | null
           start_date?: string | null
           status?: string | null
-          title?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -808,7 +1533,6 @@ export type Database = {
           progress?: number | null
           start_date?: string | null
           status?: string | null
-          title?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -816,7 +1540,162 @@ export type Database = {
             foreignKeyName: "projects_constructor_id_fkey"
             columns: ["constructor_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "projects_constructor_id_fkey"
+            columns: ["constructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "projects_constructor_id_fkey"
+            columns: ["constructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string | null
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      quotations: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          items: Json
+          order_id: string | null
+          pdf_url: string | null
+          provider_id: string
+          status: string
+          subtotal: number
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          items?: Json
+          order_id?: string | null
+          pdf_url?: string | null
+          provider_id: string
+          status?: string
+          subtotal: number
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          items?: Json
+          order_id?: string | null
+          pdf_url?: string | null
+          provider_id?: string
+          status?: string
+          subtotal?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "quotations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "quotations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "quotations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "quotations_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "quotations_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
             referencedColumns: ["user_id"]
           },
         ]
@@ -857,7 +1736,28 @@ export type Database = {
             foreignKeyName: "ratings_rated_user_id_fkey"
             columns: ["rated_user_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ratings_rated_user_id_fkey"
+            columns: ["rated_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ratings_rated_user_id_fkey"
+            columns: ["rated_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ratings_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
             referencedColumns: ["user_id"]
           },
           {
@@ -867,21 +1767,123 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "ratings_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
         ]
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          contract_id: string | null
+          created_at: string
+          id: string
+          rating: number
+          reviewed_id: string
+          reviewer_id: string
+        }
+        Insert: {
+          comment?: string | null
+          contract_id?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          reviewed_id: string
+          reviewer_id: string
+        }
+        Update: {
+          comment?: string | null
+          contract_id?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          reviewed_id?: string
+          reviewer_id?: string
+        }
+        Relationships: []
+      }
+      transport_requests: {
+        Row: {
+          accepted_at: string | null
+          cargo_type: string
+          city: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          driver_id: string | null
+          dropoff_address: string
+          dropoff_lat: number | null
+          dropoff_lng: number | null
+          id: string
+          pickup_address: string
+          pickup_lat: number | null
+          pickup_lng: number | null
+          requester_id: string
+          requester_role: string
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          cargo_type: string
+          city?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          driver_id?: string | null
+          dropoff_address: string
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          id?: string
+          pickup_address: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          requester_id: string
+          requester_role?: string
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          cargo_type?: string
+          city?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          driver_id?: string | null
+          dropoff_address?: string
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          id?: string
+          pickup_address?: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          requester_id?: string
+          requester_role?: string
+          status?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
           company_name: string | null
           created_at: string | null
+          delivery_time_hours: number | null
+          free_shipping_threshold: number | null
           hourly_rate: number | null
           id: string
           is_available: boolean | null
           is_verified: boolean | null
-          onboarding_completed: boolean | null
           min_order_amount: number | null
           onboarding_complete: boolean | null
+          onboarding_completed: boolean | null
+          payment_bank_transfer: string | null
+          payment_cash: boolean | null
           payment_qr_url: string | null
           role: string
+          service_zones: string[] | null
           specialty: string | null
           store_description: string | null
           store_logo_url: string | null
@@ -895,6 +1897,8 @@ export type Database = {
         Insert: {
           company_name?: string | null
           created_at?: string | null
+          delivery_time_hours?: number | null
+          free_shipping_threshold?: number | null
           hourly_rate?: number | null
           id?: string
           is_available?: boolean | null
@@ -902,8 +1906,11 @@ export type Database = {
           min_order_amount?: number | null
           onboarding_complete?: boolean | null
           onboarding_completed?: boolean | null
+          payment_bank_transfer?: string | null
+          payment_cash?: boolean | null
           payment_qr_url?: string | null
           role: string
+          service_zones?: string[] | null
           specialty?: string | null
           store_description?: string | null
           store_logo_url?: string | null
@@ -917,6 +1924,8 @@ export type Database = {
         Update: {
           company_name?: string | null
           created_at?: string | null
+          delivery_time_hours?: number | null
+          free_shipping_threshold?: number | null
           hourly_rate?: number | null
           id?: string
           is_available?: boolean | null
@@ -924,8 +1933,11 @@ export type Database = {
           min_order_amount?: number | null
           onboarding_complete?: boolean | null
           onboarding_completed?: boolean | null
+          payment_bank_transfer?: string | null
+          payment_cash?: boolean | null
           payment_qr_url?: string | null
           role?: string
+          service_zones?: string[] | null
           specialty?: string | null
           store_description?: string | null
           store_logo_url?: string | null
@@ -941,590 +1953,65 @@ export type Database = {
             foreignKeyName: "user_roles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
             referencedColumns: ["user_id"]
           },
         ]
       }
-      maestro_habilidades: {
+      waitlist: {
         Row: {
-          id: string
-          maestro_id: string
-          skill: string
-          porcentaje: number
+          city: string
           created_at: string | null
-        }
-        Insert: {
-          id?: string
-          maestro_id: string
-          skill: string
-          porcentaje: number
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          maestro_id?: string
-          skill?: string
-          porcentaje?: number
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maestro_habilidades_maestro_id_fkey"
-            columns: ["maestro_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      reviews: {
-        Row: {
+          email: string | null
           id: string
-          reviewer_id: string
-          reviewed_id: string
-          contract_id: string | null
-          rating: number
-          comment: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          reviewer_id: string
-          reviewed_id: string
-          contract_id?: string | null
-          rating: number
-          comment?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          reviewer_id?: string
-          reviewed_id?: string
-          contract_id?: string | null
-          rating?: number
-          comment?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reviews_reviewer_id_fkey"
-            columns: ["reviewer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "reviews_reviewed_id_fkey"
-            columns: ["reviewed_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      disputes: {
-        Row: {
-          id: string
-          order_id: string
-          created_by: string
-          reason: string
-          details: string
-          status: 'open' | 'resolved'
-          created_at: string
-          resolved_at: string | null
-        }
-        Insert: {
-          id?: string
-          order_id: string
-          created_by: string
-          reason: string
-          details: string
-          status?: 'open' | 'resolved'
-          created_at?: string
-          resolved_at?: string | null
-        }
-        Update: {
-          id?: string
-          order_id?: string
-          created_by?: string
-          reason?: string
-          details?: string
-          status?: 'open' | 'resolved'
-          created_at?: string
-          resolved_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "disputes_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "disputes_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      licitaciones: {
-        Row: {
-          id: string
-          constructor_id: string
-          title: string
-          description: string | null
-          specialty: string | null
-          city: string | null
-          budget_min: number | null
-          budget_max: number | null
-          status: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          constructor_id: string
-          title: string
-          description?: string | null
-          specialty?: string | null
-          city?: string | null
-          budget_min?: number | null
-          budget_max?: number | null
-          status?: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          constructor_id?: string
-          title?: string
-          description?: string | null
-          specialty?: string | null
-          city?: string | null
-          budget_min?: number | null
-          budget_max?: number | null
-          status?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "licitaciones_constructor_id_fkey"
-            columns: ["constructor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      licitacion_postulaciones: {
-        Row: {
-          id: string
-          licitacion_id: string
-          maestro_id: string
-          message: string | null
-          proposed_budget: number | null
-          status: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          licitacion_id: string
-          maestro_id: string
-          message?: string | null
-          proposed_budget?: number | null
-          status?: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          licitacion_id?: string
-          maestro_id?: string
-          message?: string | null
-          proposed_budget?: number | null
-          status?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "licitacion_postulaciones_licitacion_id_fkey"
-            columns: ["licitacion_id"]
-            isOneToOne: false
-            referencedRelation: "licitaciones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "licitacion_postulaciones_maestro_id_fkey"
-            columns: ["maestro_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      messages: {
-        Row: {
-          id: string
-          conversation_id: string
-          sender_id: string
-          receiver_id: string
-          content: string
-          is_read: boolean | null
-          read_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          conversation_id: string
-          sender_id: string
-          receiver_id: string
-          content: string
-          is_read?: boolean | null
-          read_at?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          conversation_id?: string
-          sender_id?: string
-          receiver_id?: string
-          content?: string
-          is_read?: boolean | null
-          read_at?: string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
-      otps: {
-        Row: {
-          id: string
+          name: string
+          phone: string
+          role: string
           user_id: string | null
-          phone: string
-          otp_code: string
-          used: boolean
-          expires_at: string
-          created_at: string
         }
         Insert: {
+          city: string
+          created_at?: string | null
+          email?: string | null
           id?: string
-          user_id?: string | null
+          name: string
           phone: string
-          otp_code: string
-          used?: boolean
-          expires_at: string
-          created_at?: string
+          role: string
+          user_id?: string | null
         }
         Update: {
+          city?: string
+          created_at?: string | null
+          email?: string | null
           id?: string
-          user_id?: string | null
+          name?: string
           phone?: string
-          otp_code?: string
-          used?: boolean
-          expires_at?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
-      push_subscriptions: {
-        Row: {
-          id: string
-          user_id: string
-          endpoint: string
-          p256dh: string
-          auth: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          endpoint: string
-          p256dh: string
-          auth: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          endpoint?: string
-          p256dh?: string
-          auth?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
-      feedback: {
-        Row: {
-          id: string
-          user_id: string | null
-          message: string
-          category: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
+          role?: string
           user_id?: string | null
-          message: string
-          category?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          message?: string
-          category?: string | null
-          created_at?: string
         }
         Relationships: []
-      }
-      quotations: {
-        Row: {
-          id: string
-          buyer_id: string
-          provider_id: string
-          items: Json
-          subtotal: number
-          pdf_url: string | null
-          expires_at: string
-          status: 'pending' | 'accepted' | 'expired' | 'converted'
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          buyer_id: string
-          provider_id: string
-          items: Json
-          subtotal: number
-          pdf_url?: string | null
-          expires_at: string
-          status?: 'pending' | 'accepted' | 'expired' | 'converted'
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          buyer_id?: string
-          provider_id?: string
-          items?: Json
-          subtotal?: number
-          pdf_url?: string | null
-          expires_at?: string
-          status?: 'pending' | 'accepted' | 'expired' | 'converted'
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quotations_buyer_id_fkey"
-            columns: ["buyer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "quotations_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      transport_requests: {
-        Row: {
-          id: string
-          requester_id: string
-          requester_role: string
-          cargo_type: 'light' | 'heavy'
-          pickup_address: string
-          dropoff_address: string
-          pickup_lat: number | null
-          pickup_lng: number | null
-          dropoff_lat: number | null
-          dropoff_lng: number | null
-          description: string | null
-          city: string | null
-          status: 'pending' | 'accepted' | 'in_transit' | 'completed' | 'cancelled'
-          driver_id: string | null
-          accepted_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          requester_id: string
-          requester_role: string
-          cargo_type: 'light' | 'heavy'
-          pickup_address: string
-          dropoff_address: string
-          pickup_lat?: number | null
-          pickup_lng?: number | null
-          dropoff_lat?: number | null
-          dropoff_lng?: number | null
-          description?: string | null
-          city?: string | null
-          status?: 'pending' | 'accepted' | 'in_transit' | 'completed' | 'cancelled'
-          driver_id?: string | null
-          accepted_at?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          requester_id?: string
-          requester_role?: string
-          cargo_type?: 'light' | 'heavy'
-          pickup_address?: string
-          dropoff_address?: string
-          pickup_lat?: number | null
-          pickup_lng?: number | null
-          dropoff_lat?: number | null
-          dropoff_lng?: number | null
-          description?: string | null
-          city?: string | null
-          status?: 'pending' | 'accepted' | 'in_transit' | 'completed' | 'cancelled'
-          driver_id?: string | null
-          accepted_at?: string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
-      driver_locations: {
-        Row: {
-          driver_id: string
-          lat: number
-          lng: number
-          heading: number | null
-          updated_at: string
-        }
-        Insert: {
-          driver_id: string
-          lat: number
-          lng: number
-          heading?: number | null
-          updated_at?: string
-        }
-        Update: {
-          driver_id?: string
-          lat?: number
-          lng?: number
-          heading?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      deliveries: {
-        Row: {
-          id: string
-          order_id: string
-          driver_id: string | null
-          status: 'pending' | 'accepted' | 'in_transit' | 'delivered' | 'failed'
-          pickup_address: string | null
-          dropoff_address: string | null
-          pickup_lat: number | null
-          pickup_lng: number | null
-          dropoff_lat: number | null
-          dropoff_lng: number | null
-          distance_km: number | null
-          estimated_fee: number | null
-          notes: string | null
-          accepted_at: string | null
-          picked_up_at: string | null
-          delivered_at: string | null
-          created_at: string
-          updated_at: string
-          cargo_type: 'light' | 'heavy' | null
-        }
-        Insert: {
-          id?: string
-          order_id: string
-          driver_id?: string | null
-          status?: 'pending' | 'accepted' | 'in_transit' | 'delivered' | 'failed'
-          pickup_address?: string | null
-          dropoff_address?: string | null
-          pickup_lat?: number | null
-          pickup_lng?: number | null
-          dropoff_lat?: number | null
-          dropoff_lng?: number | null
-          distance_km?: number | null
-          estimated_fee?: number | null
-          notes?: string | null
-          accepted_at?: string | null
-          picked_up_at?: string | null
-          delivered_at?: string | null
-          created_at?: string
-          updated_at?: string
-          cargo_type?: 'light' | 'heavy' | null
-        }
-        Update: {
-          id?: string
-          order_id?: string
-          driver_id?: string | null
-          status?: 'pending' | 'accepted' | 'in_transit' | 'delivered' | 'failed'
-          pickup_address?: string | null
-          dropoff_address?: string | null
-          pickup_lat?: number | null
-          pickup_lng?: number | null
-          dropoff_lat?: number | null
-          dropoff_lng?: number | null
-          distance_km?: number | null
-          estimated_fee?: number | null
-          notes?: string | null
-          accepted_at?: string | null
-          picked_up_at?: string | null
-          delivered_at?: string | null
-          created_at?: string
-          updated_at?: string
-          cargo_type?: 'light' | 'heavy' | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "deliveries_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "deliveries_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
       }
     }
     Views: {
-      kpi_orders_by_day: {
+      kpi_active_maestros: {
         Row: {
-          day: string | null
-          order_count: number | null
-          gmv: number | null
-        }
-        Relationships: []
-      }
-      kpi_gmv_by_city: {
-        Row: {
-          city: string | null
-          total_orders: number | null
-          total_gmv: number | null
-          confirmed_gmv: number | null
-        }
-        Relationships: []
-      }
-      kpi_payment_confirmation_rate: {
-        Row: {
-          total_orders: number | null
-          confirmed: number | null
-          expired: number | null
-          cancelled: number | null
-          confirmation_rate: number | null
-        }
-        Relationships: []
-      }
-      kpi_licitaciones_engagement: {
-        Row: {
-          total: number | null
-          with_bids: number | null
-          without_bids: number | null
-          engagement_rate: number | null
+          available: number | null
+          profile_complete: number | null
+          total_maestros: number | null
         }
         Relationships: []
       }
@@ -1536,38 +2023,128 @@ export type Database = {
         }
         Relationships: []
       }
-      kpi_active_maestros: {
+      kpi_gmv_by_city: {
         Row: {
-          total_maestros: number | null
-          profile_complete: number | null
-          available: number | null
+          city: string | null
+          confirmed_gmv: number | null
+          total_gmv: number | null
+          total_orders: number | null
+        }
+        Relationships: []
+      }
+      kpi_licitaciones_engagement: {
+        Row: {
+          engagement_rate: number | null
+          total: number | null
+          with_bids: number | null
+          without_bids: number | null
+        }
+        Relationships: []
+      }
+      kpi_orders_by_day: {
+        Row: {
+          day: string | null
+          gmv: number | null
+          order_count: number | null
+        }
+        Relationships: []
+      }
+      kpi_payment_confirmation_rate: {
+        Row: {
+          cancelled: number | null
+          confirmation_rate: number | null
+          confirmed: number | null
+          expired: number | null
+          total_orders: number | null
         }
         Relationships: []
       }
       kpi_signups_by_day: {
         Row: {
+          by_role: Json | null
           day: string | null
           signups: number | null
-          by_role: Json | null
         }
         Relationships: []
       }
       maestros_view: {
         Row: {
-          user_id: string
-          name: string
-          city: string
-          avatar_url: string | null
-          specialties: string[] | null
-          rate_type: string | null
-          rate_amount: number
           available: boolean | null
+          avatar_url: string | null
+          city: string | null
           experience_years: number | null
+          name: string | null
+          rate_amount: number | null
+          rate_type: string | null
+          specialties: string[] | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      profiles_invalid_city: {
+        Row: {
+          city: string | null
+          created_at: string | null
+          name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string | null
+          name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string | null
+          name?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
     }
     Functions: {
+      accept_delivery: { Args: { p_delivery_id: string }; Returns: Json }
+      accept_transport_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      broadcast_licitacion: {
+        Args: { p_licitacion_id: string }
+        Returns: number
+      }
+      check_throttle: {
+        Args: {
+          p_identifier: string
+          p_max_attempts: number
+          p_window_minutes: number
+        }
+        Returns: boolean
+      }
+      confirm_payment_by_provider: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
+      confirm_rental_return: {
+        Args: { p_order_item_id: string }
+        Returns: undefined
+      }
+      create_dispute: {
+        Args: { p_details: string; p_order_id: string; p_reason: string }
+        Returns: Json
+      }
+      expire_old_quotations: { Args: never; Returns: undefined }
+      expire_pending_orders: { Args: never; Returns: number }
+      generate_quotation: {
+        Args: {
+          p_buyer_id: string
+          p_expires_in_days?: number
+          p_items: Json
+          p_provider_id: string
+          p_subtotal: number
+        }
+        Returns: string
+      }
       get_user_rating: {
         Args: { target_user_id: string }
         Returns: {
@@ -1575,90 +2152,103 @@ export type Database = {
           total_reviews: number
         }[]
       }
+      list_orders_cursor: {
+        Args: {
+          p_cursor_created_at?: string
+          p_cursor_id?: string
+          p_limit?: number
+          p_status?: string
+        }
+        Returns: {
+          cargo_type: string
+          constructor_id: string
+          created_at: string
+          id: string
+          provider_id: string
+          status: string
+          total: number
+        }[]
+      }
+      list_products_cursor: {
+        Args: {
+          p_category_id?: string
+          p_cursor_created_at?: string
+          p_cursor_id?: string
+          p_limit?: number
+          p_provider_id?: string
+          p_stage?: string
+        }
+        Returns: {
+          active: boolean
+          category_id: string
+          construction_stage: string
+          created_at: string
+          id: string
+          image_url: string
+          name: string
+          price_unit: number
+          provider_id: string
+          stock_quantity: number
+          unit_type: string
+        }[]
+      }
       mark_notification_read: {
         Args: { notification_id: string }
         Returns: undefined
       }
-      switch_active_role: { Args: { new_role: string }; Returns: undefined }
+      mark_rental_completed: {
+        Args: { p_order_item_id: string }
+        Returns: undefined
+      }
+      mark_rental_in_use: { Args: { p_order_id: string }; Returns: undefined }
       place_order: {
         Args: {
           p_constructor_id: string
+          p_delivery_address?: string
+          p_delivery_lat?: number
+          p_delivery_lng?: number
+          p_delivery_method?: string
+          p_items: Json
           p_provider_id: string
           p_total: number
-          p_items: { product_id: string; quantity: number; price_unit: number }[]
-          p_delivery_method?: string
-          p_delivery_address?: string | null
-          p_delivery_lat?: number | null
-          p_delivery_lng?: number | null
         }
         Returns: string
       }
-      upsert_driver_location: {
-        Args: {
-          p_lat: number
-          p_lng: number
-          p_heading?: number
-        }
+      promote_user_role: {
+        Args: { p_role: string; p_user_id: string }
         Returns: undefined
-      }
-      accept_delivery: {
-        Args: { p_delivery_id: string }
-        Returns: { success: boolean; message?: string; delivery_id?: string }
-      }
-      update_delivery_status: {
-        Args: { p_delivery_id: string; p_new_status: string }
-        Returns: { success: boolean; new_status: string }
-      }
-      generate_quotation: {
-        Args: {
-          p_buyer_id: string
-          p_provider_id: string
-          p_items: Json
-          p_subtotal: number
-          p_expires_in_days: number
-        }
-        Returns: string
-      }
-      send_notification: {
-        Args: {
-          p_user_id: string
-          p_type: string
-          p_title: string
-          p_message: string
-        }
-        Returns: undefined
-      }
-      create_dispute: {
-        Args: {
-          p_order_id: string
-          p_reason: string
-          p_details: string
-        }
-        Returns: Json
-      }
-      resolve_dispute: {
-        Args: {
-          p_dispute_id: string
-          p_resolution_notes?: string
-        }
-        Returns: Json
-      }
-      expire_pending_orders: {
-        Args: Record<string, never>
-        Returns: number
-      }
-      confirm_payment_by_provider: {
-        Args: { p_order_id: string }
-        Returns: Json
-      }
-      upload_payment_evidence: {
-        Args: { p_order_id: string; p_evidence_url: string }
-        Returns: Json
       }
       reject_payment_by_provider: {
         Args: { p_order_id: string; p_reason?: string }
         Returns: Json
       }
+      resolve_dispute: {
+        Args: { p_dispute_id: string; p_resolution_notes?: string }
+        Returns: Json
+      }
+      send_notification: {
+        Args: {
+          p_message: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      switch_active_role: { Args: { new_role: string }; Returns: undefined }
+      update_delivery_status: {
+        Args: { p_delivery_id: string; p_new_status: string }
+        Returns: Json
+      }
+      upload_payment_evidence: {
+        Args: { p_evidence_url: string; p_order_id: string }
+        Returns: Json
+      }
+      upsert_driver_location: {
+        Args: { p_heading?: number; p_lat: number; p_lng: number }
+        Returns: undefined
+      }
+      vehicle_to_cargo_type: { Args: { p_vehicle: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
@@ -1791,3 +2381,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

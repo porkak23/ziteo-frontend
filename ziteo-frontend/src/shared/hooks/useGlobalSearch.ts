@@ -32,7 +32,7 @@ export function useGlobalSearch(query: string) {
         ])
 
         if (isMounted) {
-          setProjects(projReq.error ? [] : ((projReq.data || []) as SearchProject[]))
+          setProjects(projReq.error ? [] : ((projReq.data || []) as unknown as SearchProject[]))
           setProfiles(profReq.error ? [] : ((profReq.data || []) as SearchProfile[]))
           setProducts(
             prodReq.error

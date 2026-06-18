@@ -144,7 +144,7 @@ export function useAcceptDelivery() {
       })
 
       if (error) throw new Error(error.message)
-      return data as AcceptDeliveryResult
+      return data as unknown as AcceptDeliveryResult
     },
     onSuccess: () => {
       // Invalidate all pool variants (any cargo_type filter)

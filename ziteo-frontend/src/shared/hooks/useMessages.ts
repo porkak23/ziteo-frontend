@@ -34,8 +34,8 @@ export function useMessages(otherUserId: string) {
 
     const fetchMessages = async () => {
       setLoading(true)
-      const { data, error: err } = await supabase
-        .from('messages')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error: err } = await (supabase.from('messages') as any)
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
@@ -79,8 +79,8 @@ export function useMessages(otherUserId: string) {
   // Marcar como leídos al abrir la conversación
   useEffect(() => {
     if (!conversationId || !currentUser) return
-    supabase
-      .from('messages')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(supabase.from('messages') as any)
       .update({ read_at: new Date().toISOString() })
       .eq('conversation_id', conversationId)
       .eq('receiver_id', currentUser.user_id)
@@ -91,7 +91,8 @@ export function useMessages(otherUserId: string) {
   const sendMessage = useCallback(
     async (content: string, productId?: string | null): Promise<void> => {
       if (!currentUser || !conversationId) throw new Error('No autenticado')
-      const { error: err } = await supabase.from('messages').insert({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: err } = await (supabase.from('messages') as any).insert({
         conversation_id: conversationId,
         sender_id: currentUser.user_id,
         receiver_id: otherUserId,
