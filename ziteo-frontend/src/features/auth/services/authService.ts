@@ -360,6 +360,7 @@ export async function updateProfile(
   userId: string,
   data: { name: string; city: string; active_role: string; avatar_url?: string }
 ): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const payload: any = { name: data.name, city: data.city, active_role: data.active_role }
   if (data.avatar_url) payload.avatar_url = data.avatar_url
 

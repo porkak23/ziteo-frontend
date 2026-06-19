@@ -30,31 +30,31 @@ interface RegisterResult {
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') return handleOptions(req)
-  if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405, req)
+  if (req.method === 'OPTIONS') return handleOptions()
+  if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405)
 
   let body: RegisterBody
   try {
     body = await req.json() as RegisterBody
   } catch {
-    return errorResponse('INVALID_JSON', 'Request body must be valid JSON', 400, req)
+    return errorResponse('INVALID_JSON', 'Request body must be valid JSON', 400)
   }
 
   const { phone, name, city, pin, initial_role, email } = body
 
   // Required field validation
   if (!phone || !name || !city || !pin || !initial_role) {
-    return errorResponse('MISSING_FIELDS', 'phone, name, city, pin, and initial_role are required', 400, req)
+    return errorResponse('MISSING_FIELDS', 'phone, name, city, pin, and initial_role are required', 400)
   }
 
   // Validate Bolivian phone format
   if (!/^\+591[678]\d{7}$/.test(phone)) {
-    return errorResponse('INVALID_PHONE_FORMAT', 'Phone must be a valid Bolivian number (+591 + 8 digits)', 400, req)
+    return errorResponse('INVALID_PHONE_FORMAT', 'Phone must be a valid Bolivian number (+591 + 8 digits)', 400)
   }
 
   // PIN must be exactly 6 numeric digits
   if (!/^\d{6}$/.test(pin)) {
-    return errorResponse('INVALID_PIN_FORMAT', 'PIN must be exactly 6 numeric digits', 400, req)
+    return errorResponse('INVALID_PIN_FORMAT', 'PIN must be exactly 6 numeric digits', 400)
   }
 
   const validRoles: UserRole[] = ['constructor', 'proveedor', 'maestro', 'chofer']
@@ -74,7 +74,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .maybeSingle()
 
   if (existingProfile) {
-    return errorResponse('PHONE_ALREADY_REGISTERED', 'An account with this phone number already exists', 409, req)
+    return errorResponse('PHONE_ALREADY_REGISTERED', 'An account with this phone number already exists', 409)
   }
 
   // Use a synthetic email for Supabase Auth (phone-only users have no real email)
@@ -91,9 +91,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   if (createError || !authData.user) {
     if (createError?.message.includes('already been registered')) {
-      return errorResponse('PHONE_ALREADY_REGISTERED', 'An account with this phone number already exists', 409, req)
+      return errorResponse('PHONE_ALREADY_REGISTERED', 'An account with this phone number already exists', 409)
     }
-    return errorResponse('REGISTER_FAILED', createError?.message ?? 'Failed to create account', 500, req)
+    return errorResponse('REGISTER_FAILED', createError?.message ?? 'Failed to create account', 500)
   }
 
   const userId = authData.user.id
@@ -115,7 +115,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (profileError) {
     // Roll back: delete the auth user so the phone is not orphaned
     await adminClient.auth.admin.deleteUser(userId)
-    return errorResponse('REGISTER_FAILED', 'Failed to create user profile', 500, req)
+    return errorResponse('REGISTER_FAILED', 'Failed to create user profile', 500)
   }
 
   // Create the initial user_role entry
@@ -135,7 +135,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   })
 
   if (signInError || !signInData.user || !signInData.session) {
-    return errorResponse('REGISTER_FAILED', 'Account created but failed to start session', 500, req)
+    return errorResponse('REGISTER_FAILED', 'Account created but failed to start session', 500)
   }
 
   const result: RegisterResult = {
@@ -150,5 +150,5 @@ Deno.serve(async (req: Request): Promise<Response> => {
     city: city ?? null,
   }
 
-  return jsonResponse(result, 201, {}, req)
+  return jsonResponse(result, 201, {})
 })

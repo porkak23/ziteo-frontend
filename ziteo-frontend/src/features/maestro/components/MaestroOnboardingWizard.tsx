@@ -515,6 +515,7 @@ export function MaestroOnboardingWizard({ onComplete }: WizardProps) {
 
     setSaving(true)
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updates: any = {
         specialty: data.especialidades.join(', '),
       }
@@ -547,6 +548,7 @@ export function MaestroOnboardingWizard({ onComplete }: WizardProps) {
 
     setSaving(true)
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updates: any = {
         rate_type: data.rateType,
       }

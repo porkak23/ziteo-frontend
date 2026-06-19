@@ -62,6 +62,7 @@ export function VendedorPublicProfile({
     if (profile?.payment_qr_url) {
       getSignedQrUrl(vendedorId, 'proveedor').then((url) => setQrUrl(url))
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQrUrl(null)
     }
   }, [profile?.payment_qr_url, vendedorId, getSignedQrUrl])
