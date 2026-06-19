@@ -361,7 +361,7 @@ export function PerfilScreen() {
               <span className="font-headline text-lg font-semibold text-on-surface">Editar nombre</span>
               <button
                 onClick={() => !savingName && setEditName(null)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container active:opacity-70"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container active:opacity-70" aria-label="Cerrar"
               >
                 <span className="material-symbols-outlined text-on-surface">close</span>
               </button>
@@ -802,7 +802,7 @@ export function PerfilScreen() {
             <img src={qrUrl} alt="QR de cobro" className="w-64 h-64 object-contain rounded-2xl" />
             <button
               onClick={() => setQrModalOpen(false)}
-              className="absolute -top-3 -right-3 w-9 h-9 bg-surface rounded-full flex items-center justify-center shadow-lg active:opacity-70"
+              className="absolute -top-3 -right-3 w-9 h-9 bg-surface rounded-full flex items-center justify-center shadow-lg active:opacity-70" aria-label="Cerrar"
             >
               <span className="material-symbols-outlined text-on-surface">close</span>
             </button>

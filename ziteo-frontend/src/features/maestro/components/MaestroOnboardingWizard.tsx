@@ -515,7 +515,7 @@ export function MaestroOnboardingWizard({ onComplete }: WizardProps) {
 
     setSaving(true)
     try {
-      const updates: Record<string, unknown> = {
+      const updates: any = {
         specialty: data.especialidades.join(', '),
       }
       const exp = parseInt(data.experiencia, 10)
@@ -547,7 +547,7 @@ export function MaestroOnboardingWizard({ onComplete }: WizardProps) {
 
     setSaving(true)
     try {
-      const updates: Record<string, unknown> = {
+      const updates: any = {
         rate_type: data.rateType,
       }
       const amt = parseFloat(data.rateAmount)

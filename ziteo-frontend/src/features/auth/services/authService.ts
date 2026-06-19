@@ -360,7 +360,7 @@ export async function updateProfile(
   userId: string,
   data: { name: string; city: string; active_role: string; avatar_url?: string }
 ): Promise<void> {
-  const payload: Record<string, unknown> = { name: data.name, city: data.city, active_role: data.active_role }
+  const payload: any = { name: data.name, city: data.city, active_role: data.active_role }
   if (data.avatar_url) payload.avatar_url = data.avatar_url
 
   const { error } = await supabase

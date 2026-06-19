@@ -466,7 +466,7 @@ export function CuentaScreen({ onClose }: CuentaScreenProps) {
                   width: 36, height: 36, borderRadius: '50%', border: 'none', background: Z.divider,
                   display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', outline: 'none',
-                }}
+                }} aria-label="Cerrar"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18, color: Z.text }}>close</span>
               </button>
@@ -550,7 +550,7 @@ export function CuentaScreen({ onClose }: CuentaScreenProps) {
                 style={{
                   width: 36, height: 36, borderRadius: '50%', border: 'none', background: Z.divider,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', outline: 'none',
-                }}
+                }} aria-label="Cerrar"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18, color: Z.text }}>close</span>
               </button>
@@ -677,7 +677,7 @@ export function CuentaScreen({ onClose }: CuentaScreenProps) {
                 style={{
                   width: 36, height: 36, borderRadius: '50%', border: 'none', background: Z.divider,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', outline: 'none',
-                }}
+                }} aria-label="Cerrar"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18, color: Z.text }}>close</span>
               </button>

@@ -35,7 +35,7 @@ export function InstallPWA() {
       </button>
       <button
         onClick={() => { setDismissed(true); localStorage.setItem('pwa_install_dismissed', 'true') }}
-        className="text-on-surface-variant"
+        className="text-on-surface-variant" aria-label="Cerrar"
       >
         <span className="material-symbols-outlined text-xl">close</span>
       </button>

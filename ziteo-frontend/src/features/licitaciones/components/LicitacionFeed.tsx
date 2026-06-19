@@ -57,7 +57,7 @@ function PostularseModal({
         </div>
         <div className="flex items-center justify-between">
           <h2 className="font-title text-base text-on-surface">Postularme a "{licitacion.title}"</h2>
-          <button onClick={onClose} className="text-on-surface-variant p-1">
+          <button onClick={onClose} className="text-on-surface-variant p-1" aria-label="Cerrar">
             <span className="material-symbols-outlined text-[22px]">close</span>
           </button>
         </div>

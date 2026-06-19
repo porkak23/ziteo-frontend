@@ -114,7 +114,7 @@ export function NuevaLicitacionForm({ onClose, onSuccess }: { onClose: () => voi
 
         <div className="flex items-center justify-between">
           <h2 className="font-title text-lg text-on-surface">Nueva solicitud</h2>
-          <button onClick={onClose} className="text-on-surface-variant p-1">
+          <button onClick={onClose} className="text-on-surface-variant p-1" aria-label="Cerrar">
             <span className="material-symbols-outlined text-[22px]">close</span>
           </button>
         </div>

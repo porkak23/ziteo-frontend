@@ -563,7 +563,7 @@ export function TiendaScreen() {
               onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value || undefined }))}
             />
             {filters.search && (
-              <button onClick={() => setFilters((f) => ({ ...f, search: undefined }))} className="shrink-0">
+              <button onClick={() => setFilters((f) => ({ ...f, search: undefined }))} className="shrink-0" aria-label="Limpiar">
                 <span className="material-symbols-outlined text-on-surface-variant text-lg">close</span>
               </button>
             )}
