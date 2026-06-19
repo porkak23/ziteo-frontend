@@ -15,22 +15,22 @@ interface ResetPinBody {
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') return handleOptions(req)
-  if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405, req)
+  if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405)
 
   let body: ResetPinBody
   try {
     body = await req.json() as ResetPinBody
   } catch {
-    return errorResponse('INVALID_JSON', 'Request body must be valid JSON', 400, req)
+    return errorResponse('INVALID_JSON', 'Request body must be valid JSON', 400)
   }
 
   const { phone, code, new_pin } = body
   if (!phone || !code || !new_pin) {
-    return errorResponse('MISSING_FIELDS', 'phone, code, and new_pin are required', 400, req)
+    return errorResponse('MISSING_FIELDS', 'phone, code, and new_pin are required', 400)
   }
 
   if (!/^\d{6}$/.test(new_pin)) {
-    return errorResponse('INVALID_PIN_FORMAT', 'New PIN must be exactly 6 numeric digits', 400, req)
+    return errorResponse('INVALID_PIN_FORMAT', 'New PIN must be exactly 6 numeric digits', 400)
   }
 
   // Verify the WhatsApp OTP against Twilio server-side before changing the PIN
@@ -53,7 +53,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Network error reaching Twilio'
-    return errorResponse('TWILIO_ERROR', message, 502, req)
+    return errorResponse('TWILIO_ERROR', message, 502)
   }
 
   if (!twilioRes.ok) {
@@ -64,13 +64,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     } catch {
       // ignore parse errors
     }
-    return errorResponse('TWILIO_ERROR', twilioMessage, 502, req)
+    return errorResponse('TWILIO_ERROR', twilioMessage, 502)
   }
 
   const twilioData = await twilioRes.json() as { status: string }
 
   if (twilioData.status !== 'approved') {
-    return errorResponse('INVALID_CODE', 'Invalid or expired verification code', 400, req)
+    return errorResponse('INVALID_CODE', 'Invalid or expired verification code', 400)
   }
 
   const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -85,7 +85,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .maybeSingle()
 
   if (!profile) {
-    return errorResponse('USER_NOT_FOUND', 'No account found for this phone number', 404, req)
+    return errorResponse('USER_NOT_FOUND', 'No account found for this phone number', 404)
   }
 
   // Update the auth user's password (PIN) via the admin API
@@ -95,7 +95,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   )
 
   if (updateError) {
-    return errorResponse('RESET_FAILED', 'Failed to update PIN', 500, req)
+    return errorResponse('RESET_FAILED', 'Failed to update PIN', 500)
   }
 
   return jsonResponse({ reset: true }, 200, {}, req)

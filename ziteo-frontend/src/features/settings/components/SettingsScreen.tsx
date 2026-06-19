@@ -248,7 +248,7 @@ export function SettingsScreen({ onLogout }: SettingsScreenProps) {
               <h2 className="font-headline text-xl text-on-surface font-semibold">Cambiar PIN</h2>
               <button
                 onClick={() => !savingPin && setShowPinModal(false)}
-                className="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container active:opacity-80 transition-opacity"
+                className="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container active:opacity-80 transition-opacity" aria-label="Cerrar"
               >
                 <span className="material-symbols-outlined text-on-surface">close</span>
               </button>
@@ -315,7 +315,7 @@ export function SettingsScreen({ onLogout }: SettingsScreenProps) {
               <h2 className="font-headline text-xl text-on-surface font-semibold">Seleccionar ciudad</h2>
               <button
                 onClick={() => !savingCity && setShowCityModal(false)}
-                className="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container active:opacity-80 transition-opacity"
+                className="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container active:opacity-80 transition-opacity" aria-label="Cerrar"
               >
                 <span className="material-symbols-outlined text-on-surface">close</span>
               </button>
@@ -432,7 +432,7 @@ export function SettingsScreen({ onLogout }: SettingsScreenProps) {
               </h2>
               <button
                 onClick={() => setLegalModal(null)}
-                className="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container active:opacity-80 transition-opacity"
+                className="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container active:opacity-80 transition-opacity" aria-label="Cerrar"
               >
                 <span className="material-symbols-outlined text-on-surface">close</span>
               </button>

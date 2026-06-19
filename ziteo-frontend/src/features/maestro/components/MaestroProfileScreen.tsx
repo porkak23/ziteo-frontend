@@ -274,7 +274,7 @@ export function MaestroProfileScreen({ maestroId, isOwn, onBack, onChat, onHire 
                 />
                 <button
                   onClick={() => setEditSpecialty(null)}
-                  className="text-on-surface-variant active:opacity-70 px-2"
+                  className="text-on-surface-variant active:opacity-70 px-2" aria-label="Cerrar"
                 >
                   <span className="material-symbols-outlined text-sm">close</span>
                 </button>
@@ -313,7 +313,7 @@ export function MaestroProfileScreen({ maestroId, isOwn, onBack, onChat, onHire 
                   min={0}
                   className="flex-1 rounded-2xl py-2 px-3 bg-transparent border border-outline-variant text-on-surface font-body text-sm focus:outline-none focus:border-primary"
                 />
-                <button onClick={() => setEditYears(undefined)} className="text-on-surface-variant active:opacity-70 px-2">
+                <button onClick={() => setEditYears(undefined)} className="text-on-surface-variant active:opacity-70 px-2" aria-label="Cerrar">
                   <span className="material-symbols-outlined text-sm">close</span>
                 </button>
                 <button
@@ -353,7 +353,7 @@ export function MaestroProfileScreen({ maestroId, isOwn, onBack, onChat, onHire 
                   min={0}
                   className="flex-1 rounded-2xl py-2 px-3 bg-transparent border border-outline-variant text-on-surface font-body text-sm focus:outline-none focus:border-primary"
                 />
-                <button onClick={() => setEditRate(undefined)} className="text-on-surface-variant active:opacity-70 px-2">
+                <button onClick={() => setEditRate(undefined)} className="text-on-surface-variant active:opacity-70 px-2" aria-label="Cerrar">
                   <span className="material-symbols-outlined text-sm">close</span>
                 </button>
                 <button

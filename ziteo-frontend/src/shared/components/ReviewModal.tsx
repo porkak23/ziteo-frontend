@@ -40,7 +40,7 @@ export function ReviewModal({ reviewedId, contractId, onClose }: ReviewModalProp
           <h2 className="font-label font-semibold text-lg text-on-surface">Calificar</h2>
           <button
             onClick={onClose}
-            className="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container text-on-surface-variant hover:bg-surface-container/80 transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container text-on-surface-variant hover:bg-surface-container/80 transition-colors" aria-label="Cerrar"
           >
             <span className="material-symbols-outlined text-lg">close</span>
           </button>

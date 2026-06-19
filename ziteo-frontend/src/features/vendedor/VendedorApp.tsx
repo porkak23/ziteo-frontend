@@ -446,6 +446,7 @@ function InventarioTab() {
 
   useEffect(() => {
     if (page.length === 0 && offset === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllProducts([])
       return
     }
@@ -544,6 +545,7 @@ function InventarioTab() {
       }
 
       setOffset(0)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllProducts([])
       queryClient.invalidateQueries({ queryKey: ['inventario', user.user_id] })
       setForm(EMPTY_FORM)

@@ -281,6 +281,7 @@ export function TransportistaScreen() {
 
   // Publica la posición GPS del chofer cada 30s mientras está en línea.
   const latestPosRef = useRef(geo.position)
+  // eslint-disable-next-line react-hooks/refs
   latestPosRef.current = geo.position
   useEffect(() => {
     if (!isOnline) return

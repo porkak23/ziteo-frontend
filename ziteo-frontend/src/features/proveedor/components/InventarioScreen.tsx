@@ -273,7 +273,7 @@ export function InventarioScreen() {
           <header className="h-14 flex items-center px-2 border-b border-outline-variant bg-surface shrink-0">
             <button
               onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }}
-              className="w-10 h-10 flex items-center justify-center rounded-full"
+              className="w-10 h-10 flex items-center justify-center rounded-full" aria-label="Cerrar"
             >
               <span className="material-symbols-outlined text-on-surface">close</span>
             </button>

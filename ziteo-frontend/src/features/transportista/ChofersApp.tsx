@@ -87,6 +87,7 @@ export function ChofersApp() {
   useEffect(() => {
     const LOCAL_TABS: ChoferTab[] = ['radar', 'historial', 'billetera']
     if (LOCAL_TABS.includes(globalTab as ChoferTab) && globalTab !== activeTab) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab(globalTab as ChoferTab)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

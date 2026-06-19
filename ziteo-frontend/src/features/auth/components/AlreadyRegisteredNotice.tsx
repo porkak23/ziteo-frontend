@@ -51,6 +51,31 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
   const [resendCooldown, setResendCooldown] = useState(0)
 
   // Cooldown countdown
+  const handlePinSubmit = async (pin: string) => {
+    setSubmitting(true)
+    setPinError(null)
+    try {
+      const fullPhone = '+591' + phone
+      const user = await loginWithPinOrLegacy(fullPhone, pin)
+      setUser(user)
+      onSuccess()
+    } catch (err) {
+      console.error('Login failed:', err)
+      const code = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
+      const message = err instanceof Error ? err.message : 'Error desconocido'
+      if (code === 'USER_NOT_FOUND' || code.includes('404') || code === 'LOGIN_FAILED') {
+        setPinError('Este número no está registrado en Ziteo. Crea una cuenta.')
+      } else if (code === 'INVALID_PIN' || code.includes('401')) {
+        setPinError('PIN incorrecto. Intenta de nuevo.')
+      } else {
+        setPinError(`Error al ingresar: ${message}`)
+      }
+      setPinValue('')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   useEffect(() => {
     if (resendCooldown <= 0) return
     const timer = setInterval(() => {
@@ -68,6 +93,7 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
   // Auto-submit when PIN is complete (6 digits)
   useEffect(() => {
     if (phase === 'pin' && pinValue.length === 6 && !submitting) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void handlePinSubmit(pinValue)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -93,30 +119,7 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
   // Phase: pin
   // ---------------------------------------------------------------------------
 
-  async function handlePinSubmit(pin: string) {
-    setSubmitting(true)
-    setPinError(null)
-    try {
-      const fullPhone = '+591' + phone
-      const user = await loginWithPinOrLegacy(fullPhone, pin)
-      setUser(user)
-      onSuccess()
-    } catch (err) {
-      console.error('Login failed:', err)
-      const code = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
-      const message = err instanceof Error ? err.message : 'Error desconocido'
-      if (code === 'USER_NOT_FOUND' || code.includes('404') || code === 'LOGIN_FAILED') {
-        setPinError('Este número no está registrado en Ziteo. Crea una cuenta.')
-      } else if (code === 'INVALID_PIN' || code.includes('401')) {
-        setPinError('PIN incorrecto. Intenta de nuevo.')
-      } else {
-        setPinError(`Error al ingresar: ${message}`)
-      }
-      setPinValue('')
-    } finally {
-      setSubmitting(false)
-    }
-  }
+
 
   // ---------------------------------------------------------------------------
   // Phase: forgot PIN

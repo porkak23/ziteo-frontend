@@ -95,6 +95,7 @@ export function MaestroPublicProfile({
     if (profile?.payment_qr_url) {
       getSignedQrUrl(maestroId, 'maestro').then((url) => setQrUrl(url))
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQrUrl(null)
     }
   }, [profile?.payment_qr_url, maestroId, getSignedQrUrl])

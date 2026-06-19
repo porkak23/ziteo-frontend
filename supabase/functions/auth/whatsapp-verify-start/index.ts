@@ -10,24 +10,24 @@ interface VerifyStartBody {
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') return handleOptions(req)
-  if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405, req)
+  if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405)
 
   let body: VerifyStartBody
   try {
     body = await req.json() as VerifyStartBody
   } catch {
-    return errorResponse('INVALID_JSON', 'Request body must be valid JSON', 400, req)
+    return errorResponse('INVALID_JSON', 'Request body must be valid JSON', 400)
   }
 
   const { phone } = body
 
   if (!phone) {
-    return errorResponse('MISSING_FIELDS', 'phone is required', 400, req)
+    return errorResponse('MISSING_FIELDS', 'phone is required', 400)
   }
 
   // Validate Bolivian phone format
   if (!/^\+591[678]\d{7}$/.test(phone)) {
-    return errorResponse('INVALID_PHONE_FORMAT', 'Phone must be a valid Bolivian number (+591 + 8 digits)', 400, req)
+    return errorResponse('INVALID_PHONE_FORMAT', 'Phone must be a valid Bolivian number (+591 + 8 digits)', 400)
   }
 
   const twilioUrl = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SERVICE_SID}/Verifications`
@@ -49,7 +49,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Network error reaching Twilio'
-    return errorResponse('TWILIO_ERROR', message, 502, req)
+    return errorResponse('TWILIO_ERROR', message, 502)
   }
 
   if (!twilioRes.ok) {
@@ -63,7 +63,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     } catch {
       // ignore parse errors
     }
-    return errorResponse('TWILIO_ERROR', twilioMessage, 502, req)
+    return errorResponse('TWILIO_ERROR', twilioMessage, 502)
   }
 
   return jsonResponse({ sent: true, channel: 'whatsapp' }, 200, {}, req)

@@ -64,7 +64,7 @@ export function FilterSheet({ open, onClose, filters, categories, onApply }: Fil
         <div className="flex items-center justify-between px-4 py-4 border-b border-outline-variant shrink-0">
           <button
             onClick={onClose}
-            className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors" aria-label="Cerrar"
           >
             <span className="material-symbols-outlined text-on-surface text-xl">close</span>
           </button>
