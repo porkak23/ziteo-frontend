@@ -52,13 +52,25 @@ export default function AvatarMenu({ isOpen, onClose, extraItems, onSettingsClic
   if (!isOpen || !user) return null
 
   const handleRoleSelect = async (role: UserRole) => {
-    if (role !== user.active_role) {
-      setActiveRole(role)
-      setTab('home')
-      supabase.from('profiles').update({ active_role: role }).eq('user_id', user.user_id).then(({ error }) => {
-        if (error) console.error('Error updating active_role:', error.message)
-      })
+    if (role === user.active_role) { onClose(); return }
+    // Guard: solo puede cambiar a roles que el usuario realmente posee
+    if (!user.roles.includes(role)) {
+      console.warn('[AvatarMenu] intento de cambiar a rol no poseído:', role)
+      onClose()
+      return
     }
+    // Persistir primero en servidor; solo actualizar UI si tiene éxito
+    const { error } = await supabase
+      .from('profiles')
+      .update({ active_role: role })
+      .eq('user_id', user.user_id)
+    if (error) {
+      console.error('Error updating active_role:', error.message)
+      onClose()
+      return
+    }
+    setActiveRole(role)
+    setTab('home')
     onClose()
   }
 

@@ -45,7 +45,7 @@ export function usePlaceOrder() {
   const currentUser  = useAuthStore((s) => s.user)
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (vars: { deliveryAddress?: string } = {}) => {
       if (cartItems.length === 0) throw new Error('El carrito está vacío')
       if (!currentUser?.user_id) throw new Error('Usuario no autenticado')
 
@@ -92,18 +92,22 @@ export function usePlaceOrder() {
         const oid = orderId as string
         orderIds.push(oid)
 
-        // Patch cargo_type on the order and its delivery if cargo was determined
+        // Patch cargo_type on the order if cargo was determined
         if (effectiveCargo) {
-          // Fire-and-forget — non-critical, don't fail the whole flow on error
-          void supabase
+          const { error: cargoErr } = await supabase
             .from('orders')
             .update({ cargo_type: effectiveCargo })
             .eq('id', oid)
+          if (cargoErr) console.warn('[placeOrder] cargo_type patch failed:', cargoErr.message)
+        }
 
-          void supabase
-            .from('deliveries')
-            .update({ cargo_type: effectiveCargo })
-            .eq('order_id', oid)
+        // Patch delivery_address so the BD trigger can copy it to deliveries.dropoff_address
+        if (vars.deliveryAddress) {
+          const { error: addrErr } = await supabase
+            .from('orders')
+            .update({ delivery_address: vars.deliveryAddress })
+            .eq('id', oid)
+          if (addrErr) console.warn('[placeOrder] delivery_address patch failed:', addrErr.message)
         }
       }
 

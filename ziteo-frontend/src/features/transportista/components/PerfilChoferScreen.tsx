@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Z } from '@/shared/design/tokens'
 import { ZAvatar } from '@/shared/design/components/ZAvatar'
 import { useAuthStore } from '@/features/auth/store/authStore'
@@ -167,6 +168,22 @@ export function PerfilChoferScreen() {
   const { data: myDeliveries, isLoading: loadingDeliveries } = useMyDeliveries()
   const completedTrips = (myDeliveries ?? []).filter((d) => d.status === 'delivered').length
 
+  // Query para calcular rating promedio del chofer
+  const { data: ratingData } = useQuery({
+    queryKey: ['driver-rating', user?.user_id],
+    enabled: !!user?.user_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('reviewed_id', user!.user_id)
+      if (error) return { avg: null, count: 0 }
+      if (!data || data.length === 0) return { avg: null, count: 0 }
+      const avg = data.reduce((sum, r) => sum + (r.rating ?? 0), 0) / data.length
+      return { avg: Math.round(avg * 10) / 10, count: data.length }
+    },
+  })
+
   const displayName = user?.name ?? '—'
   const city = user?.city ?? '—'
 
@@ -294,8 +311,12 @@ export function PerfilChoferScreen() {
           background: Z.surface, border: `1px solid ${Z.border}`,
         }}>
           <div style={{ textAlign: 'center', padding: '10px 24px' }}>
-            <div style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text }}>Nuevo</div>
-            <div style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted, fontWeight: 500 }}>calificación</div>
+            <div style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text }}>
+              {ratingData?.avg != null ? ratingData.avg.toFixed(1) : 'Nuevo'}
+            </div>
+            <div style={{ fontFamily: Z.font, fontSize: 10, color: Z.textMuted, fontWeight: 500 }}>
+              {ratingData?.count ? `${ratingData.count} reseña${ratingData.count !== 1 ? 's' : ''}` : 'calificación'}
+            </div>
           </div>
           <div style={{ width: 1, background: Z.border }} />
           <div style={{ textAlign: 'center', padding: '10px 24px' }}>

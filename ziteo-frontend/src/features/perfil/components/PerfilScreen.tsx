@@ -16,10 +16,16 @@ import { usePaymentQr } from '../../proveedor/hooks/usePaymentQr'
 const VendedorPublicProfile = lazy(() => import('../../proveedor/components/VendedorPublicProfile').then(m => ({ default: m.VendedorPublicProfile })))
 const MaestroPublicProfile  = lazy(() => import('../../maestro/components/MaestroPublicProfile').then(m => ({ default: m.MaestroPublicProfile })))
 
-function persistActiveRole(userId: string, role: UserRole) {
-  supabase.from('profiles').update({ active_role: role }).eq('user_id', userId).then(({ error }) => {
-    if (error) console.error('Error persisting active_role:', error.message)
-  })
+async function persistActiveRole(userId: string, role: UserRole): Promise<boolean> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ active_role: role })
+    .eq('user_id', userId)
+  if (error) {
+    console.error('Error persisting active_role:', error.message)
+    return false
+  }
+  return true
 }
 
 const USER_ROLES: Record<UserRole, { label: string; icon: string }> = {
@@ -615,7 +621,11 @@ export function PerfilScreen() {
                           </span>
                         ) : (
                           <button
-                            onClick={() => { setActiveRole(role); persistActiveRole(user.user_id, role) }}
+                            onClick={async () => {
+                              if (!user.roles.includes(role)) return
+                              const ok = await persistActiveRole(user.user_id, role)
+                              if (ok) setActiveRole(role)
+                            }}
                             className="bg-surface-container text-on-surface-variant rounded-full px-2 py-0.5 text-[10px] font-label font-semibold border border-outline-variant active:opacity-70"
                           >
                             Activar
@@ -672,7 +682,11 @@ export function PerfilScreen() {
                     )}
                     {role === 'constructor' && (
                       <button
-                        onClick={() => { setActiveRole('constructor'); persistActiveRole(user.user_id, 'constructor') }}
+                        onClick={async () => {
+                          if (!user.roles.includes('constructor')) return
+                          const ok = await persistActiveRole(user.user_id, 'constructor')
+                          if (ok) setActiveRole('constructor')
+                        }}
                         className="font-label text-xs px-3 py-2 rounded-xl bg-primary text-on-primary active:opacity-70"
                       >
                         Ir al dashboard

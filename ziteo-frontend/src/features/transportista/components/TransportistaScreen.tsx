@@ -12,13 +12,74 @@ import type { Delivery, VehicleType } from '../types/deliveryTypes'
 
 type ServiceMode = 'entregas' | 'transporte'
 
+// ─── Vehicle SVG icons ────────────────────────────────────────────────────────
+
+function IconMoto({ color, size }: { color: string; size: number }) {
+  return (
+    <svg width={size} height={Math.round(size * 0.75)} viewBox="0 0 40 30" fill="none">
+      <circle cx="8"  cy="24" r="5" stroke={color} strokeWidth="2" fill="none" />
+      <circle cx="32" cy="24" r="5" stroke={color} strokeWidth="2" fill="none" />
+      <path
+        d="M8 24L12 14L18 12H24L28 16L32 24M24 12L27 8H30M18 12V16H25"
+        stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"
+      />
+    </svg>
+  )
+}
+
+function IconCamioneta({ color, size }: { color: string; size: number }) {
+  return (
+    <svg width={size} height={Math.round(size * 0.65)} viewBox="0 0 42 28" fill="none">
+      <rect x="2" y="5" width="38" height="15" rx="2.5" stroke={color} strokeWidth="2" fill="none" />
+      <path d="M4 7h13v9H4V7z" stroke={color} strokeWidth="1.6" fill="none" />
+      <circle cx="9"  cy="22" r="4" stroke={color} strokeWidth="2" fill="none" />
+      <circle cx="33" cy="22" r="4" stroke={color} strokeWidth="2" fill="none" />
+    </svg>
+  )
+}
+
+function IconPickup({ color, size }: { color: string; size: number }) {
+  return (
+    <svg width={size} height={Math.round(size * 0.6)} viewBox="0 0 44 26" fill="none">
+      <path
+        d="M2 20V10a2 2 0 012-2h14v12H2z"
+        stroke={color} strokeWidth="2" fill="none" strokeLinejoin="round"
+      />
+      <path d="M4 11h10v5H4v-5z" stroke={color} strokeWidth="1.5" fill="none" />
+      <path
+        d="M18 13h22v7H18v-7z"
+        stroke={color} strokeWidth="2" fill="none" strokeLinejoin="round"
+      />
+      <circle cx="9"  cy="21.5" r="3.5" stroke={color} strokeWidth="2" fill="none" />
+      <circle cx="34" cy="21.5" r="3.5" stroke={color} strokeWidth="2" fill="none" />
+    </svg>
+  )
+}
+
+function IconCamion({ color, size }: { color: string; size: number }) {
+  return (
+    <svg width={size} height={Math.round(size * 0.55)} viewBox="0 0 54 30" fill="none">
+      <path
+        d="M2 22V9a2 2 0 012-2h12v15H2z"
+        stroke={color} strokeWidth="2" fill="none" strokeLinejoin="round"
+      />
+      <path d="M4 10h8v8H4v-8z" stroke={color} strokeWidth="1.5" fill="none" />
+      <rect x="16" y="4" width="35" height="18" rx="2" stroke={color} strokeWidth="2" fill="none" />
+      <circle cx="9"  cy="23.5" r="3.5" stroke={color} strokeWidth="2" fill="none" />
+      <circle cx="36" cy="23.5" r="3.5" stroke={color} strokeWidth="2" fill="none" />
+      <circle cx="44" cy="23.5" r="3.5" stroke={color} strokeWidth="2" fill="none" />
+      <path d="M16 15h35" stroke={color} strokeWidth="1.2" strokeDasharray="3 2" opacity="0.4" />
+    </svg>
+  )
+}
+
 // ─── Vehicle setup banner ─────────────────────────────────────────────────────
 
-const VEHICLE_OPTS: { value: VehicleType; icon: string; label: string }[] = [
-  { value: 'moto',      icon: '🛵', label: 'Moto' },
-  { value: 'camioneta', icon: '🚗', label: 'Camioneta' },
-  { value: 'camion',    icon: '🚛', label: 'Camión' },
-  { value: 'pickup',    icon: '🛻', label: 'Pickup' },
+const VEHICLE_OPTS: { value: VehicleType; Icon: (p: { color: string; size: number }) => React.ReactElement; label: string }[] = [
+  { value: 'moto',      Icon: IconMoto,      label: 'Moto' },
+  { value: 'camioneta', Icon: IconCamioneta, label: 'Camioneta' },
+  { value: 'camion',    Icon: IconCamion,    label: 'Camión' },
+  { value: 'pickup',    Icon: IconPickup,    label: 'Pickup' },
 ]
 
 function VehicleSetupBanner() {
@@ -53,7 +114,7 @@ function VehicleSetupBanner() {
             onClick={() => save(v.value)}
             className="flex flex-col items-center gap-1 py-2 rounded-xl border border-outline-variant bg-surface-container active:opacity-70 transition-opacity disabled:opacity-50 text-center"
           >
-            <span className="text-xl leading-none">{v.icon}</span>
+            <v.Icon color="currentColor" size={22} />
             <span className="font-label text-[11px] font-semibold text-on-surface">{v.label}</span>
           </button>
         ))}
@@ -146,13 +207,13 @@ function RadarActive({
         {/* GPS indicator */}
         <div className="absolute top-3 left-3 flex items-center gap-1.5">
           <span
-            className={`material-symbols-outlined text-sm ${hasLocation ? 'text-primary' : 'text-white/30'}`}
+            className={`material-symbols-outlined text-sm ${hasLocation ? 'text-primary' : 'text-white/70'}`}
             style={{ fontVariationSettings: "'FILL' 1" }}
             aria-hidden="true"
           >
             {hasLocation ? 'gps_fixed' : 'gps_off'}
           </span>
-          <span className="font-body text-white/50 text-xs">
+          <span className="font-body text-white/70 text-xs">
             {hasLocation ? 'GPS activo' : 'Sin GPS'}
           </span>
         </div>
@@ -184,8 +245,10 @@ function JobCard({
       {/* Fee row */}
       <div className="px-4 py-3 flex items-center justify-between border-b border-outline-variant/50">
         <div className="flex items-center gap-2">
-          <span className="text-base leading-none" aria-hidden="true">
-            {delivery.cargo_type === 'heavy' ? '🚛' : '🛵'}
+          <span className="flex items-center" aria-hidden="true">
+            {delivery.cargo_type === 'heavy'
+              ? <IconCamion color="currentColor" size={18} />
+              : <IconMoto color="currentColor" size={18} />}
           </span>
           <span className="font-label font-semibold text-on-surface text-sm">
             Pedido #{delivery.id.slice(0, 6).toUpperCase()}
@@ -321,7 +384,7 @@ export function TransportistaScreen() {
         {/* Header */}
         <div className="px-5 pt-8 pb-4 flex items-start justify-between">
           <div>
-            <p className="font-body text-white/40 text-xs tracking-wider uppercase mb-1">Transportista</p>
+            <p className="font-body text-white/70 text-xs tracking-wider uppercase mb-1">Transportista</p>
             <h1 className="font-headline font-black text-white text-3xl leading-none tracking-tight">{firstName}</h1>
           </div>
           <div data-testid="radar-status-badge" className="flex items-center gap-1.5 bg-error/15 border border-error/30 rounded-full px-3 py-1.5">
@@ -350,7 +413,7 @@ export function TransportistaScreen() {
                   local_shipping
                 </span>
               </div>
-              <p className="font-label font-bold text-white/25 text-sm">Radar inactivo</p>
+              <p className="font-label font-bold text-white/65 text-sm">Radar inactivo</p>
             </div>
             <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[--color-driver-surface] to-transparent" />
           </div>
@@ -361,11 +424,11 @@ export function TransportistaScreen() {
           <div className="flex gap-3 mx-5 mt-4">
             <div className="flex-1 bg-white/5 rounded-2xl px-4 py-3 text-center border border-white/8">
               <p className="font-headline font-black text-white text-2xl">{completedToday}</p>
-              <p className="font-body text-white/40 text-xs mt-0.5">viajes hoy</p>
+              <p className="font-body text-white/70 text-xs mt-0.5">viajes hoy</p>
             </div>
             <div className="flex-1 bg-white/5 rounded-2xl px-4 py-3 text-center border border-white/8">
               <p className="font-headline font-black text-white text-2xl">Bs. {today.net.toFixed(0)}</p>
-              <p className="font-body text-white/40 text-xs mt-0.5">ganado hoy</p>
+              <p className="font-body text-white/70 text-xs mt-0.5">ganado hoy</p>
             </div>
           </div>
         )}
@@ -375,7 +438,7 @@ export function TransportistaScreen() {
           <p className="font-headline font-black text-white text-2xl leading-tight">
             ¿Listo para trabajar?
           </p>
-          <p className="font-body text-white/40 text-sm max-w-xs leading-relaxed">
+          <p className="font-body text-white/70 text-sm max-w-xs leading-relaxed">
             Actívate para ver pedidos y transportes disponibles en tu zona
           </p>
         </div>
@@ -399,7 +462,7 @@ export function TransportistaScreen() {
               CONECTARME
             </span>
           </button>
-          <p className="font-body text-white/25 text-xs text-center">
+          <p className="font-body text-white/65 text-xs text-center">
             Se usará tu ubicación mientras estés conectado
           </p>
         </div>
@@ -416,7 +479,7 @@ export function TransportistaScreen() {
         {/* Top bar */}
         <div className="px-4 pt-4 pb-3 flex items-center justify-between">
           <div>
-            <p data-testid="radar-status-badge" className="font-body text-white/40 text-xs">Conectado</p>
+            <p data-testid="radar-status-badge" className="font-body text-white/70 text-xs">Conectado</p>
             <div className="flex items-center gap-2">
               <h1 className="font-headline font-black text-white text-xl leading-tight">{firstName}</h1>
               {driverProfile?.vehicle_type && (
@@ -453,7 +516,7 @@ export function TransportistaScreen() {
             { label: 'En curso', value: String(activeDeliveries.length) },
           ].map(({ label, value }) => (
             <div key={label} className="bg-white/5 rounded-2xl px-3 py-2.5 text-center border border-white/8">
-              <p className="font-body text-white/40 text-[10px] uppercase tracking-wider">{label}</p>
+              <p className="font-body text-white/70 text-[10px] uppercase tracking-wider">{label}</p>
               <p className="font-headline font-black text-white text-lg mt-0.5">{value}</p>
             </div>
           ))}
@@ -576,7 +639,9 @@ export function TransportistaScreen() {
                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
                   : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
               }`}>
-                {cargoCapability === 'heavy' ? '🚛 Pesados' : '🛵 Ligeros'}
+                {cargoCapability === 'heavy'
+                  ? <><IconCamion color="currentColor" size={14} /> Pesados</>
+                  : <><IconMoto color="currentColor" size={14} /> Ligeros</>}
               </span>
             )}
           </div>

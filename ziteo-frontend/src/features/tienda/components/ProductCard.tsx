@@ -68,13 +68,13 @@ function ProductCardComponent({ product, onPress }: ProductCardProps) {
           <span className="material-symbols-outlined text-4xl text-on-surface-variant/30">inventory_2</span>
         )}
         {outOfStock && (
-          <span className="absolute top-2 left-2 bg-error text-on-error text-[10px] font-label font-bold rounded-lg px-2 py-0.5 uppercase tracking-wide">
+          <span className="absolute top-2 left-2 bg-error text-on-error text-xs font-label font-bold rounded-lg px-2 py-0.5 uppercase tracking-wide">
             Sin stock
           </span>
         )}
         {inCart && !outOfStock && (
           <span className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-            <span className="font-label text-[10px] font-bold text-white leading-none">{cartItem.quantity}</span>
+            <span className="font-label text-xs font-bold text-white leading-none">{cartItem.quantity}</span>
           </span>
         )}
       </div>
@@ -93,7 +93,7 @@ function ProductCardComponent({ product, onPress }: ProductCardProps) {
           >
             <button
               onClick={() => setIsBulk(false)}
-              className={`px-2 py-0.5 rounded-md text-[10px] font-label font-semibold transition-colors ${
+              className={`px-3 py-2.5 rounded-md text-xs font-label font-semibold transition-colors ${
                 !isBulk
                   ? 'bg-primary text-on-primary'
                   : 'text-on-surface-variant hover:text-on-surface'
@@ -103,7 +103,7 @@ function ProductCardComponent({ product, onPress }: ProductCardProps) {
             </button>
             <button
               onClick={() => setIsBulk(true)}
-              className={`px-2 py-0.5 rounded-md text-[10px] font-label font-semibold transition-colors ${
+              className={`px-3 py-2.5 rounded-md text-xs font-label font-semibold transition-colors ${
                 isBulk
                   ? 'bg-primary text-on-primary'
                   : 'text-on-surface-variant hover:text-on-surface'
@@ -123,7 +123,7 @@ function ProductCardComponent({ product, onPress }: ProductCardProps) {
 
         {/* Bulk hint */}
         {isBulk && hasBulk && bulkQty > 1 && (
-          <p className="font-body text-on-surface-variant text-[10px] -mt-0.5">
+          <p className="font-body text-on-surface-variant text-xs -mt-0.5">
             Mínimo {bulkQty} unidades por bulto
           </p>
         )}

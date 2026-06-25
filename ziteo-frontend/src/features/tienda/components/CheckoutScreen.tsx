@@ -13,6 +13,7 @@ interface CheckoutScreenProps {
 export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
   const [orderError, setOrderError] = useState<string | null>(null)
   const [pendingQr, setPendingQr] = useState<{ orderId: string; providerId: string } | null>(null)
+  const [deliveryAddress, setDeliveryAddress] = useState('')
   const { toasts, showToast, removeToast } = useToast()
 
   const items = useCart((s) => s.items)
@@ -26,7 +27,7 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
     // Capture providerId from cart before the mutation clears it
     const firstProviderId = items[0]?.sellerId ?? ''
 
-    placeOrder(undefined, {
+    placeOrder({ deliveryAddress: deliveryAddress.trim() }, {
       onSuccess: ({ orderIds, providerIds }) => {
         showToast('¡Pedido realizado con éxito!', 'success')
         const orderId = orderIds[0] ?? ''
@@ -81,6 +82,20 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
           </span>
         </div>
 
+        <div className="mt-4 flex flex-col gap-1.5">
+          <label className="font-label text-sm text-on-surface" htmlFor="delivery-address">
+            Dirección de entrega
+          </label>
+          <input
+            id="delivery-address"
+            type="text"
+            value={deliveryAddress}
+            onChange={(e) => setDeliveryAddress(e.target.value)}
+            placeholder="Ej. Av. Hernando Siles 123, Sucre"
+            className="border border-outline rounded-2xl px-4 py-3 bg-surface text-on-surface font-body text-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
         {orderError && (
           <div className="mt-3 bg-error-container text-on-error-container rounded-2xl p-3 font-body text-sm">
             {orderError}
@@ -92,7 +107,7 @@ export function CheckoutScreen({ onBack, onSuccess }: CheckoutScreenProps) {
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={isPending || items.length === 0}
+          disabled={isPending || items.length === 0 || deliveryAddress.trim() === ''}
           className="w-full bg-primary text-on-primary font-label font-semibold rounded-2xl py-4 text-sm transition-opacity disabled:opacity-60"
         >
           {isPending ? 'Procesando...' : 'Confirmar pedido'}

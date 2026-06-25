@@ -134,7 +134,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   }, [open])
 
   function handleConfirm() {
-    placeOrder(undefined, {
+    placeOrder({}, {
       onSuccess: () => {
         showToast('¡Pedido enviado!', 'success')
         setTimeout(onClose, 1200)

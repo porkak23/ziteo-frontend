@@ -70,7 +70,7 @@ function PostulanteCard({
         </div>
         <button
           onClick={() => onVerPerfil(postulacion.maestro_id)}
-          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-surface border border-outline-variant text-on-surface-variant text-[11px] font-label font-semibold shrink-0 active:opacity-70 transition-opacity"
+          className="flex items-center gap-1 px-3 py-2.5 rounded-lg bg-surface border border-outline-variant text-on-surface-variant text-[11px] font-label font-semibold shrink-0 active:opacity-70 transition-opacity"
         >
           <span className="material-symbols-outlined text-[12px]">person</span>
           Ver perfil
@@ -93,14 +93,14 @@ function PostulanteCard({
           <button
             disabled={isPending}
             onClick={() => handleAction('accepted')}
-            className="flex-1 bg-primary text-on-primary rounded-xl py-2 text-xs font-label font-semibold disabled:opacity-50 transition-opacity active:opacity-80"
+            className="flex-1 bg-primary text-on-primary rounded-xl py-3 text-xs font-label font-semibold disabled:opacity-50 transition-opacity active:opacity-80"
           >
             Aceptar
           </button>
           <button
             disabled={isPending}
             onClick={() => handleAction('rejected')}
-            className="flex-1 bg-surface border border-outline-variant text-on-surface rounded-xl py-2 text-xs font-label font-semibold disabled:opacity-50 transition-opacity active:opacity-80"
+            className="flex-1 bg-surface border border-outline-variant text-on-surface rounded-xl py-3 text-xs font-label font-semibold disabled:opacity-50 transition-opacity active:opacity-80"
           >
             Rechazar
           </button>
@@ -199,7 +199,7 @@ function LicitacionCard({
             <button
               disabled={isCerrando}
               onClick={handleCerrar}
-              className="w-full border border-outline-variant text-on-surface-variant rounded-xl py-2.5 text-sm font-label font-semibold disabled:opacity-50 transition-opacity active:opacity-80 mt-1"
+              className="w-full border border-outline-variant text-on-surface-variant rounded-xl py-3 text-sm font-label font-semibold disabled:opacity-50 transition-opacity active:opacity-80 mt-1"
             >
               {isCerrando ? 'Cerrando...' : 'Cerrar licitación'}
             </button>

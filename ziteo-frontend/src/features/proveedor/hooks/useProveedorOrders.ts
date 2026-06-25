@@ -134,11 +134,12 @@ export function useUpdateOrderStatus() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: string, status: string, providerId: string }) => {
+    mutationFn: async ({ orderId, status, providerId }: { orderId: string, status: string, providerId: string }) => {
       const { error } = await supabase
         .from('orders')
         .update({ status })
         .eq('id', orderId)
+        .eq('provider_id', providerId)
 
       if (error) throw error
     },

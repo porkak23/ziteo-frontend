@@ -38,7 +38,7 @@ export function EarningsPanel({ maestroId }: EarningsPanelProps) {
     <div className="flex flex-col gap-4 px-4 py-4 bg-surface rounded-2xl border border-outline-variant mb-2 shadow-sm">
       <div className="flex items-center justify-between h-7">
         <h2 className="font-title text-lg text-on-surface m-0 leading-none">Mis Ganancias</h2>
-        <span className="font-body text-[10px] text-on-surface-variant bg-surface-container px-2 py-1 rounded-full whitespace-nowrap">
+        <span className="font-body text-xs text-on-surface-variant bg-surface-container px-2 py-1 rounded-full whitespace-nowrap">
           Últimos 6 meses
         </span>
       </div>
@@ -46,21 +46,21 @@ export function EarningsPanel({ maestroId }: EarningsPanelProps) {
       <div className="flex gap-2">
         <div className="flex flex-col gap-1 flex-1 bg-surface-container rounded-xl p-3 min-w-0">
           <span className="material-symbols-outlined text-primary text-[20px]">payments</span>
-          <span className="font-body text-[10px] text-on-surface-variant leading-tight truncate">Total ganado</span>
+          <span className="font-body text-xs text-on-surface-variant leading-tight truncate">Total ganado</span>
           <span className="font-label text-sm text-on-surface font-semibold truncate" title={`Bs. ${totalEarned.toLocaleString('es-BO')}`}>
             Bs. {totalEarned.toLocaleString('es-BO')}
           </span>
         </div>
         <div className="flex flex-col gap-1 flex-1 bg-surface-container rounded-xl p-3 min-w-0">
           <span className="material-symbols-outlined text-primary text-[20px]">task_alt</span>
-          <span className="font-body text-[10px] text-on-surface-variant leading-tight truncate">Trabajos</span>
+          <span className="font-body text-xs text-on-surface-variant leading-tight truncate">Trabajos</span>
           <span className="font-label text-sm text-on-surface font-semibold truncate">
             {completedCount}
           </span>
         </div>
         <div className="flex flex-col gap-1 flex-1 bg-surface-container rounded-xl p-3 min-w-0">
           <span className="material-symbols-outlined text-primary text-[20px]">trending_up</span>
-          <span className="font-body text-[10px] text-on-surface-variant leading-tight truncate">Promedio</span>
+          <span className="font-body text-xs text-on-surface-variant leading-tight truncate">Promedio</span>
           <span className="font-label text-sm text-on-surface font-semibold truncate" title={`Bs. ${Math.round(avgBudget).toLocaleString('es-BO')}`}>
             Bs. {Math.round(avgBudget).toLocaleString('es-BO')}
           </span>
@@ -77,7 +77,7 @@ export function EarningsPanel({ maestroId }: EarningsPanelProps) {
                 style={{ height: d.amount > 0 ? `max(${heightPercent}%, 15%)` : '15%' }} 
                 title={`Bs. ${d.amount.toLocaleString('es-BO')}`}
               />
-              <span className="text-[10px] text-on-surface-variant font-body">{d.month}</span>
+              <span className="text-xs text-on-surface-variant font-body">{d.month}</span>
             </div>
           )
         })}
