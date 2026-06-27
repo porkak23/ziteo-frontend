@@ -45,7 +45,12 @@ export function usePlaceOrder() {
   const currentUser  = useAuthStore((s) => s.user)
 
   return useMutation({
-    mutationFn: async (vars: { deliveryAddress?: string } = {}) => {
+    mutationFn: async (vars: {
+      deliveryMethod?: 'delivery' | 'pickup'
+      deliveryAddress?: string
+      deliveryLat?: number
+      deliveryLng?: number
+    } = {}) => {
       if (cartItems.length === 0) throw new Error('El carrito está vacío')
       if (!currentUser?.user_id) throw new Error('Usuario no autenticado')
 
@@ -56,6 +61,9 @@ export function usePlaceOrder() {
         return w < 5 ? 'light' : 'heavy'
       })()
       const effectiveCargo: CargoType | null = cargoType ?? autoDetected
+
+      const method = vars.deliveryMethod ?? 'delivery'
+      const isDelivery = method === 'delivery'
 
       // Group by providerId
       const byProvider = cartItems.reduce<Record<string, CartItem[]>>((acc, item) => {
@@ -69,46 +77,28 @@ export function usePlaceOrder() {
       for (const [providerId, items] of Object.entries(byProvider)) {
         const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
-        // Build items payload for the RPC
         const rpcItems = items.map((i) => ({
           product_id: i.productId,
           quantity:   i.quantity,
           price_unit: i.price,
         }))
 
-        // Single atomic call — stock check + order + order_items in one transaction
+        // Single atomic call — stock check + order + order_items + delivery fields in one transaction
         const { data: orderId, error } = await supabase.rpc('place_order', {
-          p_constructor_id: currentUser.user_id,
-          p_provider_id:    providerId,
-          p_total:          total,
-          p_items:          rpcItems,
+          p_constructor_id:   currentUser.user_id,
+          p_provider_id:      providerId,
+          p_total:            total,
+          p_items:            rpcItems,
+          p_delivery_method:  method,
+          p_delivery_address: isDelivery ? vars.deliveryAddress : undefined,
+          p_delivery_lat:     isDelivery ? vars.deliveryLat : undefined,
+          p_delivery_lng:     isDelivery ? vars.deliveryLng : undefined,
+          p_cargo_type:       effectiveCargo ?? undefined,
         })
 
-        if (error) {
-          // Surface the PostgreSQL exception message directly to the user
-          throw new Error(error.message)
-        }
+        if (error) throw new Error(error.message)
 
-        const oid = orderId as string
-        orderIds.push(oid)
-
-        // Patch cargo_type on the order if cargo was determined
-        if (effectiveCargo) {
-          const { error: cargoErr } = await supabase
-            .from('orders')
-            .update({ cargo_type: effectiveCargo })
-            .eq('id', oid)
-          if (cargoErr) console.warn('[placeOrder] cargo_type patch failed:', cargoErr.message)
-        }
-
-        // Patch delivery_address so the BD trigger can copy it to deliveries.dropoff_address
-        if (vars.deliveryAddress) {
-          const { error: addrErr } = await supabase
-            .from('orders')
-            .update({ delivery_address: vars.deliveryAddress })
-            .eq('id', oid)
-          if (addrErr) console.warn('[placeOrder] delivery_address patch failed:', addrErr.message)
-        }
+        orderIds.push(orderId as string)
       }
 
       return { orderIds, providerIds: Object.keys(byProvider) }
@@ -118,16 +108,10 @@ export function usePlaceOrder() {
       clearCart()
       queryClient.invalidateQueries({ queryKey: ['orders'] })
 
-      // Use the send_notification RPC so notifications go through the secure
-      // SECURITY DEFINER path instead of a direct insert (which WITH CHECK (false) blocks).
+      // In-app notification is handled by the trg_notify_provider_on_new_order DB trigger
+      // (SECURITY DEFINER) — no client-side send_notification call needed.
+      // Only deliver Web Push from here.
       for (const pid of providerIds) {
-        await supabase.rpc('send_notification', {
-          p_user_id: pid,
-          p_type:    'order',
-          p_title:   'Nuevo pedido',
-          p_message: 'Has recibido un nuevo pedido de materiales.',
-        })
-        // Also deliver as Web Push if the provider has an active subscription
         supabase.functions.invoke('notifications/send-push', {
           body: {
             user_id: pid,
@@ -135,7 +119,7 @@ export function usePlaceOrder() {
             body:    'Has recibido un nuevo pedido de materiales.',
             url:     '/',
           },
-        }).catch((err: unknown) => console.warn('[send-push] order push failed:', err))
+        }).catch(() => {})
       }
     },
   })

@@ -17,6 +17,8 @@ interface OtpVerificationSheetProps {
   error?: string | null;
   onResend?: () => void;
   resendCooldown?: number;
+  /** Dev-only: OTP code returned when WhatsApp is not configured. Auto-fills the input. */
+  debugOtp?: string;
 }
 
 function formatPhone(raw: string): string {
@@ -126,6 +128,8 @@ function SpinnerIcon() {
   );
 }
 
+const SUPPORT_WHATSAPP = 'https://wa.me/59175000000' // placeholder — update with real support number
+
 export function OtpVerificationSheet({
   phone,
   step,
@@ -137,6 +141,7 @@ export function OtpVerificationSheet({
   error = null,
   onResend,
   resendCooldown = 0,
+  debugOtp,
 }: OtpVerificationSheetProps) {
   const [otpValue, setOtpValue] = useState('');
   const [pinDraft, setPinDraft] = useState('');
@@ -151,10 +156,18 @@ export function OtpVerificationSheet({
     return () => clearTimeout(t);
   }, []);
 
+  // Auto-fill OTP input in dev when backend returns debug_otp
+  useEffect(() => {
+    if (debugOtp && step === 'code') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOtpValue(debugOtp);
+    }
+  }, [debugOtp, step]);
+
   // React-recommended pattern: reset derived state during render when prop changes
   if (prevStep !== step) {
     setPrevStep(step);
-    if (step === 'code') setOtpValue('');
+    if (step === 'code') setOtpValue(debugOtp ?? '');
     if (step === 'pin-create') { setPinDraft(''); setPinConfirm(''); setPinMismatch(false); }
     if (step === 'pin-confirm') { setPinConfirm(''); setPinMismatch(false); }
   }
@@ -229,8 +242,34 @@ export function OtpVerificationSheet({
             />
 
             {error && (
-              <p style={{ fontFamily: Z.font, fontSize: 13, color: 'var(--z-error)', margin: 0, textAlign: 'center' }}>
-                {error}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+                <p style={{ fontFamily: Z.font, fontSize: 13, color: 'var(--z-error)', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
+                  {error}
+                </p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <a
+                    href={SUPPORT_WHATSAPP}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.orangeDark, textDecoration: 'underline', textUnderlineOffset: 3 }}
+                  >
+                    Contactar soporte
+                  </a>
+                  <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted }}>·</span>
+                  <button
+                    type="button"
+                    onClick={onChangePhone}
+                    style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textSec, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textUnderlineOffset: 3 }}
+                  >
+                    Volver
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {debugOtp && (
+              <p style={{ fontFamily: Z.font, fontSize: 11, color: Z.textMuted, margin: 0, textAlign: 'center' }}>
+                [DEV] Código de prueba: <strong>{debugOtp}</strong>
               </p>
             )}
 
@@ -307,9 +346,29 @@ export function OtpVerificationSheet({
             />
 
             {error && (
-              <p style={{ fontFamily: Z.font, fontSize: 13, color: 'var(--z-error)', margin: 0, textAlign: 'center' }}>
-                {error}
-              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+                <p style={{ fontFamily: Z.font, fontSize: 13, color: 'var(--z-error)', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
+                  {error}
+                </p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <a
+                    href={SUPPORT_WHATSAPP}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.orangeDark, textDecoration: 'underline', textUnderlineOffset: 3 }}
+                  >
+                    Contactar soporte
+                  </a>
+                  <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted }}>·</span>
+                  <button
+                    type="button"
+                    onClick={onChangePhone}
+                    style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textSec, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textUnderlineOffset: 3 }}
+                  >
+                    Volver
+                  </button>
+                </div>
+              </div>
             )}
 
             <ZButton
@@ -365,7 +424,7 @@ export function OtpVerificationSheet({
                 Activa tu huella digital
               </p>
               <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: 0, lineHeight: 1.6 }}>
-                Entra a Ziteo sin escribir tu PIN cada vez. Seguro y rápido.
+                Entra a Ziteoo sin escribir tu PIN cada vez. Seguro y rápido.
               </p>
             </div>
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
