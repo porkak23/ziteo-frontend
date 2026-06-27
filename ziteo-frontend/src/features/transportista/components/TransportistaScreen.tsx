@@ -98,6 +98,7 @@ export function TransportistaScreen() {
 
   const currentJob = pool[poolIndex] ?? null
   const latestPosRef = useRef(geo.position)
+  // eslint-disable-next-line react-hooks/refs
   latestPosRef.current = geo.position
 
   useEffect(() => {
@@ -110,7 +111,6 @@ export function TransportistaScreen() {
     publish()
     const id = setInterval(publish, 30_000)
     return () => clearInterval(id)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline])
 
   useEffect(() => { setPoolIndex(0) }, [pool.length])
