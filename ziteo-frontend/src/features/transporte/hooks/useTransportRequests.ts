@@ -104,6 +104,77 @@ export function usePendingTransportRequests() {
   return query
 }
 
+// ─── Chofer: mis transportes activos/historial ───────────────────────────────
+
+export function useMyTransportRequests() {
+  const user = useAuthStore((s) => s.user)
+  const driverId = user?.user_id ?? ''
+  const queryClient = useQueryClient()
+  const queryClientRef = useRef(queryClient)
+
+  const query = useQuery<TransportRequest[]>({
+    queryKey: ['transport-requests', 'mine', driverId],
+    enabled: !!driverId,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('transport_requests')
+        .select('*')
+        .eq('driver_id', driverId)
+        .order('created_at', { ascending: false })
+      if (error) throw new Error(error.message)
+      return (data ?? []) as TransportRequest[]
+    },
+  })
+
+  useEffect(() => {
+    if (!driverId) return
+    const uid = Math.random().toString(36).slice(2, 8)
+    const channel = supabase
+      .channel(`transport-requests:driver:${driverId}:${uid}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'transport_requests', filter: `driver_id=eq.${driverId}` }, () => {
+        queryClientRef.current.invalidateQueries({ queryKey: ['transport-requests', 'mine', driverId] })
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [driverId])
+
+  return query
+}
+
+// ─── Chofer: avanzar estado de transporte ────────────────────────────────────
+
+export interface AdvanceTransportResult {
+  success: boolean
+  message?: string
+  request_id?: string
+  status?: string
+}
+
+export function useAdvanceTransportRequest() {
+  const queryClient = useQueryClient()
+  const user = useAuthStore((s) => s.user)
+  const driverId = user?.user_id ?? ''
+
+  return useMutation<AdvanceTransportResult, Error, { requestId: string; newStatus: 'in_transit' | 'completed' | 'cancelled' }>({
+    mutationFn: async ({ requestId, newStatus }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc('advance_transport_request', {
+        p_request_id: requestId,
+        p_new_status: newStatus,
+      })
+      if (error) throw new Error(error.message)
+      const result = data as AdvanceTransportResult
+      if (!result.success) throw new Error(result.message ?? 'Error al avanzar estado')
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transport-requests', 'mine', driverId] })
+      queryClient.invalidateQueries({ queryKey: ['transport-requests', 'pool'] })
+    },
+  })
+}
+
 // ─── Chofer: aceptar solicitud ────────────────────────────────────────────────
 
 export interface AcceptTransportResult {
