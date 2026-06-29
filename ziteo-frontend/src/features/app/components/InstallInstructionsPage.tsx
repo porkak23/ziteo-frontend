@@ -37,10 +37,10 @@ export function InstallInstructionsPage() {
             Instalacion
           </p>
           <h1 className="font-headline font-bold text-2xl text-on-surface leading-snug">
-            Como instalar Ziteo en tu celular
+            Como instalar Ziteoo en tu celular
           </h1>
           <p className="font-body text-sm text-on-surface-variant mt-1">
-            Ziteo funciona como una app normal instalada en tu pantalla de inicio,
+            Ziteoo funciona como una app normal instalada en tu pantalla de inicio,
             sin necesidad de una tienda de aplicaciones.
           </p>
         </div>
@@ -60,7 +60,7 @@ export function InstallInstructionsPage() {
               Instalar desde Google Play
             </p>
             <p className="font-body text-sm text-on-surface-variant">
-              La forma mas rapida. Busca &quot;Ziteo&quot; en Google Play o usa el enlace directo.
+              La forma mas rapida. Busca &quot;Ziteoo&quot; en Google Play o usa el enlace directo.
             </p>
             <a
               href="https://play.google.com/store/apps/details?id=bo.ziteo.app"
@@ -125,10 +125,9 @@ export function InstallInstructionsPage() {
           </div>
         </div>
 
-        {/* ── Nota final ── */}
         <div className="bg-primary-container rounded-2xl px-4 py-4">
           <p className="font-body text-sm text-on-primary-container leading-relaxed">
-            Una vez instalada, Ziteo funciona como una app normal desde tu
+            Una vez instalada, Ziteoo funciona como una app normal desde tu
             pantalla de inicio. Puedes abrirla sin conexion a internet para
             consultar tu historial y pedidos recientes.
           </p>

@@ -214,7 +214,7 @@ export default function BetaSignupForm({ onSuccess }: BetaSignupFormProps) {
             {/* Header */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <h1 style={{ fontFamily: Z.font, fontWeight: 800, fontSize: 28, color: Z.text, margin: 0 }}>
-                Bienvenido a Ziteo
+                Bienvenido a Ziteoo
               </h1>
               <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: 0, lineHeight: 1.5 }}>
                 Acceso beta — te avisaremos cuando la app lance oficialmente
@@ -307,7 +307,7 @@ export default function BetaSignupForm({ onSuccess }: BetaSignupFormProps) {
                 ¿Cuál es tu rol?
               </h1>
               <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: 0, lineHeight: 1.5 }}>
-                Elige cómo usarás Ziteo
+                Elige cómo usarás Ziteoo
               </p>
             </div>
 
@@ -440,7 +440,7 @@ export default function BetaSignupForm({ onSuccess }: BetaSignupFormProps) {
             {/* Header */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <h1 style={{ fontFamily: Z.font, fontWeight: 800, fontSize: 28, color: Z.text, margin: 0 }}>
-                Instala Ziteo en tu celular
+                Instala Ziteoo en tu celular
               </h1>
               <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: 0, lineHeight: 1.5 }}>
                 Para usar la app cuando quieras, agrégala a tu pantalla de inicio
@@ -628,7 +628,7 @@ function InstallInstructionsInline() {
           margin: 0,
         }}
       >
-        Una vez instalada, Ziteo funciona como una app normal desde tu pantalla de inicio.
+        Una vez instalada, Ziteoo funciona como una app normal desde tu pantalla de inicio.
       </p>
     </div>
   )

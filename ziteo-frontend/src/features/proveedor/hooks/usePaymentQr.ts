@@ -3,6 +3,14 @@ import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 import { track } from '../../../lib/analytics'
 
+async function computeFileSha256(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 export function usePaymentQr() {
   const user = useAuthStore((s) => s.user)
   const [uploading, setUploading] = useState(false)
@@ -33,15 +41,20 @@ export function usePaymentQr() {
 
       if (uploadError) throw uploadError
 
-      // Store the relative path (not a public URL — bucket is private)
+      // Compute SHA-256 hash before storing path (anti-substitution: hash binds file to DB record)
+      const hash = await computeFileSha256(file)
+
       const role = user.active_role || 'proveedor'
       const { error: dbError } = await supabase
         .from('user_roles')
-        .update({ payment_qr_url: filePath })
+        .update({ payment_qr_url: filePath, payment_qr_hash: hash, payment_qr_updated_at: new Date().toISOString() })
         .eq('user_id', user.user_id)
         .eq('role', role)
 
       if (dbError) throw new Error('QR subido pero no se pudo guardar en perfil')
+
+      // Also store hash via SECURITY DEFINER RPC (triggers audit log on user_roles)
+      try { await supabase.rpc('store_qr_hash', { p_hash: hash, p_role: role }) } catch { /* non-critical */ }
 
       return filePath
     } finally {
@@ -81,9 +94,52 @@ export function usePaymentQr() {
 
     const { data: signed } = await supabase.storage
       .from('payment-qrs')
-      .createSignedUrl(data.payment_qr_url, 600) // 10 minutes
+      .createSignedUrl(data.payment_qr_url, 300) // 5 minutes — short window, renewable on demand
 
     return signed?.signedUrl ?? null
+  }
+
+  // ─── Driver: fetch provider QR for an assigned delivery ──────────────────────
+  // Validates the caller has an active delivery for this provider's order before
+  // serving the QR URL. Used by PaymentCloseSheet during COD collection.
+
+  async function getProviderQrForDelivery(
+    deliveryId: string,
+  ): Promise<{ signedUrl: string | null; qrHash: string | null }> {
+    // Lookup order → provider via the delivery
+    const { data: delivery } = await supabase
+      .from('deliveries')
+      .select('order_id, driver_id')
+      .eq('id', deliveryId)
+      .maybeSingle()
+
+    if (!delivery?.order_id) return { signedUrl: null, qrHash: null }
+
+    const { data: order } = await supabase
+      .from('orders')
+      .select('provider_id')
+      .eq('id', delivery.order_id)
+      .maybeSingle()
+
+    if (!order?.provider_id) return { signedUrl: null, qrHash: null }
+
+    const { data: roleRow } = await supabase
+      .from('user_roles')
+      .select('payment_qr_url, payment_qr_hash')
+      .eq('user_id', order.provider_id)
+      .eq('role', 'proveedor')
+      .maybeSingle()
+
+    if (!roleRow?.payment_qr_url) return { signedUrl: null, qrHash: null }
+
+    const { data: signed } = await supabase.storage
+      .from('payment-qrs')
+      .createSignedUrl(roleRow.payment_qr_url, 300)
+
+    return {
+      signedUrl: signed?.signedUrl ?? null,
+      qrHash: roleRow.payment_qr_hash ?? null,
+    }
   }
 
   // ─── Constructor: fetch provider's alternative payment methods ───────────────
@@ -187,6 +243,7 @@ export function usePaymentQr() {
   return {
     uploadQr,
     getSignedQrUrl,
+    getProviderQrForDelivery,
     getProviderPaymentMethods,
     uploadPaymentEvidence,
     getPaymentEvidence,

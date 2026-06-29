@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const PHONE_REGEX = /^\+591[678]\d{7}$/
 const OTP_REGEX = /^\d{6}$/
-const PIN_REGEX = /^\d{8}$/
+const PIN_REGEX = /^\d{6}$/
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

@@ -6,7 +6,7 @@ export default function TerminosDeUso() {
       {/* Header */}
       <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${Z.divider}`, flexShrink: 0 }}>
         <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 600, color: Z.textMuted, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>
-          Ziteo
+          Ziteoo
         </div>
         <h1 style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text, margin: 0 }}>
           Términos de Uso
@@ -22,13 +22,13 @@ export default function TerminosDeUso() {
 
           <Section title="1. Descripción del servicio">
             <p>
-              Ziteo es una plataforma digital que conecta a personas y empresas del sector de la construcción en Bolivia.
-              A través de Ziteo, constructores pueden buscar materiales de construcción, contratar maestros de obra y
+              Ziteoo es una plataforma digital que conecta a personas y empresas del sector de la construcción en Bolivia.
+              A través de Ziteoo, constructores pueden buscar materiales de construcción, contratar maestros de obra y
               coordinar el transporte de insumos. Proveedores publican su catálogo de productos. Maestros de obra ofrecen
               sus servicios. Choferes realizan entregas de materiales.
             </p>
             <p>
-              Ziteo actúa exclusivamente como intermediario tecnológico. No somos parte de los contratos, acuerdos de
+              Ziteoo actúa exclusivamente como intermediario tecnológico. No somos parte de los contratos, acuerdos de
               servicio ni transacciones que se celebren entre los usuarios de la plataforma. La responsabilidad de cada
               operación recae íntegramente sobre las partes involucradas.
             </p>
@@ -49,7 +49,7 @@ export default function TerminosDeUso() {
           </Section>
 
           <Section title="3. Condiciones de uso de la plataforma">
-            <p>Para usar Ziteo debes:</p>
+            <p>Para usar Ziteoo debes:</p>
             <ul>
               <li>Ser mayor de 18 años o contar con autorización de tu representante legal.</li>
               <li>Proporcionar un número de teléfono boliviano válido y verificable.</li>
@@ -58,19 +58,19 @@ export default function TerminosDeUso() {
               <li>Actualizar tu información cuando cambie, especialmente datos de contacto y ciudad de operación.</li>
             </ul>
             <p>
-              Ziteo se reserva el derecho de suspender o eliminar cuentas que incumplan estos términos, sin previo aviso
+              Ziteoo se reserva el derecho de suspender o eliminar cuentas que incumplan estos términos, sin previo aviso
               en casos de fraude o actividad maliciosa.
             </p>
           </Section>
 
           <Section title="4. Pagos y transacciones">
             <p>
-              Ziteo facilita el contacto entre compradores y vendedores, pero no procesa pagos ni actúa como intermediario
+              Ziteoo facilita el contacto entre compradores y vendedores, pero no procesa pagos ni actúa como intermediario
               financiero. Los pagos se realizan directamente entre las partes, ya sea mediante transferencia bancaria,
               pago QR (código de respuesta rápida del proveedor) u otro método acordado entre los usuarios.
             </p>
             <p>
-              Ziteo no almacena datos de tarjetas de crédito ni información bancaria. No garantiza el cumplimiento de
+              Ziteoo no almacena datos de tarjetas de crédito ni información bancaria. No garantiza el cumplimiento de
               ningún pago ni actúa como garante de ninguna transacción. En caso de disputa por un pago, los usuarios
               pueden utilizar el mecanismo de resolución de disputas de la plataforma como medio de comunicación, pero
               la resolución final es responsabilidad de las partes.
@@ -79,18 +79,18 @@ export default function TerminosDeUso() {
 
           <Section title="5. Resolución de disputas">
             <p>
-              Si surge un conflicto entre usuarios, Ziteo ofrece un mecanismo interno de reporte de disputas accesible
+              Si surge un conflicto entre usuarios, Ziteoo ofrece un mecanismo interno de reporte de disputas accesible
               desde la aplicación. El proceso es el siguiente:
             </p>
             <ul>
               <li>El usuario afectado reporta el problema mediante el botón de disputa en la app, dentro de las 48 horas
               posteriores a marcar la entrega o servicio como completado.</li>
-              <li>Ziteo recibe el reporte y notifica a ambas partes dentro de 24 horas hábiles.</li>
+              <li>Ziteoo recibe el reporte y notifica a ambas partes dentro de 24 horas hábiles.</li>
               <li>Las partes tienen 5 días hábiles para presentar su versión y cualquier evidencia disponible.</li>
-              <li>Ziteo emite una recomendación de resolución dentro de ese plazo.</li>
+              <li>Ziteoo emite una recomendación de resolución dentro de ese plazo.</li>
             </ul>
             <p>
-              La recomendación de Ziteo no tiene carácter vinculante en términos legales. Si la disputa no se resuelve
+              La recomendación de Ziteoo no tiene carácter vinculante en términos legales. Si la disputa no se resuelve
               mediante este mecanismo, las partes pueden recurrir a las instancias legales correspondientes bajo la
               jurisdicción boliviana.
             </p>
@@ -111,7 +111,7 @@ export default function TerminosDeUso() {
 
           <Section title="7. Modificaciones a los términos">
             <p>
-              Ziteo puede modificar estos Términos de Uso en cualquier momento. Cuando lo hagamos, notificaremos a los
+              Ziteoo puede modificar estos Términos de Uso en cualquier momento. Cuando lo hagamos, notificaremos a los
               usuarios a través de la aplicación con al menos 7 días de anticipación antes de que los cambios entren en
               vigencia. El uso continuado de la plataforma después de la fecha de vigencia implica la aceptación de los
               nuevos términos.

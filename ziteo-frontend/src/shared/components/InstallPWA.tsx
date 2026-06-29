@@ -24,7 +24,7 @@ export function InstallPWA() {
         install_mobile
       </span>
       <div className="flex-1">
-        <p className="font-semibold text-on-surface text-sm">Instalar Ziteo</p>
+        <p className="font-semibold text-on-surface text-sm">Instalar Ziteoo</p>
         <p className="text-on-surface-variant text-xs">Agrega la app a tu pantalla de inicio</p>
       </div>
       <button

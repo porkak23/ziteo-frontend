@@ -21,7 +21,7 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
       >
         <img
           src="/welcome-hero.jpg"
-          alt="Obrero boliviano en obra con casco Ziteo"
+          alt="Obrero boliviano en obra con casco Ziteoo"
           loading="eager"
           decoding="async"
           style={{
@@ -129,7 +129,7 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
             textAlign: 'center',
           }}
         >
-          Al usar Ziteo aceptas nuestros{' '}
+          Al usar Ziteoo aceptas nuestros{' '}
           <button
             type="button"
             onClick={() => setLegalModal('terminos')}

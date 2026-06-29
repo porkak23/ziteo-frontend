@@ -15,29 +15,29 @@ interface BetaSignupBody {
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') return handleOptions()
-  if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405)
+  if (req.method === 'OPTIONS') return handleOptions(req)
+  if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405, req)
 
   let body: BetaSignupBody
   try {
     body = await req.json() as BetaSignupBody
   } catch {
-    return errorResponse('INVALID_JSON', 'Request body must be valid JSON', 400)
+    return errorResponse('INVALID_JSON', 'Request body must be valid JSON', 400, req)
   }
 
   const { name, phone, email, city, role } = body
 
   if (!name || !phone || !city || !role) {
-    return errorResponse('MISSING_FIELDS', 'name, phone, city, and role are required', 400)
+    return errorResponse('MISSING_FIELDS', 'name, phone, city, and role are required', 400, req)
   }
 
   if (!/^\+591[678]\d{7}$/.test(phone)) {
-    return errorResponse('INVALID_PHONE', 'Phone must be a valid Bolivian number (+591 + 8 digits)', 400)
+    return errorResponse('INVALID_PHONE', 'Phone must be a valid Bolivian number (+591 + 8 digits)', 400, req)
   }
 
   const validRoles: UserRole[] = ['constructor', 'proveedor', 'maestro', 'chofer']
   if (!validRoles.includes(role)) {
-    return errorResponse('INVALID_ROLE', `Role must be one of: ${validRoles.join(', ')}`, 400)
+    return errorResponse('INVALID_ROLE', `Role must be one of: ${validRoles.join(', ')}`, 400, req)
   }
 
   const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -67,7 +67,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       password: betaPassword,
     })
     if (signInError || !signInData.session) {
-      return errorResponse('LOGIN_FAILED', 'Could not sign in existing user', 500)
+      return errorResponse('LOGIN_FAILED', 'Could not sign in existing user', 500, req)
     }
     userId = existingProfile.user_id
     accessToken = signInData.session.access_token
@@ -86,7 +86,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       access_token: accessToken,
       refresh_token: refreshToken,
       is_returning: true,
-    })
+    }, 200, {}, req)
   }
 
   // New user — create account
@@ -115,7 +115,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
     if (!createdUserId) {
-      return errorResponse('SIGNUP_FAILED', createError?.message ?? 'Failed to create account', 500)
+      return errorResponse('SIGNUP_FAILED', createError?.message ?? 'Failed to create account', 500, req)
     }
   } else {
     createdUserId = authData.user.id
@@ -130,7 +130,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { error: profileError } = await adminClient.from('profiles').insert(profilePayload)
   if (profileError) {
     await adminClient.auth.admin.deleteUser(userId)
-    return errorResponse('SIGNUP_FAILED', 'Failed to create profile', 500)
+    return errorResponse('SIGNUP_FAILED', 'Failed to create profile', 500, req)
   }
 
   // Create role entry
@@ -149,7 +149,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   })
 
   if (signInError || !signInData.session) {
-    return errorResponse('SESSION_FAILED', 'Account created but could not create session', 500)
+    return errorResponse('SESSION_FAILED', 'Account created but could not create session', 500, req)
   }
 
   accessToken = signInData.session.access_token
@@ -165,5 +165,5 @@ Deno.serve(async (req: Request): Promise<Response> => {
     access_token: accessToken,
     refresh_token: refreshToken,
     is_returning: false,
-  }, 201)
+  }, 201, {}, req)
 })

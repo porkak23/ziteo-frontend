@@ -1,72 +1,90 @@
-import posthog from 'posthog-js'
-
 /**
- * Initialize PostHog analytics.
- * Safe to call even if VITE_POSTHOG_KEY is not set (no-ops in that case).
+ * PostHog analytics — deferred loading.
+ * The posthog-js chunk (~182KB) loads after first paint via requestIdleCallback
+ * so it never blocks rendering.
+ *
+ * The public API (initAnalytics, identifyUser, resetUser, track.*) is identical
+ * to before — no call sites need to change.
+ *
+ * Calls made before PostHog loads are queued and flushed once the SDK is ready.
  */
+import type { PostHog } from 'posthog-js'
+
+type PendingCall =
+  | { kind: 'identify'; userId: string; role: string }
+  | { kind: 'reset' }
+  | { kind: 'capture'; event: string; props?: Record<string, string> }
+
+let posthog: PostHog | null = null
+const queue: PendingCall[] = []
+
+function flush(sdk: PostHog) {
+  for (const call of queue) {
+    if (call.kind === 'identify') sdk.identify(call.userId, { role: call.role })
+    else if (call.kind === 'reset') sdk.reset()
+    else sdk.capture(call.event, call.props)
+  }
+  queue.length = 0
+}
+
 export function initAnalytics(): void {
   const key = import.meta.env.VITE_POSTHOG_KEY as string | undefined
-  const host = (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? 'https://app.posthog.com'
   if (!key) return
 
-  posthog.init(key, {
-    api_host: host,
-    capture_pageview: false,         // Manual page views for SPA routing
-    autocapture: false,              // Only explicit events
-    disable_session_recording: true, // Sentry Replay already covers this
-    persistence: 'localStorage',
-  })
+  const host = (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? 'https://app.posthog.com'
+
+  const load = async () => {
+    const { default: sdk } = await import('posthog-js')
+    sdk.init(key, {
+      api_host: host,
+      capture_pageview: false,
+      autocapture: false,
+      disable_session_recording: true,
+      persistence: 'localStorage',
+    })
+    posthog = sdk
+    flush(sdk)
+  }
+
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(() => { load().catch(console.error) })
+  } else {
+    setTimeout(() => { load().catch(console.error) }, 1)
+  }
 }
 
-/**
- * Identify the authenticated user.
- * Only sends user_id and role — no PII (no phone, no name, no email).
- */
 export function identifyUser(userId: string, role: string): void {
-  posthog.identify(userId, { role })
+  if (posthog) posthog.identify(userId, { role })
+  else queue.push({ kind: 'identify', userId, role })
 }
 
-/** Reset the PostHog identity (call on logout). */
 export function resetUser(): void {
-  posthog.reset()
+  if (posthog) posthog.reset()
+  else queue.push({ kind: 'reset' })
 }
 
-/** Explicitly tracked funnel events. */
+function capture(event: string, props?: Record<string, string>): void {
+  if (posthog) posthog.capture(event, props)
+  else queue.push({ kind: 'capture', event, props })
+}
+
 export const track = {
-  pageView: (page: string) =>
-    posthog.capture('page_view', { page }),
+  pageView: (page: string) => capture('page_view', { page }),
 
-  // Auth funnel
-  registrationStarted: () =>
-    posthog.capture('registration_started'),
-  otpVerified: () =>
-    posthog.capture('otp_verified'),
-  onboardingComplete: (role: string) =>
-    posthog.capture('onboarding_complete', { role }),
+  registrationStarted: () => capture('registration_started'),
+  otpVerified: () => capture('otp_verified'),
+  onboardingComplete: (role: string) => capture('onboarding_complete', { role }),
 
-  // Shopping funnel
-  productViewed: (productId: string) =>
-    posthog.capture('product_viewed', { product_id: productId }),
-  addedToCart: (productId: string) =>
-    posthog.capture('added_to_cart', { product_id: productId }),
-  orderPlaced: (orderId: string) =>
-    posthog.capture('order_placed', { order_id: orderId }),
-  paymentEvidenceUploaded: (orderId: string) =>
-    posthog.capture('payment_evidence_uploaded', { order_id: orderId }),
-  paymentConfirmed: (orderId: string) =>
-    posthog.capture('payment_confirmed', { order_id: orderId }),
+  productViewed: (productId: string) => capture('product_viewed', { product_id: productId }),
+  addedToCart: (productId: string) => capture('added_to_cart', { product_id: productId }),
+  orderPlaced: (orderId: string) => capture('order_placed', { order_id: orderId }),
+  paymentEvidenceUploaded: (orderId: string) => capture('payment_evidence_uploaded', { order_id: orderId }),
+  paymentConfirmed: (orderId: string) => capture('payment_confirmed', { order_id: orderId }),
 
-  // Construction marketplace
-  licitacionPublished: () =>
-    posthog.capture('licitacion_published'),
-  ofertaSubmitted: () =>
-    posthog.capture('oferta_submitted'),
-  maestroContacted: () =>
-    posthog.capture('maestro_contacted'),
+  licitacionPublished: () => capture('licitacion_published'),
+  ofertaSubmitted: () => capture('oferta_submitted'),
+  maestroContacted: () => capture('maestro_contacted'),
 
-  // Delivery
-  radarActivated: () =>
-    posthog.capture('radar_activated'),
-  deliveryCompleted: () =>
-    posthog.capture('delivery_completed'),
+  radarActivated: () => capture('radar_activated'),
+  deliveryCompleted: () => capture('delivery_completed'),
 }

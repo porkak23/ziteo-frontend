@@ -40,7 +40,7 @@ export default function WaitlistScreen({ name, city, onLogout }: WaitlistScreenP
             marginBottom: 20,
           }}
         >
-          Ziteo
+          Ziteoo
         </div>
 
         {/* Greeting */}
@@ -81,7 +81,7 @@ export default function WaitlistScreen({ name, city, onLogout }: WaitlistScreenP
             margin: 0,
           }}
         >
-          Te notificaremos cuando Ziteo esté disponible en tu ciudad. La apertura está programada
+          Te notificaremos cuando Ziteoo esté disponible en tu ciudad. La apertura está programada
           para el <span style={{ color: Z.text, fontWeight: 600 }}>{openDateStr}</span>.
         </p>
 
@@ -136,7 +136,7 @@ export default function WaitlistScreen({ name, city, onLogout }: WaitlistScreenP
             margin: '20px 0 0',
           }}
         >
-          Actualmente Ziteo opera en{' '}
+          Actualmente Ziteoo opera en{' '}
           {LAUNCH_CONFIG.open.join(' y ')}.
         </p>
       </div>

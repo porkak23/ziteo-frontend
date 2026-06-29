@@ -159,18 +159,21 @@ serve(async (req) => {
       await sendWhatsAppOtp(phone, otp_code)
     } catch (waErr) {
       console.error('WhatsApp send error:', waErr)
-      // Return OTP in debug_otp only when WhatsApp is not configured (dev/local)
+      // Return OTP in debug_otp only when WhatsApp is not configured (dev/local) OR debug OTP is enabled
       const isNotConfigured = String(waErr).includes('WHATSAPP_NOT_CONFIGURED')
-      if (!isNotConfigured) {
+      const isDebugEnabled = Deno.env.get('DEBUG_OTP_ENABLED') === 'true'
+      if (!isNotConfigured && !isDebugEnabled) {
         return jsonResponse({ error: 'WHATSAPP_SEND_FAILED' }, 500)
       }
       return jsonResponse({ user_id, phone, requires_otp: true, debug_otp: otp_code }, 201)
     }
 
+    const isDebugEnabled = Deno.env.get('DEBUG_OTP_ENABLED') === 'true'
     return jsonResponse({
       user_id,
       phone,
       requires_otp: true,
+      ...(isDebugEnabled ? { debug_otp: otp_code } : {})
     }, 201)
   } catch (err) {
     console.error('Unexpected error:', err)

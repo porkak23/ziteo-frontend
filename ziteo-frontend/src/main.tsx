@@ -7,12 +7,9 @@ import { get, set, del } from 'idb-keyval'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './shared/components/ErrorBoundary'
-import * as Sentry from '@sentry/react'
 import { initAnalytics } from './lib/analytics'
+import { initSentry } from './lib/sentryClient'
 import { initPWAInstallCapture } from './shared/lib/pwaInstall'
-
-// Initialize PostHog before render (no-ops if VITE_POSTHOG_KEY is empty)
-initAnalytics()
 
 // Capture `beforeinstallprompt` as early as possible so the install flow can
 // fire the native dialog with a single tap, even if the event arrives before
@@ -41,28 +38,6 @@ const idbPersister: Persister = {
   removeClient: () => del('__rq_cache'),
 }
 
-const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined
-if (SENTRY_DSN) {
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    environment: import.meta.env.MODE,
-    // Performance tracing: full sampling in dev, 10% in production
-    tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
-    // Session Replay: record 10% of sessions in prod, 100% in dev;
-    // always capture the session on error for diagnosis
-    replaysSessionSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
-    replaysOnErrorSampleRate: 1.0,
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration({
-        // Mask all text and block all media by default — privacy-first
-        maskAllText: true,
-        blockAllMedia: true,
-      }),
-    ],
-  })
-}
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <PersistQueryClientProvider
@@ -75,3 +50,10 @@ createRoot(document.getElementById('root')!).render(
     </PersistQueryClientProvider>
   </StrictMode>,
 )
+
+// Defer analytics and error monitoring until after first paint.
+// PostHog (~182KB) and Sentry (~110KB) load via requestIdleCallback so they
+// never block rendering. Boot-time errors are still captured — sentryClient
+// installs temporary window.error/unhandledrejection handlers until the SDK loads.
+initAnalytics()
+initSentry()

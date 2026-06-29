@@ -90,7 +90,7 @@ export default function InstallSuggestion({ onContinue }: InstallSuggestionProps
   }
 
   const BENEFITS = [
-    { title: 'Acceso desde tu pantalla de inicio', description: 'Abre Ziteo con un toque, como cualquier app nativa.' },
+    { title: 'Acceso desde tu pantalla de inicio', description: 'Abre Ziteoo con un toque, como cualquier app nativa.' },
     { title: 'Funciona sin conexión', description: 'Consulta tu información incluso sin internet en obra.' },
     { title: 'Notificaciones de pedidos', description: 'Entérate al instante cuando algo necesita tu atención.' },
   ]
@@ -149,7 +149,7 @@ export default function InstallSuggestion({ onContinue }: InstallSuggestionProps
             margin: '14px 0 8px',
           }}
         >
-          Instala Ziteo en tu teléfono
+          Instala Ziteoo en tu teléfono
         </h2>
         <p
           style={{
@@ -180,8 +180,8 @@ export default function InstallSuggestion({ onContinue }: InstallSuggestionProps
             </div>
             <div style={{ fontFamily: Z.font, fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
               {ios
-                ? 'Estás viendo Ziteo dentro de otra app. Toca los tres puntos (•••) arriba a la derecha y elige "Abrir en Safari" para poder instalar.'
-                : 'Estás viendo Ziteo dentro de otra app. Toca el botón de abajo y se abrirá en Chrome para que puedas instalar.'}
+                ? 'Estás viendo Ziteoo dentro de otra app. Toca los tres puntos (•••) arriba a la derecha y elige "Abrir en Safari" para poder instalar.'
+                : 'Estás viendo Ziteoo dentro de otra app. Toca el botón de abajo y se abrirá en Chrome para que puedas instalar.'}
             </div>
           </div>
         )}

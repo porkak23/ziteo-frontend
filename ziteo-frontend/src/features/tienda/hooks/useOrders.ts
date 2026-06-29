@@ -50,6 +50,7 @@ export function usePlaceOrder() {
       deliveryAddress?: string
       deliveryLat?: number
       deliveryLng?: number
+      projectId?: string
     } = {}) => {
       if (cartItems.length === 0) throw new Error('El carrito está vacío')
       if (!currentUser?.user_id) throw new Error('Usuario no autenticado')
@@ -94,6 +95,7 @@ export function usePlaceOrder() {
           p_delivery_lat:     isDelivery ? vars.deliveryLat : undefined,
           p_delivery_lng:     isDelivery ? vars.deliveryLng : undefined,
           p_cargo_type:       effectiveCargo ?? undefined,
+          p_project_id:       vars.projectId ?? undefined,
         })
 
         if (error) throw new Error(error.message)

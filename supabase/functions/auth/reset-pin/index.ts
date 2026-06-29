@@ -3,9 +3,6 @@ import { handleOptions, jsonResponse, errorResponse } from '../../_shared/cors.t
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID') ?? ''
-const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN') ?? ''
-const TWILIO_VERIFY_SERVICE_SID = Deno.env.get('TWILIO_VERIFY_SERVICE_SID') ?? ''
 
 interface ResetPinBody {
   phone: string
@@ -33,51 +30,56 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return errorResponse('INVALID_PIN_FORMAT', 'New PIN must be exactly 6 numeric digits', 400, req)
   }
 
-  // Verify the WhatsApp OTP against Twilio server-side before changing the PIN
-  const twilioUrl = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SERVICE_SID}/VerificationChecks`
-  const credentials = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)
-
-  const params = new URLSearchParams()
-  params.set('To', phone)
-  params.set('Code', code)
-
-  let twilioRes: Response
-  try {
-    twilioRes = await fetch(twilioUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${credentials}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params.toString(),
-    })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Network error reaching Twilio'
-    return errorResponse('TWILIO_ERROR', message, 502, req)
-  }
-
-  if (!twilioRes.ok) {
-    let twilioMessage = `Twilio error ${twilioRes.status}`
-    try {
-      const errBody = await twilioRes.json() as { message?: string }
-      if (errBody.message) twilioMessage = errBody.message
-    } catch {
-      // ignore parse errors
-    }
-    return errorResponse('TWILIO_ERROR', twilioMessage, 502, req)
-  }
-
-  const twilioData = await twilioRes.json() as { status: string }
-
-  if (twilioData.status !== 'approved') {
-    return errorResponse('INVALID_CODE', 'Invalid or expired verification code', 400, req)
+  if (!/^\d{6}$/.test(code)) {
+    return errorResponse('INVALID_CODE_FORMAT', 'Code must be exactly 6 numeric digits', 400, req)
   }
 
   const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  // Look up the user by phone to get the auth user ID
+  const now = new Date().toISOString()
+
+  // Verify OTP from the local otps table (column: code)
+  const { data: otpRecord, error: otpError } = await adminClient
+    .from('otps')
+    .select('id, code, expires_at, used')
+    .eq('phone', phone)
+    .eq('used', false)
+    .eq('purpose', 'reset_pin')
+    .gt('expires_at', now)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (otpError) {
+    return errorResponse('OTP_LOOKUP_FAILED', 'Failed to verify code', 500, req)
+  }
+
+  if (!otpRecord) {
+    const { data: expiredRecord } = await adminClient
+      .from('otps')
+      .select('id')
+      .eq('phone', phone)
+      .eq('used', false)
+      .eq('purpose', 'reset_pin')
+      .lte('expires_at', now)
+      .maybeSingle()
+
+    if (expiredRecord) {
+      return errorResponse('OTP_EXPIRED', 'This code has expired. Please request a new one.', 410, req)
+    }
+    return errorResponse('INVALID_CODE', 'Invalid or unrecognized verification code', 400, req)
+  }
+
+  if (otpRecord.code !== code) {
+    return errorResponse('INVALID_CODE', 'Incorrect verification code', 400, req)
+  }
+
+  // Mark OTP as used
+  await adminClient.from('otps').update({ used: true }).eq('id', otpRecord.id)
+
+  // Look up user by phone
   const { data: profile } = await adminClient
     .from('profiles')
     .select('user_id')
@@ -88,7 +90,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return errorResponse('USER_NOT_FOUND', 'No account found for this phone number', 404, req)
   }
 
-  // Update the auth user's password (PIN) via the admin API
+  // Update the auth user's password (PIN)
   const { error: updateError } = await adminClient.auth.admin.updateUserById(
     profile.user_id,
     { password: new_pin }
@@ -97,6 +99,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (updateError) {
     return errorResponse('RESET_FAILED', 'Failed to update PIN', 500, req)
   }
+
+  // Revoke all existing sessions so stolen refresh tokens can't be reused after a PIN reset
+  await adminClient.auth.admin.signOut(profile.user_id, 'others')
 
   return jsonResponse({ reset: true }, 200, {}, req)
 })

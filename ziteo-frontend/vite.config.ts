@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
@@ -6,7 +6,25 @@ import { sentryVitePlugin } from '@sentry/vite-plugin'
 import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Derive the Supabase host from VITE_SUPABASE_URL so the service worker
+  // runtime caching rules below track whatever project this build targets
+  // (prod vs staging). Hardcoding the project ref would silently break PWA
+  // caching whenever the deploy points at a different Supabase project.
+  const env = loadEnv(mode, process.cwd(), '')
+  let supabaseHost = ''
+  try {
+    supabaseHost = new URL(env.VITE_SUPABASE_URL).host
+  } catch {
+    supabaseHost = ''
+  }
+  // Escape for use inside a RegExp; '(?!)' never matches, so a missing/invalid
+  // URL just disables Supabase runtime caching instead of crashing the build.
+  const host = supabaseHost
+    ? supabaseHost.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    : '(?!)'
+
+  return {
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -18,10 +36,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'pwa-icon.svg', 'icons/*.png'],
       manifest: {
-        name: 'Ziteo',
-        short_name: 'Ziteo',
+        name: 'Ziteoo',
+        short_name: 'Ziteoo',
         description: 'La plataforma que construye Bolivia',
-        theme_color: '#D94F00',
+        theme_color: '#A43700',
         background_color: '#f9f9f9',
         display: 'standalone',
         orientation: 'portrait',
@@ -46,7 +64,7 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Supabase REST API — NetworkFirst so live data takes priority; fallback to cache
-            urlPattern: /^https:\/\/yvqbubjfhmuztknmhyvd\.supabase\.co\/rest\/.*/i,
+            urlPattern: new RegExp(`^https://${host}/rest/.*`, 'i'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-api-cache',
@@ -56,7 +74,7 @@ export default defineConfig({
           },
           {
             // Supabase Storage — CacheFirst, images/files don't change often
-            urlPattern: /^https:\/\/yvqbubjfhmuztknmhyvd\.supabase\.co\/storage\/.*/i,
+            urlPattern: new RegExp(`^https://${host}/storage/.*`, 'i'),
             handler: 'CacheFirst',
             options: {
               cacheName: 'supabase-storage-cache',
@@ -65,7 +83,7 @@ export default defineConfig({
           },
           {
             // Supabase Edge Functions — NetworkFirst, always want fresh responses
-            urlPattern: /^https:\/\/yvqbubjfhmuztknmhyvd\.supabase\.co\/functions\/.*/i,
+            urlPattern: new RegExp(`^https://${host}/functions/.*`, 'i'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-functions-cache',
@@ -113,8 +131,12 @@ export default defineConfig({
       : []),
   ],
   build: {
-    // Required for Sentry source maps to be useful
-    sourcemap: true,
+    // 'hidden' genera los source maps (para que Sentry pueda subirlos y dar
+    // stack traces legibles) pero NO añade el comentario //# sourceMappingURL
+    // al JS, así que los navegadores/público no los descubren ni descargan.
+    // Combinado con filesToDeleteAfterUpload (abajo), los .map se borran tras
+    // subirse a Sentry y nunca quedan expuestos en producción.
+    sourcemap: 'hidden',
     rollupOptions: {
       output: {
         manualChunks(id: string) {
@@ -127,4 +149,5 @@ export default defineConfig({
       },
     },
   },
+  }
 })

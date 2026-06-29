@@ -31,7 +31,7 @@ export function useMaestroProfile(maestroId: string) {
 
       // Two independent queries so a missing user_roles row doesn't kill the fetch
       const [profileRes, roleRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('user_id', maestroId).maybeSingle(),
+        supabase.from('profiles').select('user_id, name, city, avatar_url, bio').eq('user_id', maestroId).maybeSingle(),
         supabase.from('user_roles').select('*').eq('user_id', maestroId).eq('role', 'maestro').maybeSingle(),
       ])
 

@@ -6,7 +6,7 @@ export default function PoliticaDeDevoluciones() {
       {/* Header */}
       <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${Z.divider}`, flexShrink: 0 }}>
         <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 600, color: Z.textMuted, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>
-          Ziteo
+          Ziteoo
         </div>
         <h1 style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text, margin: 0 }}>
           Política de Devoluciones y Disputas
@@ -20,11 +20,11 @@ export default function PoliticaDeDevoluciones() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px 32px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 640 }}>
 
-          <Section title="1. Rol de Ziteo en las transacciones">
+          <Section title="1. Rol de Ziteoo en las transacciones">
             <p>
-              Ziteo es una plataforma de conexión entre compradores y vendedores del sector construcción. No somos parte
+              Ziteoo es una plataforma de conexión entre compradores y vendedores del sector construcción. No somos parte
               de los contratos de compraventa de materiales ni de los acuerdos de prestación de servicios entre usuarios.
-              Por lo tanto, Ziteo no garantiza devoluciones ni actúa como intermediario financiero en ninguna transacción.
+              Por lo tanto, Ziteoo no garantiza devoluciones ni actúa como intermediario financiero en ninguna transacción.
             </p>
           </Section>
 
@@ -34,7 +34,7 @@ export default function PoliticaDeDevoluciones() {
               un pedido, el Constructor debe consultar al Proveedor sus condiciones de devolución o cambio.
             </p>
             <p>
-              Ziteo no garantiza devoluciones ni reembolsos. En caso de materiales defectuosos, en mal estado o que no
+              Ziteoo no garantiza devoluciones ni reembolsos. En caso de materiales defectuosos, en mal estado o que no
               correspondan a lo acordado, el Constructor puede:
             </p>
             <ul>
@@ -46,7 +46,7 @@ export default function PoliticaDeDevoluciones() {
           <Section title="3. Servicios de maestros de obra">
             <p>
               Los contratos de trabajo entre Constructores y Maestros de Obra son acuerdos privados entre las partes.
-              Ziteo no interviene en la definición de honorarios, condiciones de pago ni en la liquidación de servicios
+              Ziteoo no interviene en la definición de honorarios, condiciones de pago ni en la liquidación de servicios
               prestados.
             </p>
             <p>
@@ -86,7 +86,7 @@ export default function PoliticaDeDevoluciones() {
           <Section title="6. Plazos para abrir una disputa">
             <p>
               Tenés 48 horas desde el momento en que la entrega o el servicio es marcado como completado en la plataforma
-              para abrir una disputa formal. Pasado ese plazo, Ziteo no podrá procesar el reporte.
+              para abrir una disputa formal. Pasado ese plazo, Ziteoo no podrá procesar el reporte.
             </p>
             <p>
               Recomendamos revisar los materiales o el resultado del servicio inmediatamente al recibirlos, antes de
@@ -99,12 +99,12 @@ export default function PoliticaDeDevoluciones() {
               Una vez abierta la disputa, el proceso es el siguiente:
             </p>
             <ul>
-              <li>Ziteo notifica a ambas partes dentro de las 24 horas hábiles siguientes.</li>
+              <li>Ziteoo notifica a ambas partes dentro de las 24 horas hábiles siguientes.</li>
               <li>Ambas partes tienen 5 días hábiles para presentar su versión y evidencias.</li>
-              <li>Ziteo revisa la información y emite una recomendación de resolución.</li>
+              <li>Ziteoo revisa la información y emite una recomendación de resolución.</li>
             </ul>
             <p>
-              La recomendación de Ziteo no tiene carácter vinculante en términos legales. Si el conflicto no se resuelve
+              La recomendación de Ziteoo no tiene carácter vinculante en términos legales. Si el conflicto no se resuelve
               mediante este mecanismo, las partes pueden recurrir a las instancias legales que correspondan bajo la
               legislación boliviana.
             </p>
@@ -112,7 +112,7 @@ export default function PoliticaDeDevoluciones() {
 
           <Section title="8. Suspensión de cuentas">
             <p>
-              Ziteo se reserva el derecho de suspender temporalmente o eliminar definitivamente la cuenta de un usuario
+              Ziteoo se reserva el derecho de suspender temporalmente o eliminar definitivamente la cuenta de un usuario
               que acumule disputas reiteradamente por incumplimiento comprobado, comportamiento fraudulento o entrega
               de materiales o servicios que no correspondan a lo publicado en la plataforma.
             </p>

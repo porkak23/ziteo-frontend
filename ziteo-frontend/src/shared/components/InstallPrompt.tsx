@@ -24,7 +24,7 @@ export function InstallPrompt() {
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
             <p className="font-semibold text-on-surface text-sm mb-1">
-              Instala Ziteo en tu celular
+              Instala Ziteoo en tu celular
             </p>
             <p className="text-on-surface-variant text-xs leading-relaxed">
               En Safari: toca el boton de compartir, luego "Anadir a pantalla de inicio".
@@ -44,7 +44,7 @@ export function InstallPrompt() {
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-40 bg-surface rounded-2xl shadow-lg border border-outline-variant p-4">
-      <p className="font-semibold text-on-surface text-sm mb-1">Instala Ziteo en tu celular</p>
+      <p className="font-semibold text-on-surface text-sm mb-1">Instala Ziteoo en tu celular</p>
       <p className="text-on-surface-variant text-xs mb-3 leading-relaxed">
         Acceso rapido sin abrir el navegador.
       </p>

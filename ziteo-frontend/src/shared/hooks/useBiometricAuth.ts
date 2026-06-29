@@ -58,10 +58,10 @@ export function useBiometricAuth(): BiometricAuthHook {
     try {
       const { BiometricAuth } = await import('@aparajita/capacitor-biometric-auth')
       await BiometricAuth.authenticate({
-        reason: 'Confirma tu identidad para entrar a Ziteo',
+        reason: 'Confirma tu identidad para entrar a Ziteoo',
         cancelTitle: 'Cancelar',
         iosFallbackTitle: 'Usar PIN',
-        androidTitle: 'Ziteo',
+        androidTitle: 'Ziteoo',
         androidSubtitle: 'Confirma tu identidad',
       })
 

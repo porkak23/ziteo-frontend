@@ -70,7 +70,7 @@ export function BilleteraScreen() {
               <dd className="font-label font-semibold text-on-surface">{fmt(week.gross)}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-on-surface-variant">Comisión Ziteo ({Math.round(COMMISSION_RATE * 100)}%)</dt>
+              <dt className="text-on-surface-variant">Comisión Ziteoo ({Math.round(COMMISSION_RATE * 100)}%)</dt>
               <dd className="font-label font-semibold text-on-surface-variant">−{fmt(week.commission)}</dd>
             </div>
             <div className="flex items-center justify-between pt-2.5 border-t border-outline-variant">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { registerWithPin, verifyOtpAndLogin, AuthServiceError } from '../services/authService'
+import { registerWithPin, resendOtp, verifyOtpAndLogin, AuthServiceError } from '../services/authService'
 import { useAuthStore } from '../store/authStore'
 import { useBiometricAuth } from '../../../shared/hooks/useBiometricAuth'
 import type { UserRole } from '../types/authTypes'
@@ -135,6 +135,9 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
   const [sheetStep, setSheetStep] = useState<VerificationStep>('pin-create')
   const [sheetLoading, setSheetLoading] = useState(false)
   const [sheetError, setSheetError] = useState<string | null>(null)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  // debug_otp: only populated in local dev when WhatsApp is not configured
+  const [debugOtp, setDebugOtp] = useState<string | null>(null)
 
   function goBack() {
     if (step === 1) onNavigate('welcome')
@@ -178,11 +181,18 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
       const user = await verifyOtpAndLogin('+591' + phone, code, createdPin)
       setUser(user)
       track.onboardingComplete(selectedRole)
+      setDebugOtp(null)
       setSheetStep('biometric')
     } catch (err) {
       console.error('OTP verification failed:', err)
-      const message = err instanceof Error ? err.message : 'Código incorrecto. Intenta de nuevo.'
-      setSheetError(message)
+      const errCode = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
+      if (errCode === 'OTP_EXPIRED') {
+        setSheetError('El código expiró. Solicita uno nuevo.')
+      } else if (errCode === 'INVALID_OTP') {
+        setSheetError('Código incorrecto. Revísalo e inténtalo de nuevo.')
+      } else {
+        setSheetError(`No pudimos verificar tu código. Inténtalo de nuevo o contacta a soporte [${errCode}].`)
+      }
     } finally {
       setSheetLoading(false)
     }
@@ -199,13 +209,28 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
     void handleRegister(pin)
   }
 
+  function mapRegisterError(code: string): string {
+    switch (code) {
+      case 'PHONE_ALREADY_REGISTERED':
+        return 'Este número ya está registrado. Por favor, inicia sesión.'
+      case 'RATE_LIMITED':
+        return 'Demasiados intentos. Espera 15 minutos antes de intentarlo de nuevo.'
+      case 'WHATSAPP_SEND_FAILED':
+        return 'No pudimos enviar el código por WhatsApp. Inténtalo de nuevo más tarde.'
+      case 'INVALID_PHONE_FORMAT':
+        return 'Número de teléfono inválido. Verifica el número e inténtalo de nuevo.'
+      default:
+        return `No pudimos completar tu registro en este momento. Inténtalo más tarde o contacta a soporte indicando el código [${code}].`
+    }
+  }
+
   async function handleRegister(pin: string) {
     if (!selectedRole) return
     setSheetLoading(true)
     setSheetError(null)
     setSheetStep('sending')
     try {
-      await registerWithPin(
+      const result = await registerWithPin(
         {
           name: name.trim(),
           phone: '+591' + phone,
@@ -217,18 +242,14 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
         },
         pin
       )
-      // auth-register created the user and sent the OTP — move to code entry
+      // auth-register created the user and sent the OTP (or returned debug_otp in dev)
+      if (result.debug_otp) setDebugOtp(result.debug_otp)
       setSheetStep('code')
     } catch (err) {
       console.error('Registration failed:', err)
-      const code = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
-      const message = err instanceof Error ? err.message : 'Error desconocido'
-      setSheetError(
-        code === 'PHONE_ALREADY_REGISTERED'
-          ? 'Este número ya está registrado. Por favor, inicia sesión.'
-          : `No pudimos registrarte: ${message}`
-      )
-      // Return to pin-create so user can retry
+      const code = err instanceof AuthServiceError ? err.code : 'ERR_AUTH_EDGE'
+      setSheetError(mapRegisterError(code))
+      // Return to pin-create so the user can retry (PIN fields reset by OtpVerificationSheet)
       setSheetStep('pin-create')
     } finally {
       setSheetLoading(false)
@@ -246,9 +267,37 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
   }
 
   async function handleResend() {
-    // Re-registration resend is not supported via a separate OTP endpoint;
-    // do nothing (OTPs expire in 5 min; user should wait or restart registration)
-    setSheetError('El código ya fue enviado a tu WhatsApp. Por favor espera 5 minutos si no lo recibiste.')
+    if (resendCooldown > 0 || sheetLoading) return
+    setSheetLoading(true)
+    setSheetError(null)
+    try {
+      const result = await resendOtp('+591' + phone)
+      if (result.debug_otp) setDebugOtp(result.debug_otp)
+      // Start 60s cooldown
+      setResendCooldown(60)
+      const interval = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) { clearInterval(interval); return 0 }
+          return prev - 1
+        })
+      }, 1000)
+    } catch (err) {
+      const errCode = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
+      if (errCode === 'RATE_LIMITED') {
+        setSheetError('Espera al menos 60 segundos antes de solicitar un nuevo código.')
+        setResendCooldown(60)
+        const interval = setInterval(() => {
+          setResendCooldown((prev) => {
+            if (prev <= 1) { clearInterval(interval); return 0 }
+            return prev - 1
+          })
+        }, 1000)
+      } else {
+        setSheetError('No pudimos reenviar el código. Inténtalo de nuevo.')
+      }
+    } finally {
+      setSheetLoading(false)
+    }
   }
 
   return (
@@ -437,7 +486,7 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
             <div>
               <h2 style={{ fontFamily: Z.font, fontWeight: 800, fontSize: 26, color: Z.text, margin: 0 }}>¿Cuál es tu rol?</h2>
               <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: '6px 0 0', lineHeight: 1.5 }}>
-                Elige cómo vas a usar Ziteo. Podrás cambiarlo más tarde.
+                Elige cómo vas a usar Ziteoo. Podrás cambiarlo más tarde.
               </p>
             </div>
 
@@ -488,7 +537,7 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
                 <span onClick={(e) => { e.stopPropagation(); setLegalModal('privacidad') }} style={{ color: Z.orange, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}>
                   Política de Privacidad
                 </span>
-                {' '}de Ziteo.
+                {' '}de Ziteoo.
               </span>
             </div>
 
@@ -498,7 +547,7 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
               disabled={!selectedRole || !termsAccepted}
               style={{ fontFamily: Z.font, fontWeight: 700, fontSize: 14, letterSpacing: '0.3px', textTransform: 'uppercase', padding: '15px 24px', borderRadius: Z.r.md, marginTop: 4, background: Z.orangeDark, color: '#FFFFFF', border: 'none', cursor: !selectedRole || !termsAccepted ? 'default' : 'pointer', width: '100%', opacity: !selectedRole || !termsAccepted ? 0.45 : 1, boxSizing: 'border-box' }}
             >
-              Entrar a Ziteo
+              Entrar a Ziteoo
             </button>
           </div>
         )}
@@ -517,10 +566,13 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
           onChangePhone={() => {
             setShowSheet(false)
             setSheetStep('pin-create')
+            setDebugOtp(null)
           }}
           loading={sheetLoading}
           error={sheetError}
           onResend={handleResend}
+          resendCooldown={resendCooldown}
+          debugOtp={debugOtp ?? undefined}
         />
       )}
     </div>

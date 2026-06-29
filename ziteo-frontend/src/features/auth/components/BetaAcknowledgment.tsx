@@ -69,10 +69,10 @@ export function BetaAcknowledgment() {
             id="beta-title"
             className="text-on-surface font-bold text-lg"
           >
-            Bienvenido a Ziteo Beta
+            Bienvenido a Ziteoo Beta
           </h2>
           <p className="text-on-surface-variant text-sm leading-relaxed">
-            Estas usando una version beta de Ziteo. Algunas funciones pueden comportarse de manera inesperada. Tus datos estan protegidos segun nuestra Politica de Privacidad.
+            Estas usando una version beta de Ziteoo. Algunas funciones pueden comportarse de manera inesperada. Tus datos estan protegidos segun nuestra Politica de Privacidad.
           </p>
           <p className="text-on-surface-variant text-sm leading-relaxed">
             Si encuentras un problema, usa el boton "Reportar problema" en cualquier pantalla.

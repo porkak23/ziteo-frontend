@@ -116,24 +116,35 @@ inspector_port = 8083
 
 [functions.auth-login]
 verify_jwt = false
+entrypoint = "./functions/auth/login/index.ts"
 
 [functions.auth-register]
 verify_jwt = false
+entrypoint = "./functions/auth/register/index.ts"
 
 [functions.auth-otp-verify]
 verify_jwt = false
+entrypoint = "./functions/auth/otp-verify/index.ts"
 
 [functions.auth-otp-resend]
 verify_jwt = false
+entrypoint = "./functions/auth/otp-resend/index.ts"
 
 [functions.auth-reset-pin]
 verify_jwt = false
+entrypoint = "./functions/auth/reset-pin/index.ts"
+
+[functions.auth-forgot-pin]
+verify_jwt = false
+entrypoint = "./functions/auth/forgot-pin/index.ts"
 
 [functions.auth-oauth-setup]
 verify_jwt = true
+entrypoint = "./functions/auth/oauth-setup/index.ts"
 
 [functions.auth-add-role]
 verify_jwt = true
+entrypoint = "./functions/auth/add-role/index.ts"
 
 [functions.auth]
 verify_jwt = false

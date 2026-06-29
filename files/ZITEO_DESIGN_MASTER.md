@@ -20,9 +20,11 @@
 
 **Fuente:** `tailwind.config.js` extraída de `diseño_completo_de_stitch_.md`
 
-### Primary Brown Ramp
+### Primary Orange Ramp (handoff `Z` tokens)
 ```
-primary:                   #a43700  (Main CTA, headers, brand)
+primary:                   #a43700  (orangeDark — Main CTA / filled buttons)
+accent / active:           #e8733a  (orange — accent, active states, gradient start)
+brand gradient:            linear-gradient(135deg, #e8733a 0%, #a43700 100%)
 primary-container:         #cd4700  (Darker, hover states)
 primary-fixed:             #ffdbcf  (Light backgrounds)
 primary-fixed-dim:         #ffb59a  (Dimmed primary)
@@ -100,28 +102,28 @@ project-center:            #FFF0EB  (Peach, center circle PROYECTOS tab)
 
 ### Font Families (Imported via Google Fonts)
 ```html
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 ```
 
 ### Font Stack
 ```css
-font-headline: ["Manrope"]  /* 400, 700, 800 weights */
-font-body:     ["Inter"]    /* 400, 600 weights */
-font-label:    ["Inter"]    /* 400, 600 weights */
+font-headline: ["Space Grotesk"]  /* 500, 600, 700 weights — display headlines */
+font-body:     ["Manrope"]        /* 400–800 weights — body */
+font-label:    ["Manrope"]        /* 400–600 weights — labels */
 ```
 
 ### Size & Weight Scale
 
 | Use Case | Font | Size | Weight | CSS Class |
 |----------|------|------|--------|-----------|
-| Hero title | Manrope | 3.75rem (60px) | 800 | `text-6xl font-extrabold` |
-| Page heading | Manrope | 2rem (32px) | 800 | `text-3xl font-bold` |
-| Section title | Manrope | 1.5rem (24px) | 700 | `text-2xl font-bold` |
+| Hero title | Space Grotesk | 3.75rem (60px) | 700 | `text-6xl font-headline font-bold` |
+| Page heading | Space Grotesk | 2rem (32px) | 700 | `text-3xl font-headline font-bold` |
+| Section title | Space Grotesk | 1.5rem (24px) | 600 | `text-2xl font-headline font-semibold` |
 | Card title | Manrope | 1rem (16px) | 700 | `text-lg font-bold` |
-| Body text | Inter | 1rem (16px) | 400 | `text-base` |
-| Label/caption | Inter | 0.875rem (14px) | 400 | `text-sm` |
-| Small text | Inter | 0.75rem (12px) | 400 | `text-xs` |
-| Overline | Inter | 0.75rem (12px) | 600 | `text-xs font-semibold` |
+| Body text | Manrope | 1rem (16px) | 400 | `text-base` |
+| Label/caption | Manrope | 0.875rem (14px) | 400 | `text-sm` |
+| Small text | Manrope | 0.75rem (12px) | 400 | `text-xs` |
+| Overline | Manrope | 0.75rem (12px) | 600 | `text-xs font-semibold` |
 
 ### Line Height
 ```
@@ -457,7 +459,7 @@ App
 Antes de mergear un componente:
 
 - [ ] Colores = SOLO tokens ZITEO (no hardcoded)
-- [ ] Tipografía = Manrope 800 (headlines) | Inter 400 (body)
+- [ ] Tipografía = Space Grotesk 700 (headlines) | Manrope 400 (body)
 - [ ] Spacing = múltiplos de 4px
 - [ ] Icons = Material Symbols únicamente
 - [ ] Responsive = mobile 320px + tablet 768px tested

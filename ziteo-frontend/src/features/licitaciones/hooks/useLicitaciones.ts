@@ -59,6 +59,7 @@ export function useLicitacionesAbiertas(filters?: { city?: string; specialty?: s
         .from('licitaciones')
         .select('*, constructor:profiles!licitaciones_constructor_id_fkey(name, avatar_url)')
         .eq('status', 'open')
+        .eq('type', 'labor')
         .order('created_at', { ascending: false })
       if (filters?.city) q = q.eq('city', filters.city)
       if (filters?.specialty) q = q.eq('specialty', filters.specialty)
@@ -245,9 +246,43 @@ export function useActualizarPostulacion() {
     mutationFn: async ({ id, status }: { id: string; status: 'accepted' | 'rejected' }) => {
       const { error } = await supabase.from('licitacion_postulaciones').update({ status }).eq('id', id)
       if (error) throw error
+
+      // Al aceptar, avisar al ganador (maestro/proveedor). Mismo patrón que usePostularse.
+      if (status === 'accepted') {
+        const { data: post } = await supabase
+          .from('licitacion_postulaciones')
+          .select('maestro_id, licitacion:licitaciones!licitacion_postulaciones_licitacion_id_fkey(title)')
+          .eq('id', id)
+          .single()
+        return { status, post }
+      }
+      return { status, post: null }
     },
-    onSuccess: () => {
+    onSuccess: async (res) => {
       queryClient.invalidateQueries({ queryKey: ['postulantes-licitacion'] }) // prefix invalidation intentional
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const post = res?.post as any
+      if (res?.status === 'accepted' && post?.maestro_id) {
+        const title = post.licitacion?.title ?? 'una solicitud'
+        const notifTitle = 'Te aceptaron'
+        const notifBody  = `Fuiste aceptado en "${title}".`
+        await supabase.rpc('send_notification', {
+          p_user_id: post.maestro_id,
+          p_type:    'contract',
+          p_title:   notifTitle,
+          p_message: notifBody,
+        })
+        // Also deliver as Web Push if the winner has an active subscription
+        supabase.functions.invoke('notifications/send-push', {
+          body: {
+            user_id: post.maestro_id,
+            title:   notifTitle,
+            body:    notifBody,
+            url:     '/',
+          },
+        }).catch((err: unknown) => console.warn('[send-push] aceptacion push failed:', err))
+      }
     },
   })
 }

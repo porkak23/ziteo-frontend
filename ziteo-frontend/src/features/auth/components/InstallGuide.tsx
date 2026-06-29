@@ -124,12 +124,12 @@ export default function InstallGuide({ onClose, onInstalled }: InstallGuideProps
             </div>
             <h3 id="install-guide-title" style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text, margin: 0 }}>¡Listo!</h3>
             <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: 0, lineHeight: 1.5 }}>
-              Busca el ícono de Ziteo en la pantalla de inicio de tu teléfono y ábrelo desde ahí.
+              Busca el ícono de Ziteoo en la pantalla de inicio de tu teléfono y ábrelo desde ahí.
             </p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <h3 id="install-guide-title" style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text, margin: 0 }}>Instalar Ziteo en iPhone</h3>
+            <h3 id="install-guide-title" style={{ fontFamily: Z.font, fontSize: 20, fontWeight: 800, color: Z.text, margin: 0 }}>Instalar Ziteoo en iPhone</h3>
             <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: 0, lineHeight: 1.5 }}>
               Sigue estos 3 pasos en Safari. Toma unos segundos.
             </p>
@@ -152,7 +152,7 @@ export default function InstallGuide({ onClose, onInstalled }: InstallGuideProps
                 n={3}
                 icon={<CheckCircleIcon color={Z.blueDark} />}
                 title="Confirma Añadir"
-                description="Arriba a la derecha. Ziteo aparecerá en tu pantalla de inicio."
+                description="Arriba a la derecha. Ziteoo aparecerá en tu pantalla de inicio."
               />
             </div>
             <button

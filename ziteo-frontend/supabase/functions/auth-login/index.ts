@@ -7,7 +7,7 @@ const corsHeaders = {
 }
 
 const PHONE_REGEX = /^\+591[678]\d{7}$/
-const PIN_REGEX = /^\d{8}$/
+const PIN_REGEX = /^\d{6}$/
 
 function phoneToEmail(phone: string): string {
   return `${phone.replace('+', '')}@phone.ziteo.bo`

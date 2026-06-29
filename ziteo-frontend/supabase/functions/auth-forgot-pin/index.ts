@@ -84,13 +84,15 @@ serve(async (req) => {
     } catch (waErr) {
       console.error('WhatsApp send error:', waErr)
       const isNotConfigured = String(waErr).includes('WHATSAPP_NOT_CONFIGURED')
-      if (!isNotConfigured) {
+      const isDebugEnabled = Deno.env.get('DEBUG_OTP_ENABLED') === 'true'
+      if (!isNotConfigured && !isDebugEnabled) {
         return jsonResponse({ error: 'WHATSAPP_SEND_FAILED' }, 500)
       }
       return jsonResponse({ sent: true, debug_otp: otp_code })
     }
 
-    return jsonResponse({ sent: true })
+    const isDebugEnabled = Deno.env.get('DEBUG_OTP_ENABLED') === 'true'
+    return jsonResponse({ sent: true, ...(isDebugEnabled ? { debug_otp: otp_code } : {}) })
   } catch (err) {
     console.error('Unexpected error:', err)
     return jsonResponse({ error: 'INTERNAL_SERVER_ERROR' }, 500)

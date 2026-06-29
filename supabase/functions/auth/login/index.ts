@@ -24,51 +24,44 @@ interface LoginResult {
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') return handleOptions()
-  if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405)
+  if (req.method === 'OPTIONS') return handleOptions(req)
+  if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405, req)
 
   let body: LoginBody
   try {
     body = await req.json() as LoginBody
   } catch {
-    return errorResponse('INVALID_JSON', 'Request body must be valid JSON', 400)
+    return errorResponse('INVALID_JSON', 'Request body must be valid JSON', 400, req)
   }
 
   const { phone, pin } = body
   if (!phone || !pin) {
-    return errorResponse('MISSING_FIELDS', 'phone and pin are required', 400)
+    return errorResponse('MISSING_FIELDS', 'phone and pin are required', 400, req)
   }
 
-  // Validate Bolivian phone format
   if (!/^\+591[678]\d{7}$/.test(phone)) {
-    return errorResponse('INVALID_PHONE_FORMAT', 'Phone must be a valid Bolivian number', 400)
+    return errorResponse('INVALID_PHONE_FORMAT', 'Phone must be a valid Bolivian number', 400, req)
   }
 
-  // PIN must be 6 numeric digits
   if (!/^\d{6}$/.test(pin)) {
-    return errorResponse('INVALID_PIN_FORMAT', 'PIN must be exactly 6 digits', 400)
+    return errorResponse('INVALID_PIN_FORMAT', 'PIN must be exactly 6 digits', 400, req)
   }
 
-  // Use service role client to bypass RLS for auth operations
   const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  // Look up the profile by phone to get the email used for Supabase Auth
-  // Phone-based users are stored with a synthetic email: phone@ziteo.bo
-  const syntheticEmail = `${phone.replace('+', '')}@ziteo.bo`
+  // Synthetic email — new users registered via auth/register use @phone.ziteo.bo
+  const syntheticEmail = `${phone.replace('+', '')}@phone.ziteo.bo`
 
-  // Sign in with Supabase Auth using email+password (PIN stored as password)
   const { data: signInData, error: signInError } = await adminClient.auth.signInWithPassword({
     email: syntheticEmail,
     password: pin,
   })
 
   if (signInError || !signInData.user || !signInData.session) {
-    // Distinguish between wrong credentials and user not found
     const errorMessage = signInError?.message ?? ''
     if (errorMessage.includes('Invalid login credentials')) {
-      // Could be wrong PIN or user doesn't exist — check profile to disambiguate
       const { data: profileCheck } = await adminClient
         .from('profiles')
         .select('user_id')
@@ -76,20 +69,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
         .maybeSingle()
 
       if (!profileCheck) {
-        return errorResponse('USER_NOT_FOUND', 'No account found for this phone number', 404)
+        return errorResponse('USER_NOT_FOUND', 'No account found for this phone number', 404, req)
       }
-      return errorResponse('INVALID_PIN', 'Incorrect PIN', 401)
+      return errorResponse('INVALID_PIN', 'Incorrect PIN', 401, req)
     }
-    // OTP not yet confirmed
     if (errorMessage.includes('Email not confirmed')) {
-      return errorResponse('EMAIL_NOT_CONFIRMED', 'Phone number not yet verified via OTP', 403)
+      return errorResponse('EMAIL_NOT_CONFIRMED', 'Phone number not yet verified via OTP', 403, req)
     }
-    return errorResponse('AUTH_ERROR', errorMessage || 'Authentication failed', 401)
+    return errorResponse('AUTH_ERROR', errorMessage || 'Authentication failed', 401, req)
   }
 
   const userId = signInData.user.id
 
-  // Fetch profile + roles in parallel
   const [profileResult, rolesResult] = await Promise.all([
     adminClient
       .from('profiles')
@@ -103,7 +94,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   ])
 
   if (profileResult.error || !profileResult.data) {
-    return errorResponse('PROFILE_NOT_FOUND', 'User profile not found', 404)
+    return errorResponse('PROFILE_NOT_FOUND', 'User profile not found', 404, req)
   }
 
   const profile = profileResult.data
@@ -121,5 +112,5 @@ Deno.serve(async (req: Request): Promise<Response> => {
     city: profile.city ?? null,
   }
 
-  return jsonResponse(result, 200)
+  return jsonResponse(result, 200, {}, req)
 })

@@ -49,6 +49,7 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
   const [forgotError, setForgotError] = useState<string | null>(null)
   const [forgotCode, setForgotCode] = useState<string | null>(null)
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [debugOtp, setDebugOtp] = useState<string | null>(null)
 
   // Cooldown countdown
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
       const code = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
       const message = err instanceof Error ? err.message : 'Error desconocido'
       if (code === 'USER_NOT_FOUND' || code.includes('404') || code === 'LOGIN_FAILED') {
-        setPinError('Este número no está registrado en Ziteo. Crea una cuenta.')
+        setPinError('Este número no está registrado en Ziteoo. Crea una cuenta.')
       } else if (code === 'INVALID_PIN' || code.includes('401')) {
         setPinError('PIN incorrecto. Intenta de nuevo.')
       } else {
@@ -127,8 +128,12 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
     setForgotCode(null)
     setForgotStep('sending')
     setPhase('forgot')
+    setDebugOtp(null)
     try {
-      await startWhatsappVerification('+591' + phone)
+      const result = await startWhatsappVerification('+591' + phone)
+      if (result?.debug_otp) {
+        setDebugOtp(result.debug_otp)
+      }
       setForgotStep('code')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al enviar el código'
@@ -173,7 +178,10 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
   async function handleForgotResend() {
     setForgotError(null)
     try {
-      await startWhatsappVerification('+591' + phone)
+      const result = await startWhatsappVerification('+591' + phone)
+      if (result?.debug_otp) {
+        setDebugOtp(result.debug_otp)
+      }
       setResendCooldown(60)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al reenviar el código'
@@ -310,7 +318,7 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
 
             <div style={{ padding: '14px 16px', borderRadius: Z.r.md, background: Z.surface, border: `1px solid ${Z.border}`, marginTop: 8 }}>
               <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text, marginBottom: 6 }}>
-                ¿Eres nuevo en Ziteo?
+                ¿Eres nuevo en Ziteoo?
               </div>
               <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, margin: 0, lineHeight: 1.6 }}>
                 Si es tu primera vez aquí, crea una cuenta para acceder a la tienda de materiales, cotizar obras y más.
@@ -455,6 +463,7 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
           error={forgotError}
           onResend={handleForgotResend}
           resendCooldown={resendCooldown}
+          debugOtp={debugOtp ?? undefined}
         />
       )}
     </div>

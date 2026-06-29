@@ -396,7 +396,7 @@ export function PerfilScreen() {
         <div className="bg-gradient-to-r from-primary/8 to-blue-500/8 border border-primary/20 rounded-2xl p-4 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-2xl">workspace_premium</span>
-            <span className="font-headline font-bold text-base text-on-surface">Ziteo Pro</span>
+            <span className="font-headline font-bold text-base text-on-surface">Ziteoo Pro</span>
             <span className="ml-auto bg-surface-container text-on-surface-variant rounded-full px-3 py-0.5 text-xs font-label">
               Plan: Gratis
             </span>

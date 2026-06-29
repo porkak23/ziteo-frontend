@@ -3,16 +3,21 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 import { sendWhatsAppOtp } from '../_shared/whatsapp.ts'
 import { safeError } from '../_shared/safeError.ts'
 import { log } from '../_shared/logger.ts'
+import { generateOtp, debugOtpEnabled } from '../_shared/otp.ts'
 
 // ─── Shared constants ───────────────────────────────────────────────────────
 
+// CORS: never use '*' on token-issuing endpoints. Restrict to the configured
+// frontend origin. Set ALLOWED_ORIGIN in the Edge Function secrets to the real
+// production frontend origin BEFORE deploying (a wrong value blocks all auth).
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? 'https://app.ziteo.bo',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Vary': 'Origin',
 }
 
 const PHONE_REGEX = /^\+591[678]\d{7}$/
-const PIN_REGEX = /^\d{8}$/
+const PIN_REGEX = /^\d{6}$/
 const OTP_REGEX = /^\d{6}$/
 
 const VALID_ROLES = ['constructor', 'proveedor', 'maestro', 'chofer'] as const
@@ -220,7 +225,7 @@ async function handleRegister(req: Request, supabase: SupabaseClient): Promise<R
   }
 
   // Generate OTP
-  const otp_code = String(Math.floor(100000 + Math.random() * 900000))
+  const otp_code = generateOtp()
   const expires_at = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
   const { error: otpError } = await supabase.from('otps').insert({
@@ -244,7 +249,10 @@ async function handleRegister(req: Request, supabase: SupabaseClient): Promise<R
     if (!isNotConfigured) {
       return jsonResponse({ error: 'WHATSAPP_SEND_FAILED' }, 500)
     }
-    return jsonResponse({ user_id, phone, requires_otp: true, debug_otp: otp_code }, 201)
+    return jsonResponse(
+      { user_id, phone, requires_otp: true, ...(debugOtpEnabled() ? { debug_otp: otp_code } : {}) },
+      201,
+    )
   }
 
   return jsonResponse({ user_id, phone, requires_otp: true }, 201)
@@ -416,7 +424,7 @@ async function handleOtpResend(req: Request, supabase: SupabaseClient): Promise<
   await supabase.from('otps').update({ used: true }).eq('phone', phone).eq('used', false)
 
   // Generate new OTP
-  const otp_code = String(Math.floor(100000 + Math.random() * 900000))
+  const otp_code = generateOtp()
   const expires_at = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
   const { error: otpError } = await supabase.from('otps').insert({
@@ -439,7 +447,7 @@ async function handleOtpResend(req: Request, supabase: SupabaseClient): Promise<
     if (!isNotConfigured) {
       return jsonResponse({ error: 'WHATSAPP_SEND_FAILED' }, 500)
     }
-    return jsonResponse({ sent: true, debug_otp: otp_code })
+    return jsonResponse({ sent: true, ...(debugOtpEnabled() ? { debug_otp: otp_code } : {}) })
   }
 
   return jsonResponse({ sent: true })
@@ -483,7 +491,7 @@ async function handleForgotPin(req: Request, supabase: SupabaseClient): Promise<
   await supabase.from('otps').update({ used: true }).eq('phone', phone).eq('used', false)
 
   // Generate reset OTP
-  const otp_code = String(Math.floor(100000 + Math.random() * 900000))
+  const otp_code = generateOtp()
   const expires_at = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
   const { error: otpError } = await supabase.from('otps').insert({
@@ -506,7 +514,7 @@ async function handleForgotPin(req: Request, supabase: SupabaseClient): Promise<
     if (!isNotConfigured) {
       return jsonResponse({ error: 'WHATSAPP_SEND_FAILED' }, 500)
     }
-    return jsonResponse({ sent: true, debug_otp: otp_code })
+    return jsonResponse({ sent: true, ...(debugOtpEnabled() ? { debug_otp: otp_code } : {}) })
   }
 
   return jsonResponse({ sent: true })

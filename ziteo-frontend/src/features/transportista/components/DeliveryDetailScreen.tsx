@@ -4,6 +4,7 @@ import { StatusBadge } from './DeliveryCard'
 import { deliveryFee } from '../utils/deliveryUtils'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
+import { PaymentCloseSheet } from './PaymentCloseSheet'
 import type { Delivery } from '../types/deliveryTypes'
 
 interface DeliveryDetailScreenProps {
@@ -24,6 +25,12 @@ function buildMapsUrl(d: Delivery): string {
   return `https://www.google.com/maps/dir/?${params.toString()}`
 }
 
+function buildWazeUrl(d: Delivery): string {
+  const lat = d.dropoff_lat ?? ''
+  const lng = d.dropoff_lng ?? ''
+  return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`
+}
+
 export function DeliveryDetailScreen({ deliveryId, onBack, readOnly }: DeliveryDetailScreenProps) {
   const { data: pool = [] }    = usePendingDeliveries()
   const { data: mine = [] }    = useMyDeliveries()
@@ -36,9 +43,9 @@ export function DeliveryDetailScreen({ deliveryId, onBack, readOnly }: DeliveryD
   const { mutate: acceptDelivery, isPending: isAccepting } = useAcceptDelivery()
   const { mutate: updateStatus, isPending: isUpdating }    = useUpdateDeliveryStatus()
 
-  // Local-only UX substate: chofer has tapped "Llegué al origen" but not yet confirmed pickup.
-  // Backend status remains `accepted` until they confirm pickup.
-  const [arrivedPickup, setArrivedPickup] = useState(false)
+  const [arrivedPickup, setArrivedPickup]         = useState(false)
+  const [paymentSheetOpen, setPaymentSheetOpen]   = useState(false)
+  const [paymentSettled, setPaymentSettled]        = useState(false)
 
   if (!delivery) {
     return (
@@ -52,7 +59,8 @@ export function DeliveryDetailScreen({ deliveryId, onBack, readOnly }: DeliveryD
   }
 
   const fee = deliveryFee(delivery).label
-  const mapsUrl = buildMapsUrl(delivery)
+  const mapsUrl  = buildMapsUrl(delivery)
+  const wazeUrl  = buildWazeUrl(delivery)
   const createdRelative = new Date(delivery.created_at).toLocaleString('es-BO', {
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
   })
@@ -86,6 +94,12 @@ export function DeliveryDetailScreen({ deliveryId, onBack, readOnly }: DeliveryD
   return (
     <div className="flex flex-col min-h-dvh bg-background">
       <Toast toasts={toasts} onRemove={removeToast} />
+      <PaymentCloseSheet
+        deliveryId={deliveryId}
+        open={paymentSheetOpen}
+        onClose={() => setPaymentSheetOpen(false)}
+        onSettled={() => setPaymentSettled(true)}
+      />
       <DetailHeader onBack={onBack} title={`Entrega #${delivery.id.slice(0, 8).toUpperCase()}`} trailing={<StatusBadge status={delivery.status} />} />
 
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 flex flex-col gap-4">
@@ -115,16 +129,27 @@ export function DeliveryDetailScreen({ deliveryId, onBack, readOnly }: DeliveryD
           <Meta icon="schedule" label="Creado" value={createdRelative} small />
         </section>
 
-        {/* Maps link */}
-        <a
-          href={mapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="h-12 rounded-xl border border-outline-variant bg-surface text-on-surface font-label font-semibold text-sm flex items-center justify-center gap-2 hover:bg-surface-container"
-        >
-          <span className="material-symbols-outlined text-base">map</span>
-          Abrir ruta en Google Maps
-        </a>
+        {/* Navigation — delegates to native app so GPS stays reliable in background */}
+        <div className="grid grid-cols-2 gap-2">
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-12 rounded-xl border border-outline-variant bg-surface text-on-surface font-label font-semibold text-sm flex items-center justify-center gap-2 hover:bg-surface-container"
+          >
+            <span className="material-symbols-outlined text-base">map</span>
+            Google Maps
+          </a>
+          <a
+            href={wazeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-12 rounded-xl border border-outline-variant bg-surface text-on-surface font-label font-semibold text-sm flex items-center justify-center gap-2 hover:bg-surface-container"
+          >
+            <span className="material-symbols-outlined text-base">directions_car</span>
+            Waze
+          </a>
+        </div>
 
         {/* Notes */}
         {delivery.notes && (
@@ -161,9 +186,27 @@ export function DeliveryDetailScreen({ deliveryId, onBack, readOnly }: DeliveryD
             )}
 
             {delivery.status === 'in_transit' && (
-              <PrimaryButton onClick={() => advance('delivered')} loading={isUpdating}>
-                Confirmar entrega
-              </PrimaryButton>
+              <>
+                {!paymentSettled && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentSheetOpen(true)}
+                    className="h-12 rounded-xl border border-primary text-primary font-label font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/5 active:opacity-70"
+                  >
+                    <span className="material-symbols-outlined text-base">payments</span>
+                    Cobrar pago
+                  </button>
+                )}
+                {paymentSettled && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-status-success-bg">
+                    <span className="material-symbols-outlined text-status-success-text text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                    <span className="font-label text-xs font-semibold text-status-success-text">Pago registrado</span>
+                  </div>
+                )}
+                <PrimaryButton onClick={() => advance('delivered')} loading={isUpdating}>
+                  Confirmar entrega
+                </PrimaryButton>
+              </>
             )}
 
             {delivery.status === 'delivered' && (

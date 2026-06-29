@@ -37,15 +37,16 @@
 
 ```javascript
 colors: {
-  "primary": "#a43700",              // Brown principal
+  "primary": "#a43700",              // Naranja oscuro (orangeDark) — CTAs/botones rellenos
+  "primary-container": "#E8733A",    // Naranja brillante (orange) — acento, estados activos, gradiente
   "background": "#f9f9f9",           // Light gray
-  "primary-container": "#cd4700",    // Darker brown
   "on-primary": "#ffffff",           // Text en primary
   "surface-container-low": "#f3f3f3",
   "outline": "#8f7066",
   // ... 40+ más
 }
 ```
+> Fuente de verdad: tokens `Z` del handoff de Claude Design. Gradiente de marca: `linear-gradient(135deg, #E8733A 0%, #A43700 100%)`. El #D94F00 quedó deprecado.
 
 **Regla:** Nunca hardcodear colores. Siempre usar variables Tailwind:
 ```
@@ -57,14 +58,14 @@ colors: {
 ### 3. Tipografía
 
 **Fonts locked** en `fonts.googleapis.com`:
-- **Manrope 800** → `font-headline` (títulos, bold)
-- **Inter 400** → `font-body` (cuerpo, regular)
+- **Space Grotesk 600/700** → `font-headline` (títulos, bold)
+- **Manrope 400–600** → `font-body` / `font-label` (cuerpo, labels)
 
 **Tamaños:**
-- Título principal (h1): `text-6xl` (Manrope 800)
-- Heading (h2): `text-3xl` (Manrope 800)
-- Body: `text-base` (Inter 400)
-- Small: `text-sm` (Inter 400)
+- Título principal (h1): `text-6xl` (Space Grotesk 700)
+- Heading (h2): `text-3xl` (Space Grotesk 700)
+- Body: `text-base` (Manrope 400)
+- Small: `text-sm` (Manrope 400)
 
 ```
 ✅ CORRECTO:

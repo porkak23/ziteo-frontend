@@ -116,8 +116,8 @@ const TITLES: Record<BiometricPromptProps['type'], string> = {
 };
 
 const SUBTITLES: Record<BiometricPromptProps['type'], string> = {
-  fingerprint: 'Sin necesidad de ingresar tu PIN cada vez. Tu huella digital desbloquea Ziteo de forma segura.',
-  face: 'Sin necesidad de ingresar tu PIN cada vez. Face ID desbloquea Ziteo de forma segura.',
+  fingerprint: 'Sin necesidad de ingresar tu PIN cada vez. Tu huella digital desbloquea Ziteoo de forma segura.',
+  face: 'Sin necesidad de ingresar tu PIN cada vez. Face ID desbloquea Ziteoo de forma segura.',
   generic: 'Usa la biometría de tu dispositivo para acceder sin PIN. Seguro y conveniente.',
 };
 

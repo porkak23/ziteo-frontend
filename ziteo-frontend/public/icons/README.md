@@ -13,7 +13,7 @@ Los archivos `.placeholder` en este directorio deben ser reemplazados con PNGs r
 
 ## Diseño
 
-- Fondo: `#D94F00` (naranja Ziteo)
+- Fondo: `#A43700` (naranja Ziteo)
 - Logo/símbolo: blanco, centrado
 - Para los maskable: mantener el logo dentro del safe zone (círculo al 80% del canvas)
 - Formato: PNG, sin transparencia en versión maskable

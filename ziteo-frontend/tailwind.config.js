@@ -74,9 +74,9 @@ export default {
       },
 
       fontFamily: {
-        headline: ["Barlow", "sans-serif"],
-        body:     ["Figtree", "sans-serif"],
-        label:    ["Figtree", "sans-serif"],
+        headline: ["Space Grotesk", "sans-serif"],
+        body:     ["Manrope", "sans-serif"],
+        label:    ["Manrope", "sans-serif"],
         manrope:  ["Manrope", "sans-serif"],
       },
 

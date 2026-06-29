@@ -163,7 +163,7 @@ export function StatusPage() {
           <h1 className="font-headline font-bold text-2xl text-on-surface">
             Estado del servicio
           </h1>
-          <p className="font-body text-sm text-on-surface-variant">Ziteo</p>
+          <p className="font-body text-sm text-on-surface-variant">Ziteoo</p>
         </div>
 
         {/* Hora actual */}

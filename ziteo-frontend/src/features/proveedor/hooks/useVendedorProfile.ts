@@ -30,7 +30,7 @@ export function useVendedorProfile(vendedorId: string) {
       }
 
       const [profileRes, roleRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('user_id', vendedorId).maybeSingle(),
+        supabase.from('profiles').select('user_id, name, city, avatar_url').eq('user_id', vendedorId).maybeSingle(),
         supabase.from('user_roles').select('*').eq('user_id', vendedorId).eq('role', 'proveedor').maybeSingle(),
       ])
 

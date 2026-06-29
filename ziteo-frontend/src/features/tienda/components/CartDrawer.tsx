@@ -10,6 +10,8 @@ import { DeliverySection } from './DeliverySection'
 import type { DeliveryMethod } from './DeliverySection'
 import { CargoSelector } from './CargoSelector'
 import type { MapPickerValue } from '../../../shared/components/MapPicker'
+import { useAuthStore } from '../../auth/store/authStore'
+import { useProyectos } from '../../proyectos/hooks/useProyectos'
 
 interface CartDrawerProps {
   open: boolean
@@ -90,9 +92,15 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const cargoType    = useCart((s) => s.cargoType)
   const setCargoType = useCart((s) => s.setCargoType)
   const totalWeight  = useCart((s) => s.totalWeight)
+  const currentUser  = useAuthStore((s) => s.user)
 
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('delivery')
-  const [deliveryLoc, setDeliveryLoc]       = useState<MapPickerValue | null>(null)
+  const [deliveryMethod, setDeliveryMethod]       = useState<DeliveryMethod>('delivery')
+  const [deliveryLoc, setDeliveryLoc]             = useState<MapPickerValue | null>(null)
+  const [originProjectId, setOriginProjectId]     = useState<string | null>(null)
+
+  const { data: proyectos } = useProyectos(
+    currentUser?.user_id ? { constructor_id: currentUser.user_id } : undefined,
+  )
 
   const { mutate: placeOrder, isPending: isPlacing } = usePlaceOrder()
   const { mutate: generateQuotation, isPending: isQuoting } = useGenerateQuotation()
@@ -121,7 +129,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   }, [open])
 
   useEffect(() => {
-    if (!open) { setDeliveryMethod('delivery'); setDeliveryLoc(null) }
+    if (!open) { setDeliveryMethod('delivery'); setDeliveryLoc(null); setOriginProjectId(null) }
   }, [open])
 
   const needsAddress   = deliveryMethod === 'delivery' && !deliveryLoc?.address
@@ -136,6 +144,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         deliveryAddress: deliveryLoc?.address,
         deliveryLat:     deliveryLoc?.lat,
         deliveryLng:     deliveryLoc?.lng,
+        projectId:       originProjectId ?? undefined,
       },
       {
         onSuccess: () => {
@@ -301,6 +310,9 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 onMethodChange={setDeliveryMethod}
                 location={deliveryLoc}
                 onLocationChange={setDeliveryLoc}
+                projects={proyectos}
+                originProjectId={originProjectId}
+                onOriginProjectChange={setOriginProjectId}
               />
 
               <CargoSelector

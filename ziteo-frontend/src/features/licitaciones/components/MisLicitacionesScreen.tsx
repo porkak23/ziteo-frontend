@@ -15,16 +15,18 @@ import { AdBanner } from '../../../shared/components/AdBanner'
 import { Z } from '../../../shared/design/tokens'
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === 'open') {
+  // Solo 'closed' se considera cerrada; cualquier otro valor (open o legacy
+  // inesperado) se trata como abierta para no esconder controles ni mal-etiquetar.
+  if (status === 'closed') {
     return (
-      <span className="px-2 py-0.5 rounded-full bg-status-success-bg text-status-success-text text-[11px] font-label font-semibold">
-        Abierta
+      <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[11px] font-label font-semibold">
+        Cerrada
       </span>
     )
   }
   return (
-    <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[11px] font-label font-semibold">
-      Cerrada
+    <span className="px-2 py-0.5 rounded-full bg-status-success-bg text-status-success-text text-[11px] font-label font-semibold">
+      Abierta
     </span>
   )
 }

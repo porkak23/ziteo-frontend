@@ -122,7 +122,7 @@ function DisputeModal({ orderId, onClose }: DisputeModalProps) {
         {isSuccess ? (
           <div className="flex flex-col gap-4">
             <div className="bg-primary-container text-on-primary-container rounded-2xl px-4 py-4 font-body text-sm text-center">
-              Tu reporte fue enviado correctamente. El equipo de Ziteo revisara la situacion y te contactara.
+              Tu reporte fue enviado correctamente. El equipo de Ziteoo revisara la situacion y te contactara.
             </div>
             <button
               onClick={onClose}

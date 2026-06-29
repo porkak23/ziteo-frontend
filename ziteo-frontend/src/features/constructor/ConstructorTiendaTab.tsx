@@ -9,6 +9,7 @@ import { MisPedidosScreen } from '../tienda/components/MisPedidosScreen'
 import { TrackOrderScreen } from '../tienda/components/TrackOrderScreen'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthStore } from '@/features/auth/store/authStore'
+import { useProyectos } from '@/features/proyectos/hooks/useProyectos'
 import { getProductImageUrl } from '../tienda/utils/productImages'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -249,9 +250,17 @@ function CartScreen({ cart, setCart, onBack }: {
   const [payMethod, setPayMethod] = useState('')
   const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery')
   const [deliveryLoc, setDeliveryLoc] = useState<MapPickerValue | null>(null)
+  const [originProjectId, setOriginProjectId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [ordered, setOrdered] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Proyectos del constructor con coordenadas guardadas → permiten "comprar desde un terreno".
+  const { data: proyectos = [] } = useProyectos({ constructor_id: userId })
+  const proyectosConCoords = useMemo(
+    () => proyectos.filter((p) => p.location_lat != null && p.location_lng != null),
+    [proyectos]
+  )
 
   const total = cart.reduce((sum, c) => sum + c.price_num * c.qty, 0)
   const removeItem = (id: string) => setCart(prev => prev.filter(c => c.id !== id))
@@ -293,8 +302,21 @@ function CartScreen({ cart, setCart, onBack }: {
           p_delivery_address: deliveryMethod === 'delivery' ? deliveryLoc?.address ?? undefined : undefined,
           p_delivery_lat: deliveryMethod === 'delivery' ? deliveryLoc?.lat || undefined : undefined,
           p_delivery_lng: deliveryMethod === 'delivery' ? deliveryLoc?.lng || undefined : undefined,
+          p_cargo_type: undefined,
+          p_project_id: deliveryMethod === 'delivery' ? (originProjectId ?? undefined) : undefined,
         })
         if (rpcError) throw rpcError
+      }
+      // Web Push al provider (la notificación in-app la crea el trigger trg_notify_provider_on_new_order)
+      for (const [providerId] of byProvider) {
+        supabase.functions.invoke('notifications/send-push', {
+          body: {
+            user_id: providerId,
+            title:   'Nuevo pedido',
+            body:    'Has recibido un nuevo pedido de materiales.',
+            url:     '/',
+          },
+        }).catch((err: unknown) => console.warn('[send-push] order push failed:', err))
       }
       setOrdered(true)
       setTimeout(() => { setCart([]); onBack() }, 1800)
@@ -390,11 +412,47 @@ function CartScreen({ cart, setCart, onBack }: {
                 })}
               </div>
               {deliveryMethod === 'delivery' && (
-                <div style={{ marginTop: 12 }}>
+                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {proyectosConCoords.length > 0 && (
+                    <div>
+                      <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec, display: 'block', marginBottom: 8 }}>
+                        Cargar desde un terreno / proyecto
+                      </label>
+                      <select
+                        value={originProjectId ?? ''}
+                        onChange={(e) => {
+                          const id = e.target.value || null
+                          setOriginProjectId(id)
+                          if (id) {
+                            const p = proyectosConCoords.find((pr) => pr.id === id)
+                            if (p && p.location_lat != null && p.location_lng != null) {
+                              setDeliveryLoc({ lat: p.location_lat, lng: p.location_lng, address: p.location_address ?? '' })
+                            }
+                          }
+                        }}
+                        style={{
+                          width: '100%', padding: '12px 14px', borderRadius: Z.r.md,
+                          border: `1.5px solid ${originProjectId ? Z.orange : Z.border}`,
+                          background: Z.surface, color: Z.text, fontFamily: Z.font, fontSize: 14,
+                          fontWeight: 600, outline: 'none', boxSizing: 'border-box', cursor: 'pointer',
+                          appearance: 'none', WebkitAppearance: 'none',
+                        }}
+                      >
+                        <option value="">Ubicación nueva…</option>
+                        {proyectosConCoords.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <MapPicker
                     label="Dirección de entrega (GPS o pin)"
                     value={deliveryLoc}
-                    onChange={setDeliveryLoc}
+                    onChange={(loc) => {
+                      // Editar manualmente la ubicación desliga el origen del proyecto.
+                      setOriginProjectId(null)
+                      setDeliveryLoc(loc)
+                    }}
                     placeholder="¿A dónde enviamos tu pedido?"
                     height={200}
                   />

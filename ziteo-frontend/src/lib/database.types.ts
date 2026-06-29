@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -297,6 +297,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           cargo_type: string
+          collect_amount: number | null
           created_at: string
           delivered_at: string | null
           distance_km: number | null
@@ -308,6 +309,7 @@ export type Database = {
           id: string
           notes: string | null
           order_id: string
+          payment_required: boolean
           picked_up_at: string | null
           pickup_address: string | null
           pickup_lat: number | null
@@ -318,6 +320,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           cargo_type?: string
+          collect_amount?: number | null
           created_at?: string
           delivered_at?: string | null
           distance_km?: number | null
@@ -329,6 +332,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id: string
+          payment_required?: boolean
           picked_up_at?: string | null
           pickup_address?: string | null
           pickup_lat?: number | null
@@ -339,6 +343,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           cargo_type?: string
+          collect_amount?: number | null
           created_at?: string
           delivered_at?: string | null
           distance_km?: number | null
@@ -350,6 +355,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id?: string
+          payment_required?: boolean
           picked_up_at?: string | null
           pickup_address?: string | null
           pickup_lat?: number | null
@@ -1064,6 +1070,7 @@ export type Database = {
           expires_at: string
           id: string
           phone: string
+          purpose: string
           used: boolean
         }
         Insert: {
@@ -1072,6 +1079,7 @@ export type Database = {
           expires_at: string
           id?: string
           phone: string
+          purpose?: string
           used?: boolean
         }
         Update: {
@@ -1080,9 +1088,140 @@ export type Database = {
           expires_at?: string
           id?: string
           phone?: string
+          purpose?: string
           used?: boolean
         }
         Relationships: []
+      }
+      payment_method_audit: {
+        Row: {
+          changed_at: string
+          field: string
+          id: string
+          new_hash: string | null
+          old_hash: string | null
+          owner_id: string
+        }
+        Insert: {
+          changed_at?: string
+          field: string
+          id?: string
+          new_hash?: string | null
+          old_hash?: string | null
+          owner_id: string
+        }
+        Update: {
+          changed_at?: string
+          field?: string
+          id?: string
+          new_hash?: string | null
+          old_hash?: string | null
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_audit_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payment_method_audit_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payment_method_audit_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          confirm_token: string
+          created_at: string
+          created_by: string
+          delivery_id: string | null
+          evidence_url: string | null
+          id: string
+          method: string
+          order_id: string
+          settled_at: string | null
+          status: string
+          token_used: boolean
+        }
+        Insert: {
+          amount: number
+          confirm_token: string
+          created_at?: string
+          created_by: string
+          delivery_id?: string | null
+          evidence_url?: string | null
+          id: string
+          method: string
+          order_id: string
+          settled_at?: string | null
+          status?: string
+          token_used?: boolean
+        }
+        Update: {
+          amount?: number
+          confirm_token?: string
+          created_at?: string
+          created_by?: string
+          delivery_id?: string | null
+          evidence_url?: string | null
+          id?: string
+          method?: string
+          order_id?: string
+          settled_at?: string | null
+          status?: string
+          token_used?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -1881,6 +2020,8 @@ export type Database = {
           onboarding_completed: boolean | null
           payment_bank_transfer: string | null
           payment_cash: boolean | null
+          payment_qr_hash: string | null
+          payment_qr_updated_at: string | null
           payment_qr_url: string | null
           role: string
           service_zones: string[] | null
@@ -1908,6 +2049,8 @@ export type Database = {
           onboarding_completed?: boolean | null
           payment_bank_transfer?: string | null
           payment_cash?: boolean | null
+          payment_qr_hash?: string | null
+          payment_qr_updated_at?: string | null
           payment_qr_url?: string | null
           role: string
           service_zones?: string[] | null
@@ -1935,6 +2078,8 @@ export type Database = {
           onboarding_completed?: boolean | null
           payment_bank_transfer?: string | null
           payment_cash?: boolean | null
+          payment_qr_hash?: string | null
+          payment_qr_updated_at?: string | null
           payment_qr_url?: string | null
           role?: string
           service_zones?: string[] | null
@@ -2109,6 +2254,10 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: Json
       }
+      advance_transport_request: {
+        Args: { p_new_status: string; p_request_id: string }
+        Returns: Json
+      }
       broadcast_licitacion: {
         Args: { p_licitacion_id: string }
         Returns: number
@@ -2201,19 +2350,36 @@ export type Database = {
         Returns: undefined
       }
       mark_rental_in_use: { Args: { p_order_id: string }; Returns: undefined }
-      place_order: {
-        Args: {
-          p_constructor_id: string
-          p_delivery_address?: string
-          p_delivery_lat?: number
-          p_delivery_lng?: number
-          p_delivery_method?: string
-          p_items: Json
-          p_provider_id: string
-          p_total: number
-        }
-        Returns: string
-      }
+      place_order:
+        | {
+            Args: {
+              p_cargo_type?: string
+              p_constructor_id: string
+              p_delivery_address?: string
+              p_delivery_lat?: number
+              p_delivery_lng?: number
+              p_delivery_method?: string
+              p_items: Json
+              p_provider_id: string
+              p_total: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_cargo_type?: string
+              p_constructor_id: string
+              p_delivery_address?: string
+              p_delivery_lat?: number
+              p_delivery_lng?: number
+              p_delivery_method?: string
+              p_items: Json
+              p_project_id?: string
+              p_provider_id: string
+              p_total: number
+            }
+            Returns: string
+          }
       promote_user_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined
@@ -2233,6 +2399,26 @@ export type Database = {
           p_type: string
           p_user_id: string
         }
+        Returns: undefined
+      }
+      settle_delivery_payment: {
+        Args: {
+          p_confirm_token: string
+          p_evidence_url?: string
+          p_transaction_id: string
+        }
+        Returns: Json
+      }
+      start_delivery_payment: {
+        Args: {
+          p_delivery_id: string
+          p_method: string
+          p_transaction_id: string
+        }
+        Returns: Json
+      }
+      store_qr_hash: {
+        Args: { p_hash: string; p_role?: string }
         Returns: undefined
       }
       switch_active_role: { Args: { new_role: string }; Returns: undefined }
@@ -2381,4 +2567,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

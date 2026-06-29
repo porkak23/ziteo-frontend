@@ -55,6 +55,17 @@ function buildAuthUser(data: {
   }
 }
 
+/**
+ * Extracts a meaningful error code from a supabase.functions.invoke error.
+ * Non-2xx responses store the parsed body in error.context; the `error` field
+ * there is the code the edge function returned (e.g. 'PHONE_ALREADY_REGISTERED').
+ */
+function extractEdgeError(error: unknown): string {
+  if (!error) return 'EDGE_FUNCTION_ERROR'
+  const e = error as { context?: { error?: string }; message?: string }
+  return e.context?.error ?? e.message ?? 'EDGE_FUNCTION_ERROR'
+}
+
 // Legacy beta credentials (deterministic, used only for backward compat)
 function getBetaCredentials(phone: string) {
   const cleanPhone = phone.replace(/\D/g, '')
@@ -117,35 +128,32 @@ async function loginLegacyBeta(phone: string): Promise<AuthUser> {
 
 // ---------------------------------------------------------------------------
 // WhatsApp OTP — Forgot PIN flow
-// (For registration, OTP is sent automatically by auth-register)
 // ---------------------------------------------------------------------------
 
 /**
  * Sends a WhatsApp OTP to a registered phone number (forgot-PIN flow).
- * Maps to the auth-forgot-pin edge function.
+ * Maps to auth-forgot-pin edge function.
  */
-export async function startWhatsappVerification(phone: string): Promise<void> {
-  const { error } = await supabase.functions.invoke('auth-forgot-pin', {
+export async function startWhatsappVerification(phone: string): Promise<{ debug_otp?: string } | undefined> {
+  const { data, error } = await supabase.functions.invoke('auth-forgot-pin', {
     body: { phone },
   })
   if (error) {
-    const code = (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
-    throw new AuthServiceError(code, code)
+    throw new AuthServiceError(extractEdgeError(error), extractEdgeError(error))
   }
+  return data as { debug_otp?: string }
 }
 
 /**
- * Verifies the OTP code for an existing user (post-registration OTP check).
- * Maps to auth-otp-verify. Does NOT return a full session (access_token is null
- * in this response). After calling this, call loginWithPin to get a session.
+ * Verifies the OTP code (post-registration or forgot-PIN).
+ * Maps to auth-otp-verify. Returns void — call loginWithPin afterward to get a session.
  */
 export async function checkWhatsappCode(phone: string, code: string): Promise<void> {
   const { error } = await supabase.functions.invoke('auth-otp-verify', {
     body: { phone, otp: code },
   })
   if (error) {
-    const msg = (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
-    throw new AuthServiceError(msg, msg)
+    throw new AuthServiceError(extractEdgeError(error), extractEdgeError(error))
   }
 }
 
@@ -154,13 +162,16 @@ export async function checkWhatsappCode(phone: string, code: string): Promise<vo
 // ---------------------------------------------------------------------------
 
 /**
- * Registra usuario nuevo con PIN.
- * Calls auth-register which creates the user, inserts profile/role, and sends
- * an OTP to the phone via WhatsApp. Returns { user_id, phone, requires_otp }
- * — a session is NOT returned yet. The caller must then verify the OTP via
- * checkWhatsappCode and call loginWithPin to get a full session.
+ * Registers a new user with PIN.
+ * Calls auth-register which creates the user, inserts profile/role, generates
+ * OTP and sends it via WhatsApp. Returns { user_id, phone, debug_otp? }.
+ * debug_otp is only included in local dev (localhost origin) when WhatsApp is
+ * not configured — NEVER expose it in production.
  */
-export async function registerWithPin(input: RegisterInput, pin: string): Promise<{ user_id: string; phone: string }> {
+export async function registerWithPin(
+  input: RegisterInput,
+  pin: string
+): Promise<{ user_id: string; phone: string; debug_otp?: string }> {
   const { data, error } = await supabase.functions.invoke('auth-register', {
     body: {
       phone: input.phone,
@@ -173,26 +184,36 @@ export async function registerWithPin(input: RegisterInput, pin: string): Promis
     },
   })
   if (error) {
-    // supabase.functions.invoke puts the parsed body in error.context on non-2xx responses
-    const ctx = (error as { context?: { error?: string } }).context
-    const code = ctx?.error ?? (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
+    const code = extractEdgeError(error)
     throw new AuthServiceError(code, code)
   }
 
-  const resp = data as { user_id: string; phone: string; requires_otp: boolean }
-  return { user_id: resp.user_id, phone: resp.phone }
+  const resp = data as { user_id: string; phone: string; requires_otp: boolean; debug_otp?: string }
+  return { user_id: resp.user_id, phone: resp.phone, debug_otp: resp.debug_otp }
+}
+
+/**
+ * Resends an OTP to a phone that has a pending registration.
+ * Maps to auth-otp-resend. Returns { debug_otp? } in local dev.
+ */
+export async function resendOtp(phone: string): Promise<{ debug_otp?: string }> {
+  const { data, error } = await supabase.functions.invoke('auth-otp-resend', {
+    body: { phone },
+  })
+  if (error) {
+    const code = extractEdgeError(error)
+    throw new AuthServiceError(code, code)
+  }
+  const resp = data as { sent: boolean; debug_otp?: string }
+  return { debug_otp: resp?.debug_otp }
 }
 
 /**
  * Verifies OTP after registration, then logs in to obtain a full session.
- * This is the second step after registerWithPin — call this when the user
- * enters the 6-digit code they received via WhatsApp.
+ * This is the second step after registerWithPin.
  */
 export async function verifyOtpAndLogin(phone: string, otp: string, pin: string): Promise<AuthUser> {
-  // Step 1: verify OTP (marks it as used and confirms the phone in Supabase Auth)
   await checkWhatsappCode(phone, otp)
-
-  // Step 2: login with PIN to get a full session
   return loginWithPin(phone, pin)
 }
 
@@ -206,8 +227,8 @@ export async function loginWithPin(phone: string, pin: string): Promise<AuthUser
     body: { phone, pin },
   })
   if (error) {
-    const msg = (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
-    throw new AuthServiceError(msg, msg)
+    const code = extractEdgeError(error)
+    throw new AuthServiceError(code, code)
   }
 
   const resp = data as {
@@ -242,7 +263,6 @@ export async function loginWithPinOrLegacy(phone: string, pin: string): Promise<
       err instanceof AuthServiceError &&
       (err.code === 'USER_NOT_FOUND' || err.code.includes('404'))
     ) {
-      // Try legacy beta credentials (ignores the pin — old users have deterministic password)
       return await loginLegacyBeta(phone)
     }
     throw err
@@ -253,14 +273,14 @@ export async function loginWithPinOrLegacy(phone: string, pin: string): Promise<
 // PIN reset
 // ---------------------------------------------------------------------------
 
-/** Resetea PIN via WhatsApp OTP */
+/** Resetea PIN via WhatsApp OTP (code from auth-forgot-pin) */
 export async function resetPin(phone: string, code: string, newPin: string): Promise<void> {
   const { error } = await supabase.functions.invoke('auth-reset-pin', {
-    body: { phone, otp: code, new_pin: newPin },
+    body: { phone, code, new_pin: newPin },
   })
   if (error) {
-    const msg = (error as { message?: string }).message ?? 'EDGE_FUNCTION_ERROR'
-    throw new AuthServiceError(msg, msg)
+    const errCode = extractEdgeError(error)
+    throw new AuthServiceError(errCode, errCode)
   }
 }
 

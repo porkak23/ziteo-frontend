@@ -83,3 +83,30 @@ El camino del Constructor creaba la orden con `place_order` RPC pero nunca notif
    - La notificación in-app queda cubierta automáticamente por el trigger.
    - Solo debes agregar la llamada al push de Web.
    - Verifica con: `INSERT INTO orders(...) RETURNING id;` → `SELECT * FROM notifications WHERE type='order' ORDER BY created_at DESC LIMIT 1;`
+
+---
+
+## Lecciones Aprendidas — OTP WhatsApp (2026-06-28)
+
+### La regla
+El sistema OTP usa Meta WhatsApp como canal primario (plantilla `ziteoo_otp` / `es_MX`), con fallback automático a Twilio SMS. Las 6 funciones de auth (`auth-register`, `auth-otp-resend`, `auth-forgot-pin`, `auth-otp-verify`, `auth-reset-pin`, `auth-login`) todas tienen `verify_jwt: false` y viven en `supabase/functions/auth/<slug>/index.ts` con dependencias compartidas en `supabase/functions/_shared/`.
+
+### Errores comunes y cómo identificarlos
+
+**Error Meta 190 — OAuthException: Authentication Error**
+- El token configurado en `WHATSAPP_ACCESS_TOKEN` es el temporal de 24h del panel API Setup, no el permanente.
+- Fix: Meta Business Settings → System Users → Generate New Token → permisos `whatsapp_business_messaging` + `whatsapp_business_management` → Token Expiry = **Never**.
+
+**Error Meta 132001 — Template name/language mismatch**
+- La función envía `language: 'es'` o template `ziteo_otp` pero Meta tiene `es_MX` + `ziteoo_otp`.
+- Fix: asegurarse de que el deploy usa `_shared/whatsapp.ts` del repo local (que ya tiene `es_MX` y default `ziteoo_otp`).
+
+### Diagnóstico rápido
+Para ver el error real de Meta (no el genérico `WHATSAPP_SEND_FAILED`), temporalmente cambiar en `auth-otp-resend`:
+```ts
+return errorResponse('WHATSAPP_SEND_FAILED', String(waErr), 500, req)
+```
+Revertir después del diagnóstico.
+
+### Cuenta de prueba Meta
+La cuenta WhatsApp Business de Ziteoo es de prueba — solo envía a números pre-registrados como destinatarios en el panel de Meta. Número de prueba registrado: `+59173401469`. Para enviar a usuarios reales hay que migrar a una cuenta de producción verificada.

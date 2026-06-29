@@ -19,8 +19,8 @@ import { NotificationsScreen } from '../notifications/components/NotificationsSc
 const HomeTabTrabajador = lazy(() =>
   import('./HomeTabTrabajador').then((m) => ({ default: m.HomeTabTrabajador }))
 )
-const LicitacionesTabTrabajador = lazy(() =>
-  import('./LicitacionesTabTrabajador').then((m) => ({ default: m.LicitacionesTabTrabajador }))
+const LicitacionFeed = lazy(() =>
+  import('../licitaciones/components/LicitacionFeed').then((m) => ({ default: m.LicitacionFeed }))
 )
 const ProyectosTabTrabajador = lazy(() =>
   import('./ProyectosTabTrabajador').then((m) => ({ default: m.ProyectosTabTrabajador }))
@@ -163,7 +163,11 @@ export function TrabajadorApp() {
           {activeTab === 'home' && (
             <HomeTabTrabajador onNavigate={handleNavigate} />
           )}
-          {activeTab === 'licitaciones' && <LicitacionesTabTrabajador />}
+          {activeTab === 'licitaciones' && (
+            <div className="px-4 pt-4 pb-24">
+              <LicitacionFeed />
+            </div>
+          )}
           {activeTab === 'proyectos' && <ProyectosTabTrabajador />}
           {activeTab === 'perfil' && <PerfilTabTrabajador />}
         </Suspense>
