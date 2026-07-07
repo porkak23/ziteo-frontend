@@ -16,11 +16,7 @@ export function useLogContactEvent() {
       maestroId: string
       eventType: ContactEventType
     }) => {
-      // `log_contact_event` es una RPC nueva (migración 20260707_contact_events.sql) que
-      // aún no está en los tipos generados de Supabase; mismo escape hatch que
-      // `broadcast_licitacion` en licitaciones/hooks/useLicitaciones.ts.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.rpc as any)('log_contact_event', {
+      const { error } = await supabase.rpc('log_contact_event', {
         p_maestro_id: maestroId,
         p_event_type: eventType,
       })
@@ -50,10 +46,7 @@ export function useContactStats(maestroId: string): ContactStats {
     queryFn: async () => {
       const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-      // `contact_events` es una tabla nueva (misma migración) que aún no está en los
-      // tipos generados de Supabase; mismo escape hatch que arriba.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contactEvents = supabase.from('contact_events' as any)
+      const contactEvents = supabase.from('contact_events')
 
       const [whatsappRes, profileRes] = await Promise.all([
         contactEvents
