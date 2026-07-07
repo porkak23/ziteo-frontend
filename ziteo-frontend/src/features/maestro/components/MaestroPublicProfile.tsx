@@ -13,6 +13,8 @@ import { ReviewCard } from '../../../shared/components/ReviewCard'
 import { ReviewForm } from '../../../shared/components/ReviewForm'
 import { SaveCancelRow } from '../../../shared/design/components/SaveCancelRow'
 import { SectionLabel } from '../../../shared/design/components/SectionLabel'
+import { BigActionButton } from '../../../shared/design/components/accessible/BigActionButton'
+import { useLogContactEvent, useContactStats } from '../hooks/useContactEvents'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -81,6 +83,8 @@ export function MaestroPublicProfile({
   const { uploadQr, getSignedQrUrl, uploading: qrUploading } = usePaymentQr()
   const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [editBank, setEditBank] = useState<string | null>(null)
+  const { mutate: logContactEvent } = useLogContactEvent()
+  const contactStats = useContactStats(maestroId)
 
   // Auto-create user_roles row on first open if missing (isOwn only)
   useEffect(() => {
@@ -98,6 +102,18 @@ export function MaestroPublicProfile({
       setQrUrl(null)
     }
   }, [profile?.payment_qr_url, maestroId, getSignedQrUrl])
+
+  // Log a single "profile_view" contact event when a constructor opens a maestro's
+  // public profile. The dependency array only lists [isOwn, maestroId] — never
+  // `logContactEvent` itself, whose identity is re-created every render by
+  // useMutation — so this effect body runs exactly once per mount/maestroId
+  // change and cannot loop on re-renders.
+  useEffect(() => {
+    if (!isOwn && maestroId) {
+      logContactEvent({ maestroId, eventType: 'profile_view' })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwn, maestroId])
 
   // Inline edit state
   const [editBio, setEditBio] = useState<string | null>(null)
@@ -342,7 +358,7 @@ export function MaestroPublicProfile({
                 <button
                   onClick={() => !isUploading && photoInputRef.current?.click()}
                   disabled={isUploading}
-                  className="absolute -bottom-1 -right-1 bg-background text-primary font-label text-[10px] font-semibold px-2 py-1 rounded-lg shadow active:opacity-80 disabled:opacity-50"
+                  className="absolute -bottom-1 -right-1 bg-background text-primary font-label text-xs font-semibold px-3 py-2 rounded-lg shadow active:opacity-80 disabled:opacity-50 min-h-[48px] flex items-center"
                   aria-label="Cambiar foto de perfil"
                 >
                   Foto
@@ -416,6 +432,164 @@ export function MaestroPublicProfile({
 
       {/* ── BODY ────────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 px-4 mt-4">
+
+        {/* ── INTERACCIONES (solo para el dueño del perfil) ────────────────── */}
+        {isOwn && (
+          <div className="bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
+            <SectionLabel>Interacciones</SectionLabel>
+            {contactStats.isLoading ? (
+              <span className="font-body text-sm text-on-surface-variant">Cargando estadísticas...</span>
+            ) : (
+              <div className="flex gap-3">
+                <div className="flex-1 flex flex-col gap-1 bg-surface-container rounded-2xl p-3.5">
+                  <span className="font-headline font-bold text-2xl text-primary">
+                    {contactStats.profileViews30d}
+                  </span>
+                  <span className="font-body text-sm text-on-surface-variant leading-snug">
+                    persona{contactStats.profileViews30d !== 1 ? 's' : ''} vieron tu perfil este mes
+                  </span>
+                </div>
+                <div className="flex-1 flex flex-col gap-1 bg-surface-container rounded-2xl p-3.5">
+                  <span className="font-headline font-bold text-2xl text-primary">
+                    {contactStats.whatsappClicks30d}
+                  </span>
+                  <span className="font-body text-sm text-on-surface-variant leading-snug">
+                    te escribieron por WhatsApp
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── ESPECIALIDADES (habilidades como chips) — destacado justo bajo el hero ── */}
+        {(habilidades.length > 0 || isOwn) && (
+          <div className="bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <SectionLabel>Especialidades</SectionLabel>
+              {isOwn && (
+                <button
+                  onClick={() => setEditingHabilidades(!editingHabilidades)}
+                  className="font-label text-sm text-primary font-semibold active:opacity-70 min-h-[48px] min-w-[48px] px-2 -mx-2 flex items-center"
+                >
+                  {editingHabilidades ? 'Cerrar' : '+ Editar'}
+                </button>
+              )}
+            </div>
+
+            {editingHabilidades && isOwn ? (
+              <div className="flex flex-col gap-3 bg-surface-container rounded-2xl p-3">
+                <span className="font-label text-[10px] text-on-surface-variant/70 uppercase tracking-wider font-semibold">
+                  Selecciona tus especialidades:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {SKILLS_DISPONIBLES.map((skillName) => {
+                    const existing = habilidades.find((h) => h.skill === skillName)
+                    const isSaving = savingHabilidad === skillName
+                    return (
+                      <button
+                        key={skillName}
+                        disabled={!!savingHabilidad}
+                        onClick={() => handleToggleSkill(skillName)}
+                        className={`font-label text-xs px-3 py-2 rounded-full border transition-all flex items-center gap-1.5 active:opacity-75 ${
+                          existing
+                            ? 'bg-primary text-on-primary border-primary font-semibold'
+                            : 'bg-background text-on-surface-variant border-outline-variant hover:border-primary/50'
+                        }`}
+                      >
+                        {skillName}
+                        {existing && <span className="text-[10px]">✓</span>}
+                        {isSaving && <span className="animate-spin text-[10px]">…</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : habilidades.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {habilidades.map((h) => (
+                  <span
+                    key={h.id}
+                    className="bg-primary/10 text-primary border border-primary/25 font-label text-[15px] font-semibold px-3.5 py-2 rounded-full"
+                  >
+                    {h.skill}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-4 text-center">
+                <p className="font-body text-sm text-on-surface-variant/70">
+                  Aún no has agregado especialidades a tu perfil.
+                </p>
+                {isOwn && (
+                  <button
+                    onClick={() => setEditingHabilidades(true)}
+                    className="bg-primary/10 text-primary border border-primary/25 rounded-xl px-4 py-2 font-label text-xs font-semibold active:opacity-75"
+                  >
+                    Agregar especialidades
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── RESEÑAS (subida en el orden para reducir scroll en vista pública) ── */}
+        <div className="bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <SectionLabel>Reseñas de constructores</SectionLabel>
+            {reviewsData && reviewsData.totalCount > 0 && (
+              <button
+                onClick={() => setShowReviewsList((v) => !v)}
+                className="text-xs font-label text-primary font-semibold active:opacity-70"
+              >
+                {showReviewsList ? 'Ocultar' : `Ver ${reviewsData.totalCount}`}
+              </button>
+            )}
+          </div>
+
+          {reviewsData && reviewsData.totalCount > 0 ? (
+            <div className="flex items-center gap-3">
+              <span className="font-headline font-bold text-3xl text-primary">
+                {reviewsData.averageRating.toFixed(1)}
+              </span>
+              <div className="flex flex-col gap-0.5">
+                <StarRating value={reviewsData.averageRating} readonly size="md" />
+                <span className="text-xs font-body text-on-surface-variant">
+                  {reviewsData.totalCount} reseña{reviewsData.totalCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-on-surface-variant">
+              <StarRating value={0} readonly size="sm" />
+              <span className="text-xs font-body">Sin reseñas aún</span>
+            </div>
+          )}
+
+          {!isOwn && currentUser?.active_role === 'constructor' && (
+            alreadyReviewed ? (
+              <div className="flex items-center gap-2 bg-surface-container rounded-xl px-3 py-2.5 text-on-surface-variant">
+                <span className="font-label text-xs">Ya calificaste a este maestro</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowReviewForm(true)}
+                className="border border-primary/40 bg-primary/5 text-primary rounded-xl py-2.5 font-label font-semibold text-sm active:opacity-75"
+              >
+                Calificar maestro
+              </button>
+            )
+          )}
+
+          {showReviewsList && reviewsData && reviewsData.reviews.length > 0 && (
+            <div className="flex flex-col gap-2 mt-1">
+              {reviewsData.reviews.map((r) => (
+                <ReviewCard key={r.id} review={r} />
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* ── PORTAFOLIO DE OBRAS ──────────────────────────────────────────── */}
         <div className="bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
@@ -548,78 +722,6 @@ export function MaestroPublicProfile({
           )}
         </div>
 
-        {/* ── ESPECIALIDADES (habilidades como chips) ─────────────────────── */}
-        {(habilidades.length > 0 || isOwn) && (
-          <div className="bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <SectionLabel>Especialidades</SectionLabel>
-              {isOwn && (
-                <button
-                  onClick={() => setEditingHabilidades(!editingHabilidades)}
-                  className="font-label text-xs text-primary font-semibold active:opacity-70"
-                >
-                  {editingHabilidades ? 'Cerrar' : '+ Editar'}
-                </button>
-              )}
-            </div>
-
-            {editingHabilidades && isOwn ? (
-              <div className="flex flex-col gap-3 bg-surface-container rounded-2xl p-3">
-                <span className="font-label text-[10px] text-on-surface-variant/70 uppercase tracking-wider font-semibold">
-                  Selecciona tus especialidades:
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {SKILLS_DISPONIBLES.map((skillName) => {
-                    const existing = habilidades.find((h) => h.skill === skillName)
-                    const isSaving = savingHabilidad === skillName
-                    return (
-                      <button
-                        key={skillName}
-                        disabled={!!savingHabilidad}
-                        onClick={() => handleToggleSkill(skillName)}
-                        className={`font-label text-xs px-3 py-2 rounded-full border transition-all flex items-center gap-1.5 active:opacity-75 ${
-                          existing
-                            ? 'bg-primary text-on-primary border-primary font-semibold'
-                            : 'bg-background text-on-surface-variant border-outline-variant hover:border-primary/50'
-                        }`}
-                      >
-                        {skillName}
-                        {existing && <span className="text-[10px]">✓</span>}
-                        {isSaving && <span className="animate-spin text-[10px]">…</span>}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : habilidades.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {habilidades.map((h) => (
-                  <span
-                    key={h.id}
-                    className="bg-primary/10 text-primary border border-primary/25 font-label text-xs px-3 py-1.5 rounded-full"
-                  >
-                    {h.skill}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2 py-4 text-center">
-                <p className="font-body text-sm text-on-surface-variant/70">
-                  Aún no has agregado especialidades a tu perfil.
-                </p>
-                {isOwn && (
-                  <button
-                    onClick={() => setEditingHabilidades(true)}
-                    className="bg-primary/10 text-primary border border-primary/25 rounded-xl px-4 py-2 font-label text-xs font-semibold active:opacity-75"
-                  >
-                    Agregar especialidades
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ── TARIFA + EXPERIENCIA ─────────────────────────────────────────── */}
         <div className="bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
           <SectionLabel>Tarifa y experiencia</SectionLabel>
@@ -667,7 +769,7 @@ export function MaestroPublicProfile({
                   {isOwn && (
                     <button
                       onClick={() => setEditRate(resolvedProfile.hourly_rate)}
-                      className="font-label text-[11px] text-primary active:opacity-70"
+                      className="font-label text-sm font-semibold text-primary active:opacity-70 min-h-[48px] min-w-[48px] px-2 -mx-2 flex items-center"
                     >
                       Editar
                     </button>
@@ -721,7 +823,7 @@ export function MaestroPublicProfile({
                   {isOwn && (
                     <button
                       onClick={() => setEditYears(resolvedProfile.years_experience)}
-                      className="font-label text-[11px] text-primary active:opacity-70"
+                      className="font-label text-sm font-semibold text-primary active:opacity-70 min-h-[48px] min-w-[48px] px-2 -mx-2 flex items-center"
                     >
                       Editar
                     </button>
@@ -736,7 +838,7 @@ export function MaestroPublicProfile({
         {(isOwn || resolvedProfile.payment_cash || resolvedProfile.payment_bank_transfer || resolvedProfile.payment_qr_url) && (
           <div className="bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
             <SectionLabel>Métodos de cobro y pago</SectionLabel>
-            
+
             <div className="flex flex-col gap-3.5">
               {/* Efectivo Option */}
               <div className="flex items-center justify-between py-2 border-b border-outline-variant/30">
@@ -778,7 +880,7 @@ export function MaestroPublicProfile({
                   {isOwn && editBank === null && (
                     <button
                       onClick={() => setEditBank(resolvedProfile.payment_bank_transfer ?? '')}
-                      className="font-label text-xs text-primary font-semibold active:opacity-75"
+                      className="font-label text-sm text-primary font-semibold active:opacity-75 min-h-[48px] min-w-[48px] px-2 -mx-2 flex items-center"
                     >
                       {resolvedProfile.payment_bank_transfer ? 'Editar' : '+ Configurar'}
                     </button>
@@ -825,7 +927,7 @@ export function MaestroPublicProfile({
                   {isOwn && resolvedProfile.payment_qr_url && (
                     <button
                       onClick={() => qrInputRef.current?.click()}
-                      className="font-label text-xs text-primary font-semibold active:opacity-75"
+                      className="font-label text-sm text-primary font-semibold active:opacity-75 min-h-[48px] min-w-[48px] px-2 -mx-2 flex items-center"
                     >
                       Cambiar QR
                     </button>
@@ -849,7 +951,7 @@ export function MaestroPublicProfile({
                   </div>
                 ) : (
                   isOwn ? (
-                    <div 
+                    <div
                       onClick={() => !qrUploading && qrInputRef.current?.click()}
                       className="border-2 border-dashed border-outline-variant hover:border-primary/50 transition-colors rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer mt-1"
                     >
@@ -885,7 +987,7 @@ export function MaestroPublicProfile({
               {editSpecialty === null && (
                 <button
                   onClick={() => setEditSpecialty(resolvedProfile.specialty ?? '')}
-                  className="font-label text-xs text-primary active:opacity-70"
+                  className="font-label text-sm text-primary font-semibold active:opacity-70 min-h-[48px] min-w-[48px] px-2 -mx-2 flex items-center"
                 >
                   Editar
                 </button>
@@ -925,7 +1027,7 @@ export function MaestroPublicProfile({
             {isOwn && editBio === null && (
               <button
                 onClick={() => setEditBio(resolvedProfile.bio ?? '')}
-                className="font-label text-xs text-primary active:opacity-70"
+                className="font-label text-sm text-primary font-semibold active:opacity-70 min-h-[48px] min-w-[48px] px-2 -mx-2 flex items-center"
               >
                 Editar
               </button>
@@ -972,83 +1074,24 @@ export function MaestroPublicProfile({
           </div>
         </div>
 
-        {/* ── RESEÑAS ──────────────────────────────────────────────────────── */}
-        <div className="bg-surface rounded-2xl p-4 border border-outline-variant flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <SectionLabel>Reseñas de constructores</SectionLabel>
-            {reviewsData && reviewsData.totalCount > 0 && (
-              <button
-                onClick={() => setShowReviewsList((v) => !v)}
-                className="text-xs font-label text-primary font-semibold active:opacity-70"
-              >
-                {showReviewsList ? 'Ocultar' : `Ver ${reviewsData.totalCount}`}
-              </button>
-            )}
-          </div>
-
-          {reviewsData && reviewsData.totalCount > 0 ? (
-            <div className="flex items-center gap-3">
-              <span className="font-headline font-bold text-3xl text-primary">
-                {reviewsData.averageRating.toFixed(1)}
-              </span>
-              <div className="flex flex-col gap-0.5">
-                <StarRating value={reviewsData.averageRating} readonly size="md" />
-                <span className="text-xs font-body text-on-surface-variant">
-                  {reviewsData.totalCount} reseña{reviewsData.totalCount !== 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-on-surface-variant">
-              <StarRating value={0} readonly size="sm" />
-              <span className="text-xs font-body">Sin reseñas aún</span>
-            </div>
-          )}
-
-          {!isOwn && currentUser?.active_role === 'constructor' && (
-            alreadyReviewed ? (
-              <div className="flex items-center gap-2 bg-surface-container rounded-xl px-3 py-2.5 text-on-surface-variant">
-                <span className="font-label text-xs">Ya calificaste a este maestro</span>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowReviewForm(true)}
-                className="border border-primary/40 bg-primary/5 text-primary rounded-xl py-2.5 font-label font-semibold text-sm active:opacity-75"
-              >
-                Calificar maestro
-              </button>
-            )
-          )}
-
-          {showReviewsList && reviewsData && reviewsData.reviews.length > 0 && (
-            <div className="flex flex-col gap-2 mt-1">
-              {reviewsData.reviews.map((r) => (
-                <ReviewCard key={r.id} review={r} />
-              ))}
-            </div>
-          )}
-        </div>
-
       </div>
 
       {/* ── FIXED BOTTOM CTA — constructor view only ────────────────────────── */}
       {!isOwn && (onHire || onChat) && (
         <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-outline-variant px-4 py-4 flex gap-3 z-30">
           {onChat && (
-            <button
+            <BigActionButton
+              label="Chatear"
+              variant="secondary"
               onClick={() => onChat(resolvedProfile.user_id, resolvedProfile.name)}
-              className="flex-1 bg-surface border border-outline-variant text-on-surface rounded-2xl py-3.5 font-label font-semibold text-sm active:opacity-75"
-            >
-              Chatear
-            </button>
+            />
           )}
           {onHire && (
-            <button
+            <BigActionButton
+              label={`Contratar a ${resolvedProfile.name}`}
+              variant="primary"
               onClick={onHire}
-              className="flex-1 bg-primary text-on-primary rounded-2xl py-3.5 font-label font-semibold text-sm active:opacity-75"
-            >
-              Contratar
-            </button>
+            />
           )}
         </div>
       )}

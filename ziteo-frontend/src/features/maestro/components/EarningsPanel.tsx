@@ -72,11 +72,13 @@ export function EarningsPanel({ maestroId }: EarningsPanelProps) {
           const heightPercent = maxAmount > 0 ? (d.amount / maxAmount) * 100 : 0;
           return (
             <div key={i} className="flex flex-col items-center flex-1 gap-1 h-full justify-end">
-              <div 
-                className={`w-full rounded-t-lg transition-[height,background-color] duration-500 ease-in-out ${d.amount > 0 ? 'bg-primary' : 'bg-surface-container'}`}
-                style={{ height: d.amount > 0 ? `max(${heightPercent}%, 15%)` : '15%' }} 
-                title={`Bs. ${d.amount.toLocaleString('es-BO')}`}
-              />
+              <div className="relative w-full flex-1">
+                <div
+                  className={`absolute bottom-0 left-0 w-full h-full rounded-t-lg origin-bottom transition-[transform,background-color] duration-500 ease-in-out ${d.amount > 0 ? 'bg-primary' : 'bg-surface-container'}`}
+                  style={{ transform: `scaleY(${(d.amount > 0 ? Math.max(heightPercent, 15) : 15) / 100})` }}
+                  title={`Bs. ${d.amount.toLocaleString('es-BO')}`}
+                />
+              </div>
               <span className="text-xs text-on-surface-variant font-body">{d.month}</span>
             </div>
           )

@@ -10,6 +10,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 import { CIUDADES_ACTIVAS } from '../../../shared/constants/geography'
 import { Z } from '../../../shared/design/tokens'
+import { BigActionButton } from '../../../shared/design/components/accessible/BigActionButton'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,9 +77,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const inputStyle: React.CSSProperties = {
   fontFamily: Z.font,
-  fontSize: 15,
+  fontSize: 16,
   fontWeight: 500,
   color: Z.text,
+  minHeight: 52,
   padding: '13px 14px',
   borderRadius: Z.r.sm,
   border: `1.5px solid ${Z.border}`,
@@ -130,12 +132,12 @@ function Step1Especialidad({
         <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: 0 }}>
           Tu especialidad
         </h2>
-        <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, marginTop: 4 }}>
-          Los constructores te buscaran por tu especialidad. Puedes elegir mas de una.
+        <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, marginTop: 4 }}>
+          Esto ayuda a que los clientes te encuentren. Puedes elegir mas de una.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {ESPECIALIDADES.map((e) => {
           const isSelected = selected.includes(e)
           return (
@@ -144,19 +146,46 @@ function Step1Especialidad({
               type="button"
               onClick={() => toggleEsp(e)}
               style={{
-                padding: '10px 16px',
-                borderRadius: Z.r.full,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                minHeight: 52,
+                padding: '12px 18px',
+                borderRadius: Z.r.md,
                 border: isSelected ? `2px solid ${Z.orange}` : `1.5px solid ${Z.border}`,
                 background: isSelected ? Z.orangeLight : Z.surface,
                 color: isSelected ? Z.orangeDark : Z.text,
                 fontFamily: Z.font,
-                fontSize: 13,
+                fontSize: 16,
                 fontWeight: isSelected ? 700 : 500,
                 cursor: 'pointer',
                 transition: 'all 0.15s',
+                width: '100%',
+                boxSizing: 'border-box',
+                textAlign: 'left',
               }}
             >
               {e}
+              {isSelected && (
+                <span
+                  aria-hidden="true"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    background: Z.orange,
+                    color: '#fff',
+                    fontSize: 14,
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}
+                >
+                  ✓
+                </span>
+              )}
             </button>
           )
         })}
@@ -166,7 +195,7 @@ function Step1Especialidad({
         <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error }}>{selError}</span>
       )}
 
-      <Field label="Anos de experiencia (opcional)">
+      <Field label="Años de experiencia">
         <input
           type="number"
           value={experiencia}
@@ -176,28 +205,16 @@ function Step1Especialidad({
           max="60"
           style={inputStyle}
         />
+        <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted }}>
+          Puedes completarlo despues
+        </span>
       </Field>
 
-      <button
+      <BigActionButton
+        label="Continuar"
         onClick={handleNext}
-        disabled={saving}
-        style={{
-          fontFamily: Z.font,
-          fontWeight: 700,
-          fontSize: 15,
-          padding: '15px 24px',
-          borderRadius: Z.r.md,
-          background: Z.gradOrange,
-          color: '#fff',
-          border: 'none',
-          cursor: saving ? 'default' : 'pointer',
-          width: '100%',
-          opacity: saving ? 0.7 : 1,
-          transition: 'all 0.2s',
-        }}
-      >
-        {saving ? 'Guardando...' : 'Continuar'}
-      </button>
+        loading={saving}
+      />
     </div>
   )
 }
@@ -244,7 +261,7 @@ function Step2Tarifa({
         <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: 0 }}>
           Tu tarifa
         </h2>
-        <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, marginTop: 4 }}>
+        <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, marginTop: 4 }}>
           Indica como cobras para que los constructores te puedan contratar.
         </p>
       </div>
@@ -261,13 +278,14 @@ function Step2Tarifa({
                 onClick={() => setRateType(t)}
                 style={{
                   flex: 1,
+                  minHeight: 52,
                   padding: '13px 8px',
                   borderRadius: Z.r.sm,
                   border: isSelected ? `2px solid ${Z.orange}` : `1.5px solid ${Z.border}`,
                   background: isSelected ? Z.orangeLight : Z.surface,
                   color: isSelected ? Z.orangeDark : Z.text,
                   fontFamily: Z.font,
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: isSelected ? 700 : 500,
                   cursor: 'pointer',
                   transition: 'all 0.15s',
@@ -289,6 +307,9 @@ function Step2Tarifa({
           min="0"
           style={inputStyle}
         />
+        <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted }}>
+          Puedes completarlo despues
+        </span>
       </Field>
 
       <Field label="Ciudad donde trabajas">
@@ -314,26 +335,11 @@ function Step2Tarifa({
         )}
       </Field>
 
-      <button
+      <BigActionButton
+        label="Continuar"
         onClick={handleNext}
-        disabled={saving}
-        style={{
-          fontFamily: Z.font,
-          fontWeight: 700,
-          fontSize: 15,
-          padding: '15px 24px',
-          borderRadius: Z.r.md,
-          background: Z.gradOrange,
-          color: '#fff',
-          border: 'none',
-          cursor: saving ? 'default' : 'pointer',
-          width: '100%',
-          opacity: saving ? 0.7 : 1,
-          transition: 'all 0.2s',
-        }}
-      >
-        {saving ? 'Guardando...' : 'Continuar'}
-      </button>
+        loading={saving}
+      />
     </div>
   )
 }
@@ -357,8 +363,8 @@ function Step3Disponibilidad({
         <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: 0 }}>
           Tu disponibilidad
         </h2>
-        <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, marginTop: 4 }}>
-          Puedes cambiar esto en cualquier momento desde tu perfil.
+        <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, marginTop: 4 }}>
+          Asi los clientes saben si pueden contactarte ahora mismo. Puedes cambiar esto en cualquier momento desde tu perfil.
         </p>
       </div>
 
@@ -403,39 +409,26 @@ function Step3Disponibilidad({
             style={{
               position: 'absolute',
               top: 3,
-              left: available ? 23 : 3,
+              left: 3,
               width: 18,
               height: 18,
               borderRadius: '50%',
-              background: '#fff',
+              background: Z.surface,
               boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-              transition: 'left 0.2s',
+              transform: available ? 'translateX(20px)' : 'translateX(0)',
+              transition: 'transform 0.2s',
             }}
           />
         </div>
       </button>
 
-      <button
-        onClick={() => onFinish(available)}
-        disabled={saving}
-        style={{
-          fontFamily: Z.font,
-          fontWeight: 700,
-          fontSize: 15,
-          padding: '15px 24px',
-          borderRadius: Z.r.md,
-          background: Z.gradOrange,
-          color: '#fff',
-          border: 'none',
-          cursor: saving ? 'default' : 'pointer',
-          width: '100%',
-          marginTop: 8,
-          opacity: saving ? 0.7 : 1,
-          transition: 'all 0.2s',
-        }}
-      >
-        {saving ? 'Guardando...' : 'Empezar a trabajar'}
-      </button>
+      <div style={{ marginTop: 8 }}>
+        <BigActionButton
+          label="Empezar a trabajar"
+          onClick={() => onFinish(available)}
+          loading={saving}
+        />
+      </div>
     </div>
   )
 }
@@ -652,7 +645,7 @@ export function MaestroOnboardingWizard({ onComplete }: WizardProps) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <p style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>
+          <p style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
             Paso {step} de 3
           </p>
           <button
@@ -660,14 +653,15 @@ export function MaestroOnboardingWizard({ onComplete }: WizardProps) {
             disabled={saving}
             style={{
               fontFamily: Z.font,
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 700,
               color: Z.textSec,
               background: 'transparent',
               border: 'none',
               cursor: saving ? 'default' : 'pointer',
-              padding: '4px 6px',
-              margin: '-4px -6px',
+              padding: '12px 10px',
+              margin: '-12px -10px',
+              minHeight: 48,
               opacity: saving ? 0.5 : 1,
             }}
           >
