@@ -22,8 +22,8 @@ export function RoleDashNav({ tabs, activeTab, onTabChange, testIdPrefix }: Role
         bottom: 24,
         left: 14,
         right: 14,
-        height: 58,
-        borderRadius: 29,
+        height: 68,
+        borderRadius: 34,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
@@ -52,17 +52,17 @@ export function RoleDashNav({ tabs, activeTab, onTabChange, testIdPrefix }: Role
               border: 'none',
               cursor: 'pointer',
               outline: 'none',
-              padding: '7px 14px',
-              borderRadius: 16,
+              padding: '10px 14px',
+              borderRadius: 18,
               transition: 'all 0.2s ease',
               minWidth: 0,
             }}
           >
-            <Icon color={active ? Z.orangeDark : Z.textMuted} size={21} />
+            <Icon color={active ? Z.orangeDark : Z.textMuted} size={24} />
             <span
               style={{
                 fontFamily: Z.font,
-                fontSize: 9.5,
+                fontSize: 12,
                 fontWeight: active ? 700 : 500,
                 color: active ? Z.orangeDark : Z.textMuted,
                 letterSpacing: 0.2,

@@ -309,7 +309,7 @@ function HomeTab({
               </div>
             </div>
             {pendingCotizacionesCount > 0 && (
-              <span style={{ position: 'absolute', top: -5, right: -5, background: Z.orange, color: '#fff', fontFamily: Z.font, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+              <span style={{ position: 'absolute', top: -5, right: -5, background: Z.orange, color: Z.onPrimary, fontFamily: Z.font, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
                 {pendingCotizacionesCount}
               </span>
             )}
@@ -333,7 +333,7 @@ function HomeTab({
               </div>
             </div>
             {openLicitacionesCount > 0 && (
-              <span style={{ position: 'absolute', top: -5, right: -5, background: Z.blue, color: '#fff', fontFamily: Z.font, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+              <span style={{ position: 'absolute', top: -5, right: -5, background: Z.blue, color: Z.onSecondary, fontFamily: Z.font, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
                 {openLicitacionesCount}
               </span>
             )}
@@ -583,12 +583,12 @@ function InventarioTab() {
             style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px',
               borderRadius: 20, border: 'none', cursor: 'pointer',
-              background: Z.orangeDark, color: '#fff', outline: 'none',
+              background: Z.orangeDark, color: Z.onPrimary, outline: 'none',
               fontFamily: Z.font, fontSize: 12, fontWeight: 700,
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5v14M5 12h14" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
             </svg>
             Agregar
           </button>
@@ -596,9 +596,9 @@ function InventarioTab() {
 
         <div style={{ display: 'flex', gap: 8 }}>
           {([
-            { key: 'manual' as const, label: 'Manual', icon: '✎' },
-            { key: 'csv' as const, label: 'CSV', icon: '⇪' },
-            { key: 'api' as const, label: 'API Sync', icon: '⟳' },
+            { key: 'manual' as const, label: 'Manual', icon: 'edit' },
+            { key: 'csv' as const, label: 'CSV', icon: 'upload' },
+            { key: 'api' as const, label: 'API Sync', icon: 'sync' },
           ]).map((m) => (
             <button
               key={m.key}
@@ -611,7 +611,7 @@ function InventarioTab() {
                 color: updateMode === m.key ? Z.blueDark : Z.textSec, outline: 'none',
               }}
             >
-              {m.icon} {m.label}
+              <span className="material-symbols-outlined" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }}>{m.icon}</span>{m.label}
             </button>
           ))}
         </div>
@@ -629,7 +629,7 @@ function InventarioTab() {
             </div>
             <button style={{
               marginTop: 10, padding: '8px 16px', borderRadius: 20, border: 'none',
-              background: Z.blue, color: '#fff', fontFamily: Z.font, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              background: Z.blue, color: Z.onSecondary, fontFamily: Z.font, fontSize: 12, fontWeight: 700, cursor: 'pointer',
             }}>
               Subir archivo
             </button>
@@ -649,7 +649,7 @@ function InventarioTab() {
             </div>
             <button style={{
               marginTop: 10, padding: '8px 16px', borderRadius: 20, border: 'none',
-              background: Z.blue, color: '#fff', fontFamily: Z.font, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              background: Z.blue, color: Z.onSecondary, fontFamily: Z.font, fontSize: 12, fontWeight: 700, cursor: 'pointer',
             }}>
               Configurar API
             </button>
@@ -659,7 +659,7 @@ function InventarioTab() {
         {criticalProducts.length > 0 && (
           <div style={{
             padding: '12px 14px', borderRadius: Z.r.md,
-            background: Z.errorBg, border: '1px solid #FECACA',
+            background: Z.errorBg, border: `1px solid ${Z.border}`,
             display: 'flex', alignItems: 'center', gap: 10,
           }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: Z.error, flexShrink: 0 }} />
@@ -688,7 +688,7 @@ function InventarioTab() {
               onClick={() => setShowForm(true)}
               style={{
                 marginTop: 12, padding: '10px 20px', borderRadius: 20, border: 'none',
-                background: Z.orangeDark, color: '#fff', fontFamily: Z.font, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                background: Z.orangeDark, color: Z.onPrimary, fontFamily: Z.font, fontSize: 13, fontWeight: 700, cursor: 'pointer',
               }}
             >
               Agregar producto
@@ -746,10 +746,11 @@ function InventarioTab() {
                       aria-label={p.active ? 'Desactivar' : 'Activar'}
                     >
                       <span style={{
-                        position: 'absolute', top: 2,
-                        left: p.active ? 'calc(100% - 18px)' : 2,
+                        position: 'absolute', top: 2, left: 2,
                         width: 16, height: 16, borderRadius: '50%',
-                        background: '#fff', transition: 'left 0.2s',
+                        background: Z.surface,
+                        transform: p.active ? 'translateX(16px)' : 'translateX(0)',
+                        transition: 'transform 0.2s',
                       }} />
                     </button>
                   </div>
@@ -761,9 +762,11 @@ function InventarioTab() {
                     <div style={{ height: 6, borderRadius: 3, background: Z.divider, overflow: 'hidden' }}>
                       <div style={{
                         height: '100%', borderRadius: 3,
-                        width: `${pct * 100}%`,
+                        width: '100%',
                         background: isCrit ? Z.error : Z.orange,
-                        transition: 'width 0.5s',
+                        transform: `scaleX(${pct})`,
+                        transformOrigin: 'left',
+                        transition: 'transform 0.5s',
                       }} />
                     </div>
                   </div>
@@ -818,7 +821,7 @@ function InventarioTab() {
                         }}
                         style={{
                           marginLeft: 'auto', padding: '6px 14px', borderRadius: 20,
-                          border: 'none', background: Z.orangeDark, color: '#fff',
+                          border: 'none', background: Z.orangeDark, color: Z.onPrimary,
                           fontFamily: Z.font, fontSize: 11, fontWeight: 700, cursor: 'pointer', outline: 'none',
                         }}
                       >
@@ -865,7 +868,7 @@ function InventarioTab() {
             {formError && (
               <div style={{
                 padding: '12px 14px', borderRadius: Z.r.sm,
-                background: Z.errorBg, border: '1px solid #FECACA',
+                background: Z.errorBg, border: `1px solid ${Z.border}`,
                 fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.error,
               }}>
                 {formError}
@@ -1218,7 +1221,7 @@ function PedidosTab() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {awaitingPaymentCount > 0 && (
               <span style={{
-                background: Z.orange, color: '#fff',
+                background: Z.orange, color: Z.onPrimary,
                 fontFamily: Z.font, fontSize: 11, fontWeight: 700,
                 padding: '3px 10px', borderRadius: 20,
               }}>
@@ -1299,7 +1302,7 @@ function PedidosTab() {
                           )}
                           style={{
                             padding: '8px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
-                            background: Z.blue, color: '#fff', outline: 'none',
+                            background: Z.blue, color: Z.onSecondary, outline: 'none',
                             fontFamily: Z.font, fontSize: 11, fontWeight: 700,
                           }}
                         >
@@ -1317,7 +1320,7 @@ function PedidosTab() {
                           })}
                           style={{
                             padding: '8px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
-                            background: Z.orangeDark, color: '#fff', outline: 'none',
+                            background: Z.orangeDark, color: Z.onPrimary, outline: 'none',
                             fontFamily: Z.font, fontSize: 11, fontWeight: 700,
                           }}
                         >
@@ -1541,7 +1544,7 @@ function EnviosScreen({ onClose }: { onClose: () => void }) {
                           )}
                           style={{
                             padding: '8px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
-                            background: Z.blue, color: '#fff',
+                            background: Z.blue, color: Z.onSecondary,
                             fontFamily: Z.font, fontSize: 11, fontWeight: 700, outline: 'none',
                           }}
                         >
@@ -1879,8 +1882,8 @@ function CotizacionesTab() {
   const history = quotations.filter((q) => q.status === 'expired')
 
   const STATUS_CFG = {
-    pending:   { label: 'Pendiente', bg: '#FFF7ED', text: '#92400E' },
-    accepted:  { label: 'Aceptada',  bg: '#F0FDF4', text: '#166534' },
+    pending:   { label: 'Pendiente', bg: 'var(--color-status-pending-bg)', text: 'var(--color-status-pending-text)' },
+    accepted:  { label: 'Aceptada',  bg: 'var(--color-status-success-bg)', text: 'var(--color-status-success-text)' },
     expired:   { label: 'Expirada',  bg: Z.divider, text: Z.textMuted },
     converted: { label: 'Convertida', bg: Z.blueLight, text: Z.blueDark },
   } as const
@@ -1956,7 +1959,7 @@ function CotizacionesTab() {
               style={{
                 flex: 1, padding: '10px', borderRadius: Z.r.sm,
                 border: 'none', background: Z.orangeDark,
-                fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: '#fff',
+                fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.onPrimary,
                 cursor: 'pointer', outline: 'none',
               }}
             >
@@ -2340,7 +2343,7 @@ export function VendedorApp() {
         style={{
           flex: 1,
           overflowY: 'auto',
-          paddingBottom: 96,
+          paddingBottom: 106,
         }}
       >
         {activeTab === 'home'          && <HomeTab onNavigate={setActiveTab} onShowEnvios={() => setShowEnvios(true)} />}

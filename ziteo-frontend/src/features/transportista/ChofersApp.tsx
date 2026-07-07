@@ -129,7 +129,7 @@ export function ChofersApp() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', paddingBottom: 92, background: Z.bg }}>
+    <div style={{ minHeight: '100vh', paddingBottom: 102, background: Z.bg }}>
       <DashHeader
         onProfile={() => setShowAccount(true)}
         onBell={() => setShowNotifications(true)}

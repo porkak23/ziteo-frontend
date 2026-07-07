@@ -154,7 +154,7 @@ export function ConstructorApp() {
         </div>
       )}
 
-      <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 96 }}>
+      <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 106 }}>
         <Suspense fallback={<TabSkeleton />}>
           {activeTab === 'home'         && <ConstructorHomeTab onNavigate={handleNavigate} />}
           {activeTab === 'tienda'       && <ConstructorTiendaTab />}
