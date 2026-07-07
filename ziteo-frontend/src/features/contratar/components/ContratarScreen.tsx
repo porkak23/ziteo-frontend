@@ -256,7 +256,7 @@ export function ContratarScreen({ onViewProfile, initialHireMaestroId }: Contrat
 
   const { data: maestros, isLoading } = useMaestros(filters)
 
-  // Auto-open ContratoForm if navigated from MaestroProfileScreen "Contratar"
+  // Auto-open ContratoForm if navigated from the maestro profile view "Contratar"
   useEffect(() => {
     if (initialHireMaestroId && maestros && !selectedMaestro) {
       const found = maestros.find(m => m.user_id === initialHireMaestroId)
