@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { Z } from '../../shared/design/tokens'
-import { SummaryCard, SectionTitle } from '../../shared/design/shell'
-import { IconStar } from '../../shared/design/shell'
+import { SectionTitle } from '../../shared/design/shell'
+import { KpiCard, BigActionButton } from '../../shared/design/components/accessible'
 import { useAuthStore } from '../auth/store/authStore'
 import { useEarnings } from '../maestro/hooks/useEarnings'
 import { useTrabajos } from '../maestro/hooks/useTrabajos'
+import { useMaestroContracts } from '../maestro/hooks/useContracts'
+import { useContactStats } from '../maestro/hooks/useContactEvents'
 import { supabase } from '../../lib/supabaseClient'
 
 interface HomeTabTrabajadorProps {
@@ -22,26 +23,37 @@ function WNavIconHardhat({ color = '#94A3B8', size = 22 }: { color?: string; siz
   )
 }
 
-function ChevronRight({ color = '#94A3B8' }: { color?: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M9 18l6-6-6-6" stroke={color} strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
 function DollarIcon({ color = Z.orange }: { color?: string }) {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
       <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke={color} strokeWidth="2" strokeLinecap="round"/>
     </svg>
   )
 }
 
-interface AcceptedContract {
-  id: string
-  description: string | null
-  constructor: { name: string } | null
+function BriefcaseIcon({ color = Z.blue }: { color?: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="7" width="18" height="13" rx="2" stroke={color} strokeWidth="2"/>
+      <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" stroke={color} strokeWidth="2"/>
+    </svg>
+  )
+}
+
+function ListIcon({ color = '#8B5CF6' }: { color?: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function PhoneIcon({ color = '#1B8A5A' }: { color?: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
 }
 
 export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
@@ -53,29 +65,12 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
   // ── Datos reales ──────────────────────────────────────────────────────────
   const { data: earnings } = useEarnings(maestroId)
   const { data: trabajos = [] } = useTrabajos()
-  const requests = trabajos.slice(0, 5)
+  const { data: contracts = [] } = useMaestroContracts(maestroId)
+  const { whatsappClicks30d } = useContactStats(maestroId)
+  const requests = trabajos.slice(0, 2)
 
-  // Proyecto activo: contrato aceptado más reciente del maestro.
-  const { data: currentContract = null } = useQuery<AcceptedContract | null>({
-    queryKey: ['maestro-current-contract', maestroId],
-    enabled: !!maestroId,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contracts')
-        .select('id, description, constructor:profiles!contracts_constructor_id_fkey(name)')
-        .eq('maestro_id', maestroId)
-        .eq('status', 'accepted')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      if (error) {
-        if (error.code === '42P01') return null
-        throw error
-      }
-      return (data as unknown as AcceptedContract | null) ?? null
-    },
-  })
+  const activeContracts = contracts.filter((c) => c.status === 'accepted')
+  const currentContract = activeContracts[0] ?? null
 
   useEffect(() => {
     if (!user?.user_id) return
@@ -108,6 +103,8 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches'
   const firstName = user?.name?.split(' ')[0] ?? 'Maestro'
+
+  const gananciasLabel = `Bs ${(earnings?.totalEarned ?? 0).toLocaleString('es-BO')}`
 
   return (
     <div style={{ padding: '0 0 20px', display: 'flex', flexDirection: 'column' }}>
@@ -149,10 +146,10 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
           >
             <div
               style={{
-                width: 60,
-                height: 32,
-                borderRadius: 16,
-                padding: 3,
+                width: 72,
+                height: 40,
+                borderRadius: 20,
+                padding: 4,
                 background: isActive ? Z.orange : Z.border,
                 transition: 'background 0.3s',
                 display: 'flex',
@@ -162,20 +159,20 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
             >
               <div
                 style={{
-                  width: 26,
-                  height: 26,
+                  width: 32,
+                  height: 32,
                   borderRadius: '50%',
                   background: '#fff',
                   boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                   transition: 'transform 0.3s',
-                  transform: isActive ? 'translateX(28px)' : 'translateX(0)',
+                  transform: isActive ? 'translateX(32px)' : 'translateX(0)',
                 }}
               />
             </div>
             <span
               style={{
                 fontFamily: Z.font,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 800,
                 letterSpacing: 0.5,
                 color: isActive ? Z.orangeDark : Z.textMuted,
@@ -213,92 +210,66 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
       </div>
 
       <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <SummaryCard
-            icon={<IconStar color="#F59E0B" size={18} />}
-            label="Calificación"
-            value="Nuevo"
-            color="#F59E0B"
-          />
-          <SummaryCard
-            icon={<WNavIconHardhat color={Z.blue} size={17} />}
-            label="Trabajos"
-            value={String(earnings?.completedCount ?? 0)}
-            color={Z.blue}
-          />
-          <SummaryCard
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <KpiCard
             icon={<DollarIcon color={Z.orange} />}
             label="Ganancias"
-            value={`${((earnings?.totalEarned ?? 0) / 1000).toFixed(1)}k`}
+            value={gananciasLabel}
             color={Z.orange}
+          />
+          <KpiCard
+            icon={<BriefcaseIcon color={Z.blue} />}
+            label="Trabajos activos"
+            value={activeContracts.length}
+            color={Z.blue}
+            onClick={() => onNavigate('proyectos')}
+          />
+          <KpiCard
+            icon={<ListIcon />}
+            label="Nuevas solicitudes"
+            value={trabajos.length}
+            color="#8B5CF6"
+            onClick={() => onNavigate('licitaciones')}
+          />
+          <KpiCard
+            icon={<PhoneIcon />}
+            label="Te contactaron"
+            value={whatsappClicks30d}
+            color="#1B8A5A"
           />
         </div>
 
-        <div>
-          <SectionTitle title="Agenda de Hoy" />
-          <div style={{ marginTop: 10 }}>
-            {currentContract ? (
-              <button
-                onClick={() => onNavigate('proyectos')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 14,
-                  padding: '14px',
-                  borderRadius: Z.r.md,
-                  border: `2px solid ${Z.orange}`,
-                  background: Z.orangeLight,
-                  width: '100%',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  textAlign: 'left',
-                }}
-              >
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 12,
-                    background: Z.gradOrange,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <WNavIconHardhat color="#fff" size={22} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>
-                    {currentContract.description ?? 'Proyecto en curso'}
-                  </div>
-                  <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 2 }}>
-                    {currentContract.constructor?.name ?? 'Constructor'}
-                  </div>
-                </div>
-                <ChevronRight color={Z.orangeDark} />
-              </button>
-            ) : (
-              <div style={{
-                fontFamily: Z.font, fontSize: 13, color: Z.textMuted,
-                padding: '16px 0', textAlign: 'center',
-              }}>
-                No tienes proyectos activos
-              </div>
-            )}
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <BigActionButton
+            label="Ver trabajos disponibles"
+            variant="primary"
+            onClick={() => onNavigate('licitaciones')}
+          />
+          <BigActionButton
+            label="Mis proyectos"
+            variant="secondary"
+            onClick={() => onNavigate('proyectos')}
+          />
+          {currentContract && (
+            <BigActionButton
+              label={`Continuar: ${currentContract.description ?? 'proyecto en curso'}`}
+              variant="success"
+              icon={<WNavIconHardhat color="#fff" size={20} />}
+              onClick={() => onNavigate('proyectos')}
+            />
+          )}
         </div>
 
         <div>
           <SectionTitle
             title="Nuevas Solicitudes"
-            action={`${requests.length} disponibles`}
+            action={`${trabajos.length} disponibles`}
             onAction={() => onNavigate('licitaciones')}
           />
           <div style={{ marginTop: 8 }}>
             {requests.length === 0 ? (
               <div style={{
-                fontFamily: Z.font, fontSize: 13, color: Z.textMuted,
+                fontFamily: Z.font, fontSize: 14, color: Z.textMuted,
                 padding: '16px 0', textAlign: 'center',
               }}>
                 No hay solicitudes disponibles por ahora
@@ -311,7 +282,7 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 12,
-                    padding: '12px 0',
+                    padding: '14px 0',
                     borderBottom: `1px solid ${Z.divider}`,
                   }}
                 >
@@ -326,15 +297,15 @@ export function HomeTabTrabajador({ onNavigate }: HomeTabTrabajadorProps) {
                     }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.text }}>
+                    <div style={{ fontFamily: Z.font, fontSize: 15, fontWeight: 700, color: Z.text }}>
                       {r.name}
                     </div>
-                    <div style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 500, color: Z.textMuted, marginTop: 2 }}>
+                    <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 500, color: Z.textMuted, marginTop: 2 }}>
                       {r.constructor?.name ?? 'Constructor'}{r.estimated_budget != null ? ` · Bs ${r.estimated_budget.toLocaleString()}` : ''}
                     </div>
                   </div>
                   {r.location_address && (
-                    <span style={{ fontFamily: Z.font, fontSize: 10, fontWeight: 500, color: Z.textMuted, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    <span style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 500, color: Z.textMuted, whiteSpace: 'nowrap', flexShrink: 0 }}>
                       {r.location_address}
                     </span>
                   )}

@@ -168,7 +168,7 @@ export function TrabajadorApp() {
               <LicitacionFeed />
             </div>
           )}
-          {activeTab === 'proyectos' && <ProyectosTabTrabajador />}
+          {activeTab === 'proyectos' && <ProyectosTabTrabajador onNavigate={handleNavigate} />}
           {activeTab === 'perfil' && <PerfilTabTrabajador />}
         </Suspense>
       </div>

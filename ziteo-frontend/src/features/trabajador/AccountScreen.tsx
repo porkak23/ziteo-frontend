@@ -32,13 +32,14 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
         style={{
           position: 'absolute',
           top: 3,
-          left: value ? 23 : 3,
+          left: 3,
           width: 20,
           height: 20,
           borderRadius: '50%',
-          background: '#fff',
+          background: Z.surface,
           boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
-          transition: 'left 0.2s',
+          transform: value ? 'translateX(20px)' : 'translateX(0)',
+          transition: 'transform 0.2s',
         }}
       />
     </button>
