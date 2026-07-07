@@ -70,7 +70,7 @@ function PostularseModal({
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Preséntate y describe tu experiencia..."
               rows={3}
-              className="bg-surface-container rounded-xl px-4 py-3 text-sm text-on-surface border border-outline-variant focus:border-primary outline-none resize-none"
+              className="bg-surface-container rounded-xl px-4 py-3 min-h-[52px] text-base text-on-surface border border-outline-variant focus:border-primary outline-none resize-none"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -81,13 +81,13 @@ function PostularseModal({
               onChange={(e) => setBudget(e.target.value)}
               placeholder="0"
               min={0}
-              className="bg-surface-container rounded-xl px-4 py-3 text-sm text-on-surface border border-outline-variant focus:border-primary outline-none"
+              className="bg-surface-container rounded-xl px-4 py-3 min-h-[52px] text-base text-on-surface border border-outline-variant focus:border-primary outline-none"
             />
           </div>
           <button
             onClick={() => onConfirm(message, budget)}
             disabled={isPending}
-            className="w-full bg-primary text-on-primary rounded-2xl py-3 text-sm font-label font-semibold disabled:opacity-50 transition-opacity active:opacity-80"
+            className="w-full bg-primary text-on-primary rounded-2xl py-3 min-h-[56px] text-base font-label font-bold disabled:opacity-50 transition-opacity active:opacity-80"
           >
             {isPending ? 'Enviando...' : 'Confirmar postulación'}
           </button>
@@ -133,46 +133,56 @@ export function LicitacionFeed() {
     )
   }
 
-  const pillBase = 'shrink-0 rounded-full px-3 py-1.5 text-[13px] font-label transition-colors'
-  const pillInactive = `${pillBase} border border-outline-variant text-on-surface-variant`
-  const pillActive = `${pillBase} bg-primary/10 border border-primary/30 text-primary font-semibold`
+  const selectClass =
+    'min-h-[52px] w-full text-base text-on-surface bg-surface rounded-xl border border-outline-variant px-3 focus:border-primary outline-none'
 
   return (
     <div className="flex flex-col gap-3">
       <Toast toasts={toasts} onRemove={removeToast} />
 
-      {/* Filtros — ciudad */}
-      <div className="flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
-        {CITY_FILTERS.map((city) => {
-          const value = city === 'Todas las ciudades' ? '' : city
-          const isActive = filterCity === value
-          return (
-            <button
-              key={city}
-              onClick={() => setFilterCity(value)}
-              className={isActive ? pillActive : pillInactive}
-            >
-              {city}
-            </button>
-          )
-        })}
-      </div>
+      {/* Filtros — ciudad y especialidad */}
+      <div className="grid grid-cols-2 gap-3 px-4">
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-on-surface" htmlFor="licitacion-filter-city">
+            Ciudad
+          </label>
+          <select
+            id="licitacion-filter-city"
+            value={filterCity}
+            onChange={(e) => setFilterCity(e.target.value)}
+            className={selectClass}
+          >
+            {CITY_FILTERS.map((city) => {
+              const value = city === 'Todas las ciudades' ? '' : city
+              return (
+                <option key={city} value={value}>
+                  {city}
+                </option>
+              )
+            })}
+          </select>
+        </div>
 
-      {/* Filtros — especialidad */}
-      <div className="flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
-        {SPECIALTY_FILTERS.map((spec) => {
-          const value = spec === 'Todas las especialidades' ? '' : spec
-          const isActive = filterSpecialty === value
-          return (
-            <button
-              key={spec}
-              onClick={() => setFilterSpecialty(value)}
-              className={isActive ? pillActive : pillInactive}
-            >
-              {spec}
-            </button>
-          )
-        })}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-on-surface" htmlFor="licitacion-filter-specialty">
+            Oficio
+          </label>
+          <select
+            id="licitacion-filter-specialty"
+            value={filterSpecialty}
+            onChange={(e) => setFilterSpecialty(e.target.value)}
+            className={selectClass}
+          >
+            {SPECIALTY_FILTERS.map((spec) => {
+              const value = spec === 'Todas las especialidades' ? '' : spec
+              return (
+                <option key={spec} value={value}>
+                  {spec}
+                </option>
+              )
+            })}
+          </select>
+        </div>
       </div>
 
       {/* Lista */}
@@ -195,29 +205,29 @@ export function LicitacionFeed() {
               {/* Header: título + fecha */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex flex-col flex-1 min-w-0">
-                  <h3 className="font-headline text-base text-on-surface line-clamp-1">{lic.title}</h3>
+                  <h3 className="font-headline text-[17px] text-on-surface line-clamp-1">{lic.title}</h3>
                   {lic.description && (
-                    <p className="font-body text-xs text-on-surface-variant line-clamp-2 mt-0.5">{lic.description}</p>
+                    <p className="font-body text-[13px] text-on-surface-variant line-clamp-2 mt-0.5">{lic.description}</p>
                   )}
                 </div>
-                <span className="font-label text-xs text-on-surface-variant shrink-0 mt-0.5">{timeAgo(lic.created_at)}</span>
+                <span className="font-label text-[13px] text-on-surface-variant shrink-0 mt-0.5">{timeAgo(lic.created_at)}</span>
               </div>
 
               {/* Metadatos: ciudad, especialidad, presupuesto */}
               <div className="flex flex-wrap gap-2">
                 {lic.city && (
-                  <span className="flex items-center gap-1 text-xs text-on-surface-variant font-body">
+                  <span className="flex items-center gap-1 text-[13px] text-on-surface-variant font-body">
                     <span className="material-symbols-outlined text-[14px]">location_on</span>
                     {lic.city}
                   </span>
                 )}
                 {lic.specialty && (
-                  <span className="flex items-center gap-1 text-xs text-on-surface-variant font-body">
+                  <span className="flex items-center gap-1 text-[13px] text-on-surface-variant font-body">
                     <span className="material-symbols-outlined text-[14px]">build</span>
                     {lic.specialty}
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-xs text-primary font-label font-semibold">
+                <span className="flex items-center gap-1 text-[13px] text-primary font-label font-semibold">
                   <span className="material-symbols-outlined text-[14px]">payments</span>
                   {formatBudget(lic.budget_min, lic.budget_max)}
                 </span>
@@ -231,13 +241,13 @@ export function LicitacionFeed() {
                       {lic.constructor?.name?.charAt(0).toUpperCase() ?? 'C'}
                     </span>
                   </div>
-                  <span className="font-body text-xs text-on-surface">{lic.constructor?.name ?? 'Constructor'}</span>
+                  <span className="font-body text-[13px] text-on-surface">{lic.constructor?.name ?? 'Constructor'}</span>
                 </div>
 
                 <button
                   disabled={lic._ya_postulado}
                   onClick={() => setPostulando(lic)}
-                  className={`px-4 py-2 rounded-xl text-xs font-label font-semibold transition-opacity active:opacity-80 ${
+                  className={`px-4 py-2 min-h-[48px] rounded-xl text-base font-label font-semibold transition-opacity active:opacity-80 ${
                     lic._ya_postulado
                       ? 'bg-surface-container text-on-surface-variant cursor-default'
                       : 'bg-primary text-on-primary'
