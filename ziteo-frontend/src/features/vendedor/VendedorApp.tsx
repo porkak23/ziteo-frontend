@@ -18,6 +18,7 @@ import { ZScreen } from '@/shared/design/components/ZScreen'
 import { useAuthStore } from '@/features/auth/store/authStore'
 import { useIncomingOrders, useUpdateOrderStatus } from '@/features/proveedor/hooks/useProveedorOrders'
 import { useProviderPaymentConfirmation } from '@/features/proveedor/hooks/useProviderPaymentConfirmation'
+import type { PendingPaymentOrder } from '@/features/proveedor/hooks/useProviderPaymentConfirmation'
 import { queryKeys } from '@/shared/query/keys'
 import { useInventario, useToggleProductoActivo, INVENTARIO_PAGE_SIZE, uploadProductImage, validateProductoForm, CATEGORIAS_CONSTRUCCION } from '@/features/proveedor/hooks/useInventario'
 import type { ProductoInventario } from '@/features/proveedor/hooks/useInventario'
@@ -191,6 +192,7 @@ function HomeTab({
   const { data: orders = [] } = useIncomingOrders(providerId)
   const pendingCount = orders.filter((o) => o.status === 'pending').length
   const { data: products = [] } = useInventario(0)
+  const { pendingCount: pendingPaymentsCount } = useProviderPaymentConfirmation(providerId)
 
   const { data: homeQuotations = [] } = useQuery<{ status: string }[]>({
     queryKey: ['proveedor-quotations', providerId],
@@ -255,6 +257,28 @@ function HomeTab({
           color={Z.orange}
         />
       </div>
+
+      {pendingPaymentsCount > 0 && (
+        <button
+          onClick={() => onNavigate('pedidos')}
+          style={{
+            border: 'none', background: 'transparent', padding: 0, margin: 0,
+            textAlign: 'left', cursor: 'pointer', outline: 'none', width: '100%',
+          }}
+        >
+          <SummaryCard
+            icon={
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="5" width="18" height="14" rx="2" stroke={Z.orange} strokeWidth="2" />
+                <path d="M7 15l3-3 2.5 2.5L17 10" stroke={Z.orange} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            }
+            label="Pagos por verificar"
+            value={String(pendingPaymentsCount)}
+            color={Z.orange}
+          />
+        </button>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button
@@ -1111,6 +1135,71 @@ function PedidosFilterDropdown({
   )
 }
 
+// Card reutilizable para un pedido con comprobante de pago pendiente de verificar.
+// Usada tanto en la sección "Pagos por Verificar" (arriba de la lista general).
+function PaymentEvidenceCard({
+  order,
+  isConfirming,
+  isRejecting,
+  onConfirm,
+  onReject,
+}: {
+  order: PendingPaymentOrder
+  isConfirming: boolean
+  isRejecting: boolean
+  onConfirm: () => void
+  onReject: () => void
+}) {
+  return (
+    <div
+      style={{
+        padding: '14px 16px', borderRadius: Z.r.md, background: Z.orangeLight,
+        border: `1px solid ${Z.orangePastel}`,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>
+          {order.buyer_name ?? 'Comprador'}
+        </span>
+        <span style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 800, color: Z.orangeDark }}>
+          Bs {order.total.toLocaleString('es-BO')}
+        </span>
+      </div>
+      <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.orangeDark, marginBottom: 10 }}>
+        Comprobante subido — pendiente de verificacion
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          disabled={isConfirming}
+          onClick={onConfirm}
+          style={{
+            flex: 1, padding: '9px', borderRadius: 20, border: 'none',
+            background: isConfirming ? Z.divider : Z.success,
+            color: isConfirming ? Z.textMuted : '#fff',
+            fontFamily: Z.font, fontSize: 11, fontWeight: 700,
+            cursor: isConfirming ? 'default' : 'pointer', outline: 'none',
+          }}
+        >
+          {isConfirming ? 'Confirmando...' : 'Validar Pago e Iniciar Envío'}
+        </button>
+        <button
+          disabled={isRejecting}
+          onClick={onReject}
+          style={{
+            flex: '0 0 auto', padding: '9px 14px', borderRadius: 20,
+            border: `1.5px solid ${Z.error}`, background: 'transparent',
+            color: Z.error,
+            fontFamily: Z.font, fontSize: 11, fontWeight: 700,
+            cursor: 'pointer', outline: 'none',
+          }}
+        >
+          Rechazar
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function PedidosTab() {
   const user = useAuthStore((s) => s.user)
   const providerId = user?.user_id ?? ''
@@ -1125,6 +1214,7 @@ function PedidosTab() {
   })
   const { mutate: updateStatus } = useUpdateOrderStatus()
   const {
+    pendingPayments,
     pendingCount: awaitingPaymentCount,
     confirmOrderPayment,
     rejectOrderPayment,
@@ -1233,6 +1323,31 @@ function PedidosTab() {
             </span>
           </div>
         </div>
+
+        {pendingPayments.length > 0 && (
+          <div>
+            <SectionTitle title="Pagos por Verificar" />
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {pendingPayments.map((order) => (
+                <PaymentEvidenceCard
+                  key={order.id}
+                  order={order}
+                  isConfirming={isConfirming}
+                  isRejecting={isRejecting}
+                  onConfirm={async () => {
+                    try {
+                      await confirmOrderPayment(order.id)
+                      showToast('Pago validado, envío en preparación', 'success')
+                    } catch (err) {
+                      showToast(err instanceof Error ? err.message : 'Error al confirmar', 'error')
+                    }
+                  }}
+                  onReject={() => setRejectingId(order.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         <PedidosFilterDropdown
           options={['Todos', 'Pendiente', 'Confirmado', 'Listo', 'En Tránsito', 'Entregado']}
@@ -1345,52 +1460,16 @@ function PedidosTab() {
                     </div>
                   </div>
 
-                  {/* Evidence indicator + confirm/reject (only when comprobante uploaded) */}
+                  {/* Indicador informativo: la acción de confirmar/rechazar vive en la sección "Pagos por Verificar" de arriba */}
                   {order.status === 'pending' && (order as { payment_evidence_url?: string | null }).payment_evidence_url && (
                     <div style={{
-                      marginTop: 10, padding: '10px 12px',
+                      marginTop: 10, padding: '8px 12px',
                       borderRadius: Z.r.sm, background: Z.orangeLight,
                       border: `1px solid ${Z.orangePastel}`,
-                      display: 'flex', flexDirection: 'column', gap: 8,
                     }}>
-                      <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.orangeDark }}>
-                        Comprobante subido — pendiente de verificacion
-                      </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          disabled={isConfirming}
-                          onClick={async () => {
-                            try {
-                              await confirmOrderPayment(order.id)
-                              showToast('Pago confirmado correctamente', 'success')
-                            } catch (err) {
-                              showToast(err instanceof Error ? err.message : 'Error al confirmar', 'error')
-                            }
-                          }}
-                          style={{
-                            flex: 1, padding: '9px', borderRadius: 20, border: 'none',
-                            background: isConfirming ? Z.divider : Z.success,
-                            color: isConfirming ? Z.textMuted : '#fff',
-                            fontFamily: Z.font, fontSize: 11, fontWeight: 700,
-                            cursor: isConfirming ? 'default' : 'pointer', outline: 'none',
-                          }}
-                        >
-                          {isConfirming ? 'Confirmando...' : 'Confirmar pago'}
-                        </button>
-                        <button
-                          disabled={isRejecting}
-                          onClick={() => setRejectingId(order.id)}
-                          style={{
-                            flex: 1, padding: '9px', borderRadius: 20,
-                            border: `1.5px solid ${Z.error}`, background: 'transparent',
-                            color: Z.error,
-                            fontFamily: Z.font, fontSize: 11, fontWeight: 700,
-                            cursor: 'pointer', outline: 'none',
-                          }}
-                        >
-                          Rechazar
-                        </button>
-                      </div>
+                      <span style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.orangeDark }}>
+                        Comprobante subido — ver en "Pagos por Verificar"
+                      </span>
                     </div>
                   )}
 
