@@ -25,23 +25,37 @@ export function QrPagoModal({ providerId, orderId, method = 'qr', onConfirmed, o
   const [step, setStep]         = useState<Step>('qr')
   const [signedUrl, setSignedUrl] = useState<string | null | undefined>(undefined)
   const [bankInfo, setBankInfo] = useState<{ bankTransfer: string | null; cash: boolean } | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // ── Load the provider's QR + bank details on mount ───────────────────────────
+  // ── Load the provider's QR + bank details on mount (and on retry) ────────────
   useEffect(() => {
     let cancelled = false
-    getSignedQrUrl(providerId).then((url) => {
-      if (!cancelled) setSignedUrl(url)
-    })
+    getSignedQrUrl(providerId)
+      .then((url) => {
+        if (!cancelled) setSignedUrl(url)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setSignedUrl(null)
+        setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el QR de pago. Intenta de nuevo.')
+      })
     getProviderPaymentMethods(providerId).then((info) => {
       if (!cancelled) setBankInfo(info)
     })
     return () => { cancelled = true }
-  }, [providerId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [providerId, reloadToken]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleRetryLoad() {
+    setSignedUrl(undefined)
+    setLoadError(null)
+    setReloadToken((t) => t + 1)
+  }
 
   // ── Poll for confirmation when in 'waiting' step ─────────────────────────────
   useEffect(() => {
@@ -51,7 +65,7 @@ export function QrPagoModal({ providerId, orderId, method = 'qr', onConfirmed, o
     }
 
     async function checkStatus() {
-      // Re-fetch the order to see if it moved to 'confirmed'
+      // Re-fetch the order to see if the provider validated the payment.
       await queryClient.invalidateQueries({ queryKey: ['orders'] })
       // Also check via direct query so we don't depend on the list being rendered
       const { data } = await supabase
@@ -59,7 +73,9 @@ export function QrPagoModal({ providerId, orderId, method = 'qr', onConfirmed, o
         .select('status')
         .eq('id', orderId)
         .maybeSingle()
-      if (data?.status === 'confirmed') {
+      // `confirm_payment_by_provider` moves the order to 'processing' (which triggers
+      // delivery creation). 'confirmed' is kept as a legacy/edge-case fallback.
+      if (data?.status === 'processing' || data?.status === 'confirmed') {
         setStep('confirmed')
       }
     }
@@ -97,7 +113,7 @@ export function QrPagoModal({ providerId, orderId, method = 'qr', onConfirmed, o
     }
   }
 
-  const isLoading = signedUrl === undefined
+  const isLoading = signedUrl === undefined && !loadError
 
   return (
     <div
@@ -131,6 +147,28 @@ export function QrPagoModal({ providerId, orderId, method = 'qr', onConfirmed, o
           const hasBank = Boolean(bankInfo?.bankTransfer)
           const showBank = method === 'transfer' || (noQr && hasBank)
 
+          if (loadError) {
+            return (
+              <div className="flex flex-col items-center gap-4 py-2">
+                <div className="w-full bg-error-container text-on-error-container rounded-2xl px-4 py-4 font-body text-sm text-center">
+                  {loadError}
+                </div>
+                <button
+                  onClick={handleRetryLoad}
+                  className="w-full bg-primary text-on-primary font-label font-semibold px-6 py-3 rounded-2xl"
+                >
+                  Reintentar
+                </button>
+                <button
+                  onClick={() => setStep('upload')}
+                  className="w-full bg-surface-container text-on-surface font-label font-semibold px-6 py-3 rounded-2xl"
+                >
+                  Ya pague — notificar pago manualmente
+                </button>
+              </div>
+            )
+          }
+
           if (isLoading) {
             return (
               <div className="flex flex-col items-center gap-4 py-2">
@@ -146,6 +184,15 @@ export function QrPagoModal({ providerId, orderId, method = 'qr', onConfirmed, o
                 <div className="flex flex-col items-center gap-4 py-2">
                   <p className="font-body text-sm text-center text-on-surface-variant py-8">
                     El proveedor aun no ha configurado una cuenta para transferencias. Contacta directamente con la tienda.
+                  </p>
+                  <button
+                    onClick={() => setStep('upload')}
+                    className="w-full bg-primary text-on-primary font-label font-semibold px-6 py-3 rounded-2xl"
+                  >
+                    Ya pague — avisar al vendedor
+                  </button>
+                  <p className="font-body text-xs text-center text-on-surface-variant">
+                    El vendedor validara tu pago con el comprobante que subas.
                   </p>
                   <button
                     onClick={onClose}
@@ -213,8 +260,17 @@ export function QrPagoModal({ providerId, orderId, method = 'qr', onConfirmed, o
           // No QR and no bank
           return (
             <div className="flex flex-col items-center gap-4 py-2">
-              <p className="font-body text-sm text-center text-on-surface-variant py-8">
-                El proveedor aun no ha configurado su QR de cobro. Contacta directamente con la tienda.
+              <p className="font-body text-sm text-center text-on-surface-variant py-4">
+                El proveedor aun no ha configurado su QR de cobro.
+              </p>
+              <button
+                onClick={() => setStep('upload')}
+                className="w-full bg-primary text-on-primary font-label font-semibold px-6 py-3 rounded-2xl"
+              >
+                Ya pague — avisar al vendedor
+              </button>
+              <p className="font-body text-xs text-center text-on-surface-variant">
+                Sube tu comprobante (foto, captura o referencia) y el vendedor validara el pago.
               </p>
               <button
                 onClick={onClose}

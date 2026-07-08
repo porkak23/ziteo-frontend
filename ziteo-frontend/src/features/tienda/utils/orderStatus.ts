@@ -13,7 +13,7 @@ export type OrderStatus =
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending:    'Pendiente de pago',
   confirmed:  'Pago confirmado',
-  processing: 'Preparando envío',
+  processing: 'Pago confirmado — preparando envío',
   shipped:    'En camino',
   delivered:  'Entregado',
   cancelled:  'Cancelado',

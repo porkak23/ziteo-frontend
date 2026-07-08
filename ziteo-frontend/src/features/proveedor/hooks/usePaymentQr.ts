@@ -65,38 +65,53 @@ export function usePaymentQr() {
   // ─── Constructor: fetch signed QR URL to display ─────────────────────────────
 
   async function getSignedQrUrl(providerUserId: string, role: string = 'proveedor'): Promise<string | null> {
-    // Verify that the authenticated buyer has at least one order with this provider
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) return null
+    try {
+      // Verify that the authenticated buyer has at least one order with this provider
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw new Error('No se pudo verificar tu sesión. Intenta de nuevo.')
+      if (!authUser) return null
 
-    const { data: orderRows } = await supabase
-      .from('orders')
-      .select('id')
-      .eq('provider_id', providerUserId)
-      .eq('constructor_id', authUser.id)
-      .limit(1)
+      const { data: orderRows, error: ordersError } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('provider_id', providerUserId)
+        .eq('constructor_id', authUser.id)
+        .limit(1)
 
-    if (!orderRows || orderRows.length === 0) {
-      // If it's a maestro, we also allow the own worker or a constructor to read it without active ecommerce orders.
-      // For now let's bypass order check if the role is 'maestro', since workers are hired differently.
-      if (role !== 'maestro') return null
+      if (ordersError) throw new Error('No se pudo verificar tus pedidos con este proveedor.')
+
+      if (!orderRows || orderRows.length === 0) {
+        // If it's a maestro, we also allow the own worker or a constructor to read it without active ecommerce orders.
+        // For now let's bypass order check if the role is 'maestro', since workers are hired differently.
+        if (role !== 'maestro') return null
+      }
+
+      // Fetch the stored relative path from user_roles
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('payment_qr_url')
+        .eq('user_id', providerUserId)
+        .eq('role', role)
+        .maybeSingle()
+
+      if (error) throw new Error('No se pudieron cargar los datos de pago del proveedor.')
+
+      // Legitimate case: provider hasn't configured a QR yet — not an error.
+      if (!data?.payment_qr_url) return null
+
+      const { data: signed, error: signError } = await supabase.storage
+        .from('payment-qrs')
+        .createSignedUrl(data.payment_qr_url, 300) // 5 minutes — short window, renewable on demand
+
+      if (signError) throw new Error('No se pudo generar el enlace del QR. Intenta de nuevo.')
+
+      return signed?.signedUrl ?? null
+    } catch (err) {
+      // Real failures (network, auth, permissions) are re-thrown so the caller can
+      // distinguish them from the legitimate "provider has no QR configured" case (null).
+      if (err instanceof Error) throw err
+      throw new Error('No se pudo cargar el QR de pago. Intenta de nuevo.')
     }
-
-    // Fetch the stored relative path from user_roles
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('payment_qr_url')
-      .eq('user_id', providerUserId)
-      .eq('role', role)
-      .maybeSingle()
-
-    if (error || !data?.payment_qr_url) return null
-
-    const { data: signed } = await supabase.storage
-      .from('payment-qrs')
-      .createSignedUrl(data.payment_qr_url, 300) // 5 minutes — short window, renewable on demand
-
-    return signed?.signedUrl ?? null
   }
 
   // ─── Driver: fetch provider QR for an assigned delivery ──────────────────────

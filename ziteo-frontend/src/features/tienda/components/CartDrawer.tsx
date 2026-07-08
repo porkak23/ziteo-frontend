@@ -9,6 +9,7 @@ import { Toast } from '../../../shared/components/Toast'
 import { DeliverySection } from './DeliverySection'
 import type { DeliveryMethod } from './DeliverySection'
 import { CargoSelector } from './CargoSelector'
+import { QrPagoModal } from './QrPagoModal'
 import type { MapPickerValue } from '../../../shared/components/MapPicker'
 import { useAuthStore } from '../../auth/store/authStore'
 import { useProyectos } from '../../proyectos/hooks/useProyectos'
@@ -97,6 +98,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [deliveryMethod, setDeliveryMethod]       = useState<DeliveryMethod>('delivery')
   const [deliveryLoc, setDeliveryLoc]             = useState<MapPickerValue | null>(null)
   const [originProjectId, setOriginProjectId]     = useState<string | null>(null)
+  // Order recién creado, listo para pagar — abre el QR/comprobante inmediatamente
+  // tras el checkout, para que el comprador no tenga que descubrir por su cuenta
+  // que debe ir a "Mis Pedidos" a pagar.
+  const [payOrder, setPayOrder]                   = useState<{ orderId: string; providerId: string } | null>(null)
 
   const { data: proyectos } = useProyectos(
     currentUser?.user_id ? { constructor_id: currentUser.user_id } : undefined,
@@ -147,8 +152,20 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         projectId:       originProjectId ?? undefined,
       },
       {
-        onSuccess: () => {
-          showToast('¡Pedido enviado!', 'success')
+        onSuccess: ({ orderIds, providerIds }) => {
+          const extraOrders = orderIds.length > 1
+          showToast(
+            extraOrders
+              ? '¡Pedido enviado! Abriendo el pago del primer proveedor — los demás están en Mis Pedidos.'
+              : '¡Pedido enviado! Ahora realiza el pago.',
+            'success'
+          )
+          // Abrimos el flujo de pago (QR / comprobante) de inmediato para el primer
+          // pedido, en vez de dejar que el comprador tenga que ir a buscarlo a
+          // "Mis Pedidos" por su cuenta.
+          if (orderIds[0] && providerIds[0]) {
+            setPayOrder({ orderId: orderIds[0], providerId: providerIds[0] })
+          }
           setTimeout(onClose, 1200)
         },
         onError: (err) => {
@@ -355,6 +372,15 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           </>
         )}
       </div>
+
+      {payOrder && (
+        <QrPagoModal
+          providerId={payOrder.providerId}
+          orderId={payOrder.orderId}
+          onConfirmed={() => setPayOrder(null)}
+          onClose={() => setPayOrder(null)}
+        />
+      )}
     </>
   )
 }
