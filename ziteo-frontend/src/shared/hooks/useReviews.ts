@@ -52,7 +52,7 @@ export function useProfileReviews(profileId: string) {
           };
 
         if (error) {
-          console.warn('Reviews table might not exist:', error);
+          console.warn('Failed to fetch reviews:', error);
           return { reviews: [], averageRating: 0, totalCount: 0 };
         }
 

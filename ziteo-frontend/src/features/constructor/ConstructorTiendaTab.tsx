@@ -7,6 +7,7 @@ import { ZHeader } from '@/shared/design/components/ZHeader'
 import { MapPicker, type MapPickerValue } from '@/shared/components/MapPicker'
 import { MisPedidosScreen } from '../tienda/components/MisPedidosScreen'
 import { TrackOrderScreen } from '../tienda/components/TrackOrderScreen'
+import { QrPagoModal } from '../tienda/components/QrPagoModal'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthStore } from '@/features/auth/store/authStore'
 import { useProyectos } from '@/features/proyectos/hooks/useProyectos'
@@ -100,7 +101,7 @@ function ProductCard({ product, onTap }: { product: Product; onTap: () => void }
     >
       <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: Z.surface, overflow: 'hidden' }}>
         {imgUrl ? (
-          <img src={imgUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={imgUrl} alt={product.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${Z.divider} 0%, ${Z.blueLight} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 600, color: Z.textMuted }}>{product.category}</span>
@@ -129,7 +130,7 @@ function BestSellerCard({ product, rank, onTap }: { product: Product; rank: numb
       <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: Z.surface, overflow: 'hidden' }}>
         {imgUrl ? (
           <>
-            <img src={imgUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={imgUrl} alt={product.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 50%)' }} />
           </>
         ) : (
@@ -167,7 +168,7 @@ function ProductDetail({ product, onBack, onAdd }: {
       <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ height: 180, borderRadius: Z.r.lg, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: Z.surface, overflow: 'hidden', border: `1px solid ${Z.border}` }}>
           {imgUrl ? (
-            <img src={imgUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={imgUrl} alt={product.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${Z.divider} 0%, ${Z.blueLight} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontFamily: Z.font, fontSize: 18, fontWeight: 700, color: Z.textMuted }}>{product.category}</span>
@@ -254,6 +255,7 @@ function CartScreen({ cart, setCart, onBack }: {
   const [submitting, setSubmitting] = useState(false)
   const [ordered, setOrdered] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [qrModalOrder, setQrModalOrder] = useState<{ orderId: string; providerId: string } | null>(null)
 
   // Proyectos del constructor con coordenadas guardadas → permiten "comprar desde un terreno".
   const { data: proyectos = [] } = useProyectos({ constructor_id: userId })
@@ -286,6 +288,7 @@ function CartScreen({ cart, setCart, onBack }: {
     setSubmitting(true)
     setError(null)
     try {
+      let lastOrderId: string | null = null
       for (const [providerId, group] of byProvider) {
         const groupTotal = group.items.reduce((s, i) => s + i.price_num * i.qty, 0)
         const items = group.items.map((i) => ({
@@ -293,7 +296,7 @@ function CartScreen({ cart, setCart, onBack }: {
           quantity: i.qty,
           price_unit: i.price_num,
         }))
-        const { error: rpcError } = await supabase.rpc('place_order', {
+        const { data: orderId, error: rpcError } = await supabase.rpc('place_order', {
           p_constructor_id: userId,
           p_provider_id: providerId,
           p_total: groupTotal,
@@ -306,6 +309,7 @@ function CartScreen({ cart, setCart, onBack }: {
           p_project_id: deliveryMethod === 'delivery' ? (originProjectId ?? undefined) : undefined,
         })
         if (rpcError) throw rpcError
+        lastOrderId = orderId as unknown as string
       }
       // Web Push al provider (la notificación in-app la crea el trigger trg_notify_provider_on_new_order)
       for (const [providerId] of byProvider) {
@@ -318,11 +322,24 @@ function CartScreen({ cart, setCart, onBack }: {
           },
         }).catch((err: unknown) => console.warn('[send-push] order push failed:', err))
       }
-      setOrdered(true)
-      setTimeout(() => { setCart([]); onBack() }, 1800)
+
+      const singleProvider = byProvider.length === 1
+      if (singleProvider && lastOrderId && (payMethod === 'qr' || payMethod === 'transfer')) {
+        setCart([])
+        setQrModalOrder({ orderId: lastOrderId, providerId: byProvider[0][0] })
+      } else {
+        setOrdered(true)
+        setTimeout(() => { setCart([]); onBack() }, 1800)
+      }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'No se pudo crear el pedido'
-      setError(msg.includes('Stock insuficiente') ? msg : 'No se pudo crear el pedido. Intenta de nuevo.')
+      const hasMessage = e instanceof Error && !!e.message
+      const msg = hasMessage ? (e as Error).message : ''
+      // Los errores de negocio del RPC (RAISE EXCEPTION en español, ej. "Stock insuficiente...")
+      // no traen `code` de Postgres/PostgREST (PGRST*, 22xxx/23xxx/42xxx) — esos sí son técnicos
+      // y deben mostrar el mensaje genérico para no exponer detalle interno al usuario.
+      const pgCode = (e as { code?: string } | null)?.code
+      const isTechnicalError = !!pgCode && /^(PGRST|22|23|42)/.test(pgCode)
+      setError(hasMessage && !isTechnicalError ? msg : 'No se pudo crear el pedido. Intenta de nuevo.')
     } finally {
       setSubmitting(false)
     }
@@ -357,7 +374,7 @@ function CartScreen({ cart, setCart, onBack }: {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${Z.border}`, borderRadius: 8, overflow: 'hidden' }}>
-                        <button onClick={() => updateQty(item.id, item.qty - 1)} style={{ width: 36, height: 36, border: 'none', background: Z.surface, cursor: 'pointer', fontSize: 16, fontWeight: 700, outline: 'none' }}>−</button>
+                        <button onClick={() => updateQty(item.id, item.qty - 1)} style={{ width: 44, height: 44, border: 'none', background: Z.surface, cursor: 'pointer', fontSize: 16, fontWeight: 700, outline: 'none' }}>−</button>
                         <input
                           type="number"
                           min={1}
@@ -367,9 +384,9 @@ function CartScreen({ cart, setCart, onBack }: {
                             const n = parseInt(e.target.value, 10)
                             updateQty(item.id, Number.isNaN(n) ? 1 : n)
                           }}
-                          style={{ width: 56, height: 36, textAlign: 'center', fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text, borderTop: 'none', borderBottom: 'none', borderLeft: `1px solid ${Z.border}`, borderRight: `1px solid ${Z.border}`, background: Z.surface, outline: 'none', padding: 0 }}
+                          style={{ width: 56, height: 44, textAlign: 'center', fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text, borderTop: 'none', borderBottom: 'none', borderLeft: `1px solid ${Z.border}`, borderRight: `1px solid ${Z.border}`, background: Z.surface, outline: 'none', padding: 0 }}
                         />
-                        <button onClick={() => updateQty(item.id, item.qty + 1)} style={{ width: 36, height: 36, border: 'none', background: Z.surface, cursor: 'pointer', fontSize: 16, fontWeight: 700, outline: 'none' }}>+</button>
+                        <button onClick={() => updateQty(item.id, item.qty + 1)} style={{ width: 44, height: 44, border: 'none', background: Z.surface, cursor: 'pointer', fontSize: 16, fontWeight: 700, outline: 'none' }}>+</button>
                       </div>
                       <button onClick={() => removeItem(item.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', outline: 'none', fontFamily: Z.font, fontSize: 10, color: Z.error, fontWeight: 600 }}>Quitar</button>
                     </div>
@@ -491,15 +508,27 @@ function CartScreen({ cart, setCart, onBack }: {
 
             {ordered && (
               <div role="status" style={{ padding: '14px', borderRadius: Z.r.sm, background: Z.successBg, color: Z.successDark, fontFamily: Z.font, fontSize: 13, fontWeight: 700, textAlign: 'center' }}>
-                ¡Pedido realizado! Redirigiendo...
+                {byProvider.length > 1
+                  ? '¡Pedidos realizados! Paga cada uno desde "Mis Pedidos". Redirigiendo...'
+                  : '¡Pedido realizado! Redirigiendo...'}
               </div>
             )}
-            <ZButton disabled={!payMethod || ordered || submitting} onClick={handleConfirm}>
+            <ZButton disabled={!payMethod || ordered || submitting || !!qrModalOrder} onClick={handleConfirm}>
               {submitting ? 'Procesando...' : 'Confirmar Pedido'}
             </ZButton>
           </>
         )}
       </div>
+
+      {qrModalOrder && (
+        <QrPagoModal
+          providerId={qrModalOrder.providerId}
+          orderId={qrModalOrder.orderId}
+          method={payMethod === 'transfer' ? 'transfer' : 'qr'}
+          onConfirmed={() => { setQrModalOrder(null); onBack() }}
+          onClose={() => { setQrModalOrder(null); onBack() }}
+        />
+      )}
     </div>
   )
 }
