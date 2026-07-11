@@ -8,6 +8,7 @@ import { usePaymentQr } from '@/features/proveedor/hooks/usePaymentQr'
 import { useUpdateVendedorProfile } from '@/features/proveedor/hooks/useVendedorProfile'
 import { MapPicker } from '@/shared/components/MapPicker'
 import type { MapPickerValue } from '@/shared/components/MapPicker'
+import type { VehicleType } from '@/features/transportista/types/deliveryTypes'
 import { RoleDashNav } from '@/shared/design/shell/RoleDashNav'
 import type { Tab } from '@/shared/design/shell/RoleDashNav'
 import { SummaryCard } from '@/shared/design/shell/SummaryCard'
@@ -1058,7 +1059,8 @@ interface EnvioOrderInfo {
   buyer_name: string | undefined
   items: string
   total: number
-  cargo_type?: 'light' | 'heavy'
+  cargo_type?: 'light' | 'medium' | 'heavy'
+  delivery_method?: 'delivery' | 'pickup'
 }
 
 function PedidosFilterDropdown({
@@ -1435,6 +1437,7 @@ function PedidosTab() {
                             items: itemsSummary,
                             total: order.total,
                             cargo_type: order.cargo_type,
+                            delivery_method: order.delivery_method,
                           })}
                           style={{
                             padding: '8px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
@@ -1613,6 +1616,15 @@ function EnviosScreen({ onClose }: { onClose: () => void }) {
                     {itemsSummary}
                   </div>
 
+                  {order.delivery_method === 'pickup' && (
+                    <div style={{
+                      display: 'inline-block', padding: '3px 10px', borderRadius: 20, marginBottom: 10,
+                      background: Z.blue + '18', color: Z.blue, fontFamily: Z.font, fontSize: 10, fontWeight: 700,
+                    }}>
+                      Retiro en tienda
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontFamily: Z.font, fontSize: 16, fontWeight: 800, color: Z.orangeDark }}>
                       Bs {order.total.toLocaleString('es-BO')}
@@ -1640,6 +1652,7 @@ function EnviosScreen({ onClose }: { onClose: () => void }) {
                           items: itemsSummary,
                           total: order.total,
                           cargo_type: order.cargo_type,
+                          delivery_method: order.delivery_method,
                         })}
                         style={{
                           padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
@@ -1708,6 +1721,12 @@ function EnviosScreen({ onClose }: { onClose: () => void }) {
 
 // ─── GESTIÓN ENVÍO SCREEN ────────────────────────────────────────────────────
 
+interface DeliveryClassification {
+  fulfillment_mode: 'flota' | 'pool' | null
+  status: string | null
+  notes: string | null
+}
+
 function GestionEnvioScreen({
   order,
   providerId,
@@ -1719,93 +1738,62 @@ function GestionEnvioScreen({
   onBack: () => void
   onDone?: () => void
 }) {
-  const [mode, setMode] = useState<'retiro' | 'flota' | 'repartidor' | null>(null)
-  const [driver, setDriver] = useState('')
-  const [plate, setPlate] = useState('')
   const [dispatching, setDispatching] = useState(false)
   const { mutate: updateStatus } = useUpdateOrderStatus()
   const { toasts, showToast, removeToast } = useToast()
+  const queryClient = useQueryClient()
 
   const finish = onDone ?? onBack
+  const isPickup = order.delivery_method === 'pickup'
 
   // Código de retiro real, derivado del UUID del pedido (6 últimos hex, mayúsculas)
   const pickupCode = order.id.replace(/-/g, '').slice(-6).toUpperCase()
 
-  const handleFlota = async () => {
-    if (!driver || !plate) return
-    setDispatching(true)
-    // Flota propia: crea el registro de entrega vía RPC (deliveries_insert_rpc
-    // bloquea el INSERT directo desde el cliente). El vehículo propio de la
-    // tienda queda fuera del pool de choferes Ziteoo.
-    const { error } = await supabase.rpc('create_delivery_by_provider', {
-      p_order_id: order.id,
-      p_mode: 'flota',
-      p_driver_name: driver,
-      p_vehicle_plate: plate,
-    })
-    if (error) {
-      showToast(error.message || 'No se pudo registrar la entrega', 'error')
-      setDispatching(false)
-      return
-    }
-    updateStatus(
-      { orderId: order.id, status: 'shipped', providerId },
-      { onSuccess: finish, onError: (err) => {
-        showToast(err instanceof Error ? err.message : 'Error al cambiar estado', 'error')
-        setDispatching(false)
-      } }
-    )
-  }
-
-  const handleRepartidor = async () => {
-    setDispatching(true)
-    // Repartidor: entra al pool de choferes Ziteoo (status pending dispara la
-    // notificación a choferes vía trigger).
-    const { error } = await supabase.rpc('create_delivery_by_provider', {
-      p_order_id: order.id,
-      p_mode: 'repartidor',
-    })
-    if (error) {
-      showToast(error.message || 'No se pudo registrar la entrega', 'error')
-      setDispatching(false)
-      return
-    }
-    updateStatus(
-      { orderId: order.id, status: 'processing', providerId },
-      { onSuccess: finish, onError: (err) => {
-        showToast(err instanceof Error ? err.message : 'Error al cambiar estado', 'error')
-        setDispatching(false)
-      } }
-    )
-  }
+  // La clasificación (flota propia vs pool) ya la decidió el trigger de BD al
+  // confirmarse el pago — esta pantalla solo la refleja, no vuelve a preguntar.
+  const { data: delivery, isLoading: loadingDelivery, refetch: refetchDelivery } = useQuery<DeliveryClassification | null>({
+    queryKey: ['envio-delivery', order.id],
+    enabled: !isPickup,
+    staleTime: 10_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deliveries')
+        .select('fulfillment_mode, status, notes')
+        .eq('order_id', order.id)
+        .maybeSingle()
+      if (error) throw error
+      return data as DeliveryClassification | null
+    },
+  })
 
   const handleRetiro = () => {
     updateStatus(
       { orderId: order.id, status: 'processing', providerId },
-      { onSuccess: finish }
+      { onSuccess: finish, onError: () => showToast('No se pudo notificar al cliente', 'error') }
     )
   }
 
-  const MODES: { key: 'retiro' | 'flota' | 'repartidor'; label: string; desc: string; color: string }[] = [
-    {
-      key: 'retiro',
-      label: 'Retiro en Tienda',
-      desc: 'El cliente viene a recoger desde tu local. Se genera un código de verificación para presentar al retirar.',
-      color: Z.blue,
-    },
-    {
-      key: 'flota',
-      label: 'Flota Propia',
-      desc: 'Asigna un conductor de tu equipo con su vehículo. Para proveedores con delivery propio.',
-      color: Z.orange,
-    },
-    {
-      key: 'repartidor',
-      label: 'Solicitar Transportista',
-      desc: 'ZITEO busca el transportista disponible más cercano. Para carga pesada se excluyen motocicletas automáticamente.',
-      color: Z.orangeDark,
-    },
-  ]
+  const handleAdvanceFleet = async (action: 'start' | 'delivered' | 'derive_pool') => {
+    setDispatching(true)
+    const { error } = await supabase.rpc('advance_own_fleet_delivery', {
+      p_order_id: order.id,
+      p_action: action,
+    })
+    setDispatching(false)
+    if (error) {
+      showToast(error.message || 'No se pudo actualizar la entrega', 'error')
+      return
+    }
+    if (action === 'delivered') {
+      finish()
+      return
+    }
+    await refetchDelivery()
+    queryClient.invalidateQueries({ queryKey: ['deliveries'] })
+    if (action === 'derive_pool') {
+      showToast('Pedido derivado al pool de Ziteoo', 'success')
+    }
+  }
 
   return (
     <ZScreen bg={Z.bg} style={{ position: 'fixed' }}>
@@ -1824,49 +1812,16 @@ function GestionEnvioScreen({
           </div>
         </div>
 
-        <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>
-          Modalidad de entrega
-        </div>
-
-        {MODES.map((opt) => (
-          <button
-            key={opt.key}
-            onClick={() => setMode(opt.key)}
-            style={{
-              display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px',
-              borderRadius: Z.r.md,
-              border: `2px solid ${mode === opt.key ? opt.color : Z.border}`,
-              background: mode === opt.key ? opt.color + '10' : Z.surface,
-              cursor: 'pointer', width: '100%', textAlign: 'left', outline: 'none',
-              transition: 'border-color 0.18s, background 0.18s',
-            }}
-          >
-            <div style={{
-              width: 10, height: 10, borderRadius: '50%', flexShrink: 0, marginTop: 5,
-              background: mode === opt.key ? opt.color : Z.border,
-              transition: 'background 0.18s',
-            }} />
-            <div>
-              <div style={{ fontFamily: Z.font, fontSize: 14, fontWeight: 700, color: Z.text }}>
-                {opt.label}
-              </div>
-              <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, marginTop: 3, lineHeight: 1.45 }}>
-                {opt.desc}
-              </div>
-            </div>
-          </button>
-        ))}
-
-        {mode === 'retiro' && (
+        {isPickup && (
           <div style={{ padding: '20px', borderRadius: Z.r.md, background: Z.blueLight, textAlign: 'center' }}>
             <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.blueDark, marginBottom: 12 }}>
-              Código de retiro
+              Retiro en tienda · Código
             </div>
             <div style={{ fontFamily: 'monospace', fontSize: 32, fontWeight: 800, color: Z.blueDark, letterSpacing: 6 }}>
               {pickupCode}
             </div>
             <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 8 }}>
-              Válido 48 horas · Compartir con el cliente
+              El comprador elegido recoger su pedido · Compártelo al entregar
             </div>
             <ZButton variant="blue" style={{ marginTop: 16 }} onClick={handleRetiro}>
               Notificar al cliente
@@ -1874,28 +1829,66 @@ function GestionEnvioScreen({
           </div>
         )}
 
-        {mode === 'flota' && (
+        {!isPickup && loadingDelivery && (
+          <div style={{ height: 120, borderRadius: Z.r.md, background: Z.divider }} />
+        )}
+
+        {!isPickup && !loadingDelivery && delivery?.fulfillment_mode === 'flota' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <ZInput label="Nombre del conductor" placeholder="Ej: Carlos Mamani" value={driver} onChange={setDriver} />
-            <ZInput label="Placa del vehículo" placeholder="Ej: 3456-ABC" value={plate} onChange={setPlate} />
-            <ZButton disabled={!driver || !plate || dispatching} onClick={handleFlota}>
-              {dispatching ? 'Despachando...' : 'Asignar y despachar'}
-            </ZButton>
+            <div style={{ padding: '16px', borderRadius: Z.r.md, background: Z.orangeLight, border: `1px solid ${Z.orangePastel}` }}>
+              <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.orangeDark, marginBottom: 4 }}>
+                Envías con tu vehículo
+              </div>
+              <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, lineHeight: 1.5 }}>
+                {delivery.notes ?? 'Tu vehículo puede llevar este pedido.'}
+              </div>
+            </div>
+
+            {delivery.status === 'pending' && (
+              <>
+                <ZButton disabled={dispatching} onClick={() => handleAdvanceFleet('start')}>
+                  {dispatching ? 'Iniciando...' : 'Iniciar envío'}
+                </ZButton>
+                <button
+                  onClick={() => handleAdvanceFleet('derive_pool')}
+                  disabled={dispatching}
+                  style={{
+                    padding: '10px 16px', borderRadius: Z.r.sm, cursor: 'pointer',
+                    background: 'transparent', color: Z.textSec, border: `1.5px solid ${Z.border}`,
+                    fontFamily: Z.font, fontSize: 13, fontWeight: 700, outline: 'none',
+                  }}
+                >
+                  Mi vehículo no puede — derivar a Ziteoo
+                </button>
+              </>
+            )}
+
+            {delivery.status === 'in_transit' && (
+              <ZButton disabled={dispatching} onClick={() => handleAdvanceFleet('delivered')}>
+                {dispatching ? 'Guardando...' : 'Marcar como entregado'}
+              </ZButton>
+            )}
           </div>
         )}
 
-        {mode === 'repartidor' && (
+        {!isPickup && !loadingDelivery && delivery?.fulfillment_mode === 'pool' && (
           <div style={{ padding: '16px', borderRadius: Z.r.md, background: Z.orangeLight }}>
             <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.orangeDark, marginBottom: 6 }}>
-              Filtro de carga automático
+              Buscando transportista Ziteoo
             </div>
             <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, lineHeight: 1.5 }}>
-              El sistema filtrará transportistas según el tipo de carga. Para materiales pesados
-              (cemento, áridos, estructuras) se excluirán motos automáticamente.
+              {delivery.status === 'pending'
+                ? 'Publicamos este pedido al pool de choferes de Ziteoo. Te avisamos cuando alguien lo acepte.'
+                : 'Un transportista de Ziteoo ya tomó este pedido.'}
             </div>
-            <ZButton style={{ marginTop: 14 }} disabled={dispatching} onClick={handleRepartidor}>
-              {dispatching ? 'Buscando...' : 'Buscar transportista ahora'}
-            </ZButton>
+          </div>
+        )}
+
+        {!isPickup && !loadingDelivery && !delivery && (
+          <div style={{ padding: '16px', borderRadius: Z.r.md, background: Z.divider }}>
+            <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec }}>
+              La entrega se generará automáticamente al confirmar el pago del pedido.
+            </div>
           </div>
         )}
       </div>
@@ -2228,6 +2221,20 @@ function CotizacionesTab() {
 
 // ─── VENDEDOR CUENTA SCREEN ──────────────────────────────────────────────────
 
+const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
+  moto: 'Moto',
+  camioneta: 'Camioneta',
+  pickup: 'Pickup',
+  camion: 'Camión',
+}
+const VEHICLE_TYPE_CAPACITY: Record<VehicleType, string> = {
+  moto: 'Carga ligera',
+  camioneta: 'Carga media',
+  pickup: 'Carga media',
+  camion: 'Carga pesada',
+}
+const VEHICLE_TYPE_ORDER: VehicleType[] = ['moto', 'camioneta', 'pickup', 'camion']
+
 function VendedorCuentaScreen({ onClose }: { onClose: () => void }) {
   const user = useAuthStore((s) => s.user)
   const { toasts, showToast, removeToast } = useToast()
@@ -2273,8 +2280,71 @@ function VendedorCuentaScreen({ onClose }: { onClose: () => void }) {
     },
   })
 
+  const [showVehicleModal, setShowVehicleModal] = useState(false)
+  const [vehicleType, setVehicleType] = useState<VehicleType | null>(null)
+  const [vehiclePlate, setVehiclePlate] = useState('')
+  const [fleetDriverName, setFleetDriverName] = useState('')
+  const { mutateAsync: updateVehicleProfile, isPending: savingVehicle } = useUpdateVendedorProfile()
+
+  const { data: vehicleStatus, refetch: refetchVehicle } = useQuery<{
+    vehicle_type: string | null
+    vehicle_plate: string | null
+    fleet_driver_name: string | null
+    vehicle_available: boolean | null
+  }>({
+    queryKey: ['vendedor-vehicle', user?.user_id],
+    enabled: !!user?.user_id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('vehicle_type, vehicle_plate, fleet_driver_name, vehicle_available')
+        .eq('user_id', user!.user_id)
+        .eq('role', 'proveedor')
+        .maybeSingle()
+      if (error) throw error
+      return data ?? { vehicle_type: null, vehicle_plate: null, fleet_driver_name: null, vehicle_available: true }
+    },
+  })
+
   const hasQr = !!qrStatus?.payment_qr_url
   const hasStoreLocation = !!storeLocationStatus?.store_address
+  const hasVehicle = !!vehicleStatus?.vehicle_type
+  const vehicleAvailable = vehicleStatus?.vehicle_available ?? true
+
+  const openVehicleModal = () => {
+    setVehicleType((vehicleStatus?.vehicle_type as VehicleType | null) ?? null)
+    setVehiclePlate(vehicleStatus?.vehicle_plate ?? '')
+    setFleetDriverName(vehicleStatus?.fleet_driver_name ?? '')
+    setShowVehicleModal(true)
+  }
+
+  const handleSaveVehicle = async () => {
+    if (!user?.user_id || !vehicleType) return
+    try {
+      await updateVehicleProfile({
+        vendedorId: user.user_id,
+        vehicle_type: vehicleType,
+        vehicle_plate: vehiclePlate || null,
+        fleet_driver_name: fleetDriverName || null,
+      })
+      await refetchVehicle()
+      showToast('Vehículo de reparto guardado', 'success')
+      setShowVehicleModal(false)
+    } catch {
+      showToast('Error al guardar el vehículo', 'error')
+    }
+  }
+
+  const handleToggleVehicleAvailable = async () => {
+    if (!user?.user_id) return
+    try {
+      await updateVehicleProfile({ vendedorId: user.user_id, vehicle_available: !vehicleAvailable })
+      await refetchVehicle()
+    } catch {
+      showToast('Error al actualizar disponibilidad', 'error')
+    }
+  }
 
   const openStoreLocationModal = () => {
     setStoreLocation(
@@ -2440,6 +2510,66 @@ function VendedorCuentaScreen({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
+        {/* Sección: Vehículo de Reparto */}
+        <div>
+          <div style={{
+            fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.textMuted,
+            letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10,
+          }}>
+            Vehículo de Reparto
+          </div>
+          <div style={{
+            padding: '16px', borderRadius: Z.r.md, background: Z.surface,
+            border: `1px solid ${Z.border}`, display: 'flex', flexDirection: 'column', gap: 12,
+          }}>
+            <div>
+              <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>
+                {hasVehicle ? VEHICLE_TYPE_LABELS[vehicleStatus!.vehicle_type as VehicleType] : 'Sin vehículo registrado'}
+              </div>
+              <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 3 }}>
+                {hasVehicle
+                  ? (vehicleStatus?.vehicle_plate || 'Sin placa registrada')
+                  : 'Si tienes vehículo propio, la app te ofrece entregar tus pedidos sin pasar por el pool de Ziteoo'}
+              </div>
+            </div>
+
+            {hasVehicle && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.text }}>
+                  Vehículo disponible
+                </span>
+                <button
+                  onClick={handleToggleVehicleAvailable}
+                  disabled={savingVehicle}
+                  style={{
+                    width: 44, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', outline: 'none',
+                    background: vehicleAvailable ? Z.orangeDark : Z.divider, position: 'relative', transition: 'background 0.2s',
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute', top: 3, left: vehicleAvailable ? 21 : 3,
+                    width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                  }} />
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={openVehicleModal}
+              style={{
+                padding: '10px 16px', borderRadius: Z.r.sm, cursor: 'pointer',
+                background: hasVehicle ? Z.surface : Z.orangeDark,
+                color: hasVehicle ? Z.text : '#fff',
+                border: hasVehicle ? `1.5px solid ${Z.border}` : 'none',
+                fontFamily: Z.font, fontSize: 13, fontWeight: 700,
+                width: '100%', outline: 'none',
+              } as React.CSSProperties}
+            >
+              {hasVehicle ? 'Editar vehículo' : 'Registrar vehículo'}
+            </button>
+          </div>
+        </div>
+
       </div>
 
       {/* ── Modal: Ubicación de la Tienda ── */}
@@ -2490,6 +2620,111 @@ function VendedorCuentaScreen({ onClose }: { onClose: () => void }) {
               }}
             >
               {savingStoreLocation ? 'Guardando...' : 'Confirmar ubicación'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Vehículo de Reparto ── */}
+      {showVehicleModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 110, display: 'flex', flexDirection: 'column',
+          justifyContent: 'flex-end', background: 'rgba(0,0,0,0.4)',
+        }}>
+          <div
+            style={{ position: 'absolute', inset: 0 }}
+            onClick={() => !savingVehicle && setShowVehicleModal(false)}
+          />
+          <div style={{
+            position: 'relative', background: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            padding: '24px', display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '85vh', overflowY: 'auto',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ fontFamily: Z.font, fontSize: 18, fontWeight: 800, color: Z.text, margin: 0 }}>
+                Vehículo de Reparto
+              </h2>
+              <button
+                onClick={() => !savingVehicle && setShowVehicleModal(false)}
+                style={{
+                  width: 36, height: 36, borderRadius: '50%', border: 'none', background: Z.divider,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', outline: 'none',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: Z.text }}>close</span>
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {VEHICLE_TYPE_ORDER.map((vt) => (
+                <button
+                  key={vt}
+                  onClick={() => setVehicleType(vt)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px',
+                    borderRadius: Z.r.sm, border: `1.5px solid ${vehicleType === vt ? Z.orangeDark : Z.border}`,
+                    background: vehicleType === vt ? Z.orangeLight + '22' : Z.surface,
+                    cursor: 'pointer', outline: 'none', textAlign: 'left', width: '100%',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span
+                      className="material-symbols-outlined"
+                      style={{ fontSize: 18, color: vehicleType === vt ? Z.orangeDark : Z.textMuted }}
+                    >
+                      {vehicleType === vt ? 'radio_button_checked' : 'radio_button_unchecked'}
+                    </span>
+                    <span style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.text }}>
+                      {VEHICLE_TYPE_LABELS[vt]}
+                    </span>
+                  </div>
+                  <span style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec }}>
+                    {VEHICLE_TYPE_CAPACITY[vt]}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div>
+              <label style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textSec, display: 'block', marginBottom: 6 }}>
+                Placa
+              </label>
+              <input
+                value={vehiclePlate}
+                onChange={(e) => setVehiclePlate(e.target.value)}
+                placeholder="Ej: 1234-ABC"
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: Z.r.sm, border: `1.5px solid ${Z.border}`,
+                  fontFamily: Z.font, fontSize: 14, color: Z.text, outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 600, color: Z.textSec, display: 'block', marginBottom: 6 }}>
+                Conductor habitual
+              </label>
+              <input
+                value={fleetDriverName}
+                onChange={(e) => setFleetDriverName(e.target.value)}
+                placeholder="Nombre de quien maneja"
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: Z.r.sm, border: `1.5px solid ${Z.border}`,
+                  fontFamily: Z.font, fontSize: 14, color: Z.text, outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <button
+              onClick={handleSaveVehicle}
+              disabled={savingVehicle || !vehicleType}
+              style={{
+                background: Z.orangeDark, color: '#fff', fontFamily: Z.font, fontSize: 14,
+                fontWeight: 700, border: 'none', borderRadius: Z.r.sm, padding: '14px',
+                cursor: 'pointer', outline: 'none', transition: 'opacity 0.2s',
+                opacity: savingVehicle ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              {savingVehicle ? 'Guardando...' : 'Guardar vehículo'}
             </button>
           </div>
         </div>

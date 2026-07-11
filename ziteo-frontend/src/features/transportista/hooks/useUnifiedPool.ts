@@ -4,6 +4,7 @@ import { usePendingTransportRequests, useAcceptTransportRequest } from '../../tr
 import { deliveryFee } from '../utils/deliveryUtils'
 import { haversineDistance } from '../../../shared/hooks/useGeolocation'
 import type { CargoCapability } from '../types/deliveryTypes'
+import { allowedCargoForCapability } from '../types/deliveryTypes'
 import type { UnifiedJob } from '../types/jobTypes'
 
 interface GeoPos { lat: number; lng: number }
@@ -36,8 +37,9 @@ export function useUnifiedPool(cargoCapability: CargoCapability | null, driverPo
       raw:            d,
     }))
 
+    const allowedCargo = allowedCargoForCapability(cargoCapability)
     const filtered = cargoCapability
-      ? transports.filter((t) => t.cargo_type === cargoCapability)
+      ? transports.filter((t) => allowedCargo.includes(t.cargo_type))
       : transports
 
     const transportJobs: UnifiedJob[] = filtered.map((t) => ({

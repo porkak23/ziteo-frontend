@@ -2,11 +2,13 @@ import type { CargoType } from '../hooks/useCart'
 
 const CARGO_LABELS: Record<CargoType, string> = {
   light: 'Carga ligera · Moto',
+  medium: 'Carga media · Camioneta',
   heavy: 'Carga pesada · Camión',
 }
 
 const CARGO_ICONS: Record<CargoType, string> = {
   light: 'two_wheeler',
+  medium: 'airport_shuttle',
   heavy: 'local_shipping',
 }
 
@@ -31,8 +33,8 @@ export function CargoSelector({ value, detected, hasWeight, onChange }: CargoSel
           <span className="ml-1 text-on-surface-variant/60">(selecciona manualmente)</span>
         )}
       </p>
-      <div className="grid grid-cols-2 gap-2">
-        {(['light', 'heavy'] as CargoType[]).map((type) => {
+      <div className="grid grid-cols-3 gap-2">
+        {(['light', 'medium', 'heavy'] as CargoType[]).map((type) => {
           const isActive = effective === type
           return (
             <button

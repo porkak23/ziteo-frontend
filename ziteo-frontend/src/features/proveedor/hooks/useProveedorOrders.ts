@@ -30,7 +30,8 @@ export interface ProveedorOrder {
   created_at: string
   items: OrderItem[]
   buyer_name?: string
-  cargo_type?: 'light' | 'heavy'
+  cargo_type?: 'light' | 'medium' | 'heavy'
+  delivery_method?: 'delivery' | 'pickup'
   payment_evidence_url?: string | null
 }
 
@@ -80,6 +81,7 @@ export function useIncomingOrders(providerId: string, onNewOrder?: () => void) {
           total,
           created_at,
           cargo_type,
+          delivery_method,
           payment_evidence_url,
           buyer:profiles!orders_constructor_id_fkey(name)
         `)

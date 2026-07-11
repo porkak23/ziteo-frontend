@@ -1,13 +1,27 @@
 export type DeliveryStatus = 'pending' | 'accepted' | 'in_transit' | 'delivered' | 'failed'
-export type CargoType = 'light' | 'heavy'
+export type CargoType = 'light' | 'medium' | 'heavy'
 export type VehicleType = 'moto' | 'camion' | 'camioneta' | 'pickup'
-export type CargoCapability = 'light' | 'heavy'
+export type CargoCapability = 'light' | 'medium' | 'heavy'
+export type FulfillmentMode = 'flota' | 'pool'
 
 export function vehicleToCargoCapability(vehicleType: string | null): CargoCapability | null {
   if (!vehicleType) return null
   if (vehicleType === 'moto') return 'light'
-  if (['camion', 'camioneta', 'pickup'].includes(vehicleType)) return 'heavy'
+  if (vehicleType === 'camioneta' || vehicleType === 'pickup') return 'medium'
+  if (vehicleType === 'camion') return 'heavy'
   return null
+}
+
+/**
+ * Carga que un vehículo con esta capacidad puede ver en el pool.
+ * Espejo de la matriz en accept_delivery: moto solo light; camioneta
+ * light+medium; camión medium+heavy (un camión no toma una bolsa de clavos).
+ */
+export function allowedCargoForCapability(capability: CargoCapability | null): CargoType[] {
+  if (capability === 'light') return ['light']
+  if (capability === 'medium') return ['light', 'medium']
+  if (capability === 'heavy') return ['medium', 'heavy']
+  return ['light', 'medium', 'heavy']
 }
 
 export interface Delivery {
@@ -16,6 +30,7 @@ export interface Delivery {
   driver_id: string | null
   status: DeliveryStatus
   cargo_type: CargoType
+  fulfillment_mode: FulfillmentMode
   pickup_address: string | null
   dropoff_address: string | null
   pickup_lat: number | null

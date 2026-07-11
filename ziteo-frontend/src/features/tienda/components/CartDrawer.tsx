@@ -19,7 +19,8 @@ interface CartDrawerProps {
   onClose: () => void
 }
 
-const detectCargoType = (w: number | null): CargoType | null => w === null ? null : w < 5 ? 'light' : 'heavy'
+const detectCargoType = (w: number | null): CargoType | null =>
+  w === null ? null : w < 5 ? 'light' : w <= 100 ? 'medium' : 'heavy'
 
 // ─── OrderProgressBar ─────────────────────────────────────────────────────────
 

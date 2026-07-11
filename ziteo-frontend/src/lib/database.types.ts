@@ -373,6 +373,7 @@ export type Database = {
           dropoff_lat: number | null
           dropoff_lng: number | null
           estimated_fee: number | null
+          fulfillment_mode: string
           id: string
           notes: string | null
           order_id: string
@@ -396,6 +397,7 @@ export type Database = {
           dropoff_lat?: number | null
           dropoff_lng?: number | null
           estimated_fee?: number | null
+          fulfillment_mode?: string
           id?: string
           notes?: string | null
           order_id: string
@@ -419,6 +421,7 @@ export type Database = {
           dropoff_lat?: number | null
           dropoff_lng?: number | null
           estimated_fee?: number | null
+          fulfillment_mode?: string
           id?: string
           notes?: string | null
           order_id?: string
@@ -2113,6 +2116,7 @@ export type Database = {
           company_name: string | null
           created_at: string | null
           delivery_time_hours: number | null
+          fleet_driver_name: string | null
           free_shipping_threshold: number | null
           hourly_rate: number | null
           id: string
@@ -2137,6 +2141,7 @@ export type Database = {
           store_name: string | null
           updated_at: string | null
           user_id: string
+          vehicle_available: boolean
           vehicle_plate: string | null
           vehicle_type: string | null
           years_experience: number | null
@@ -2145,6 +2150,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           delivery_time_hours?: number | null
+          fleet_driver_name?: string | null
           free_shipping_threshold?: number | null
           hourly_rate?: number | null
           id?: string
@@ -2169,6 +2175,7 @@ export type Database = {
           store_name?: string | null
           updated_at?: string | null
           user_id: string
+          vehicle_available?: boolean
           vehicle_plate?: string | null
           vehicle_type?: string | null
           years_experience?: number | null
@@ -2177,6 +2184,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           delivery_time_hours?: number | null
+          fleet_driver_name?: string | null
           free_shipping_threshold?: number | null
           hourly_rate?: number | null
           id?: string
@@ -2201,6 +2209,7 @@ export type Database = {
           store_name?: string | null
           updated_at?: string | null
           user_id?: string
+          vehicle_available?: boolean
           vehicle_plate?: string | null
           vehicle_type?: string | null
           years_experience?: number | null
@@ -2366,6 +2375,10 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: Json
       }
+      advance_own_fleet_delivery: {
+        Args: { p_action: string; p_order_id: string }
+        Returns: Json
+      }
       advance_transport_request: {
         Args: { p_new_status: string; p_request_id: string }
         Returns: Json
@@ -2374,6 +2387,7 @@ export type Database = {
         Args: { p_licitacion_id: string }
         Returns: number
       }
+      cargo_rank: { Args: { p_cargo: string }; Returns: number }
       check_throttle: {
         Args: {
           p_identifier: string

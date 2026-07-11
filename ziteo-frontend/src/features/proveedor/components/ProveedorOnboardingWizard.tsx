@@ -11,6 +11,7 @@ import { useAuthStore } from '../../auth/store/authStore'
 import { CIUDADES_ACTIVAS } from '../../../shared/constants/geography'
 import { CATEGORIAS_CONSTRUCCION } from '../hooks/useInventario'
 import { Z } from '../../../shared/design/tokens'
+import type { VehicleType } from '../../transportista/types/deliveryTypes'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ interface WizardProps {
   onComplete: () => void
 }
 
-type WizardStep = 1 | 2 | 3
+type WizardStep = 1 | 2 | 3 | 4
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -614,6 +615,149 @@ function Step3Producto({ onNext, onSkip }: { onNext: () => void; onSkip: () => v
   )
 }
 
+// ─── Step 4: Vehículo de reparto ──────────────────────────────────────────────
+
+const VEHICLE_LABELS: Record<VehicleType, { label: string; capacity: string }> = {
+  moto:      { label: 'Moto',      capacity: 'Carga ligera' },
+  camioneta: { label: 'Camioneta', capacity: 'Carga media' },
+  pickup:    { label: 'Pickup',    capacity: 'Carga media' },
+  camion:    { label: 'Camión',    capacity: 'Carga pesada' },
+}
+const VEHICLE_ORDER: VehicleType[] = ['moto', 'camioneta', 'pickup', 'camion']
+
+function Step4Vehicle({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+  const user = useAuthStore((s) => s.user)
+  const [vehicleType, setVehicleType] = useState<VehicleType | null>(null)
+  const [plate, setPlate] = useState('')
+  const [driverName, setDriverName] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSave() {
+    if (!user || !vehicleType) return
+    setSaving(true)
+    setError(null)
+    try {
+      const { error: dbErr } = await supabase
+        .from('user_roles')
+        .update({
+          vehicle_type: vehicleType,
+          vehicle_plate: plate.trim() || null,
+          fleet_driver_name: driverName.trim() || null,
+        })
+        .eq('user_id', user.user_id)
+        .eq('role', 'proveedor')
+      if (dbErr) throw dbErr
+      onNext()
+    } catch {
+      setError('No se pudo guardar el vehículo. Intenta de nuevo.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div>
+        <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: 0 }}>
+          ¿Tienes vehículo de reparto?
+        </h2>
+        <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, marginTop: 4 }}>
+          Si tienes vehículo propio, la app te ofrece entregar tus pedidos directamente sin pasar por el pool de choferes de Ziteoo.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {VEHICLE_ORDER.map((vt) => (
+          <button
+            key={vt}
+            onClick={() => setVehicleType(vt)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px',
+              borderRadius: Z.r.sm, border: `1.5px solid ${vehicleType === vt ? Z.orange : Z.border}`,
+              background: vehicleType === vt ? Z.orangeLight : Z.surface,
+              cursor: 'pointer', outline: 'none', textAlign: 'left', width: '100%',
+            }}
+          >
+            <span style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.text }}>
+              {VEHICLE_LABELS[vt].label}
+            </span>
+            <span style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec }}>
+              {VEHICLE_LABELS[vt].capacity}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {vehicleType && (
+        <>
+          <Field label="Placa">
+            <input
+              type="text"
+              value={plate}
+              onChange={(e) => setPlate(e.target.value)}
+              placeholder="Ej. 1234-ABC"
+              style={inputStyle}
+            />
+          </Field>
+          <Field label="Conductor habitual">
+            <input
+              type="text"
+              value={driverName}
+              onChange={(e) => setDriverName(e.target.value)}
+              placeholder="Nombre de quien maneja"
+              style={inputStyle}
+            />
+          </Field>
+        </>
+      )}
+
+      {error && (
+        <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.error }}>{error}</span>
+      )}
+
+      <button
+        onClick={handleSave}
+        disabled={saving || !vehicleType}
+        style={{
+          fontFamily: Z.font,
+          fontWeight: 700,
+          fontSize: 15,
+          padding: '15px 24px',
+          borderRadius: Z.r.md,
+          background: vehicleType ? Z.gradOrange : Z.divider,
+          color: vehicleType ? '#fff' : Z.textMuted,
+          border: 'none',
+          cursor: saving || !vehicleType ? 'default' : 'pointer',
+          width: '100%',
+          opacity: saving ? 0.7 : 1,
+          transition: 'all 0.2s',
+        }}
+      >
+        {saving ? 'Guardando...' : 'Continuar'}
+      </button>
+
+      <button
+        onClick={onSkip}
+        style={{
+          fontFamily: Z.font,
+          fontWeight: 600,
+          fontSize: 14,
+          padding: '12px 24px',
+          borderRadius: Z.r.md,
+          background: 'transparent',
+          color: Z.textSec,
+          border: `1.5px solid ${Z.border}`,
+          cursor: 'pointer',
+          width: '100%',
+        }}
+      >
+        No tengo vehículo propio
+      </button>
+    </div>
+  )
+}
+
 // ─── Main Wizard ──────────────────────────────────────────────────────────────
 
 export function ProveedorOnboardingWizard({ onComplete }: WizardProps) {
@@ -648,7 +792,7 @@ export function ProveedorOnboardingWizard({ onComplete }: WizardProps) {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
           <p style={{ fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>
-            Paso {step} de 3
+            Paso {step} de 4
           </p>
           <button
             onClick={finish}
@@ -667,7 +811,7 @@ export function ProveedorOnboardingWizard({ onComplete }: WizardProps) {
             Saltar
           </button>
         </div>
-        <StepDots current={step} total={3} />
+        <StepDots current={step} total={4} />
       </div>
 
       {/* Content */}
@@ -687,6 +831,12 @@ export function ProveedorOnboardingWizard({ onComplete }: WizardProps) {
         )}
         {step === 3 && (
           <Step3Producto
+            onNext={() => setStep(4)}
+            onSkip={() => setStep(4)}
+          />
+        )}
+        {step === 4 && (
+          <Step4Vehicle
             onNext={finish}
             onSkip={finish}
           />

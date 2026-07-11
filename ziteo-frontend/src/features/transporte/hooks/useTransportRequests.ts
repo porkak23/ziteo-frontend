@@ -7,7 +7,9 @@ export interface TransportRequest {
   id: string
   requester_id: string
   requester_role: string
-  cargo_type: 'light' | 'heavy'
+  // 'medium' existe en BD (CHECK compartido con orders/deliveries) pero los
+  // fletes directos aún solo ofrecen light/heavy al crear (ver CreateTransportPayload).
+  cargo_type: 'light' | 'medium' | 'heavy'
   pickup_address: string
   dropoff_address: string
   pickup_lat: number | null

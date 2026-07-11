@@ -35,7 +35,7 @@ export interface CartItem {
   weight_kg?: number
 }
 
-export type CargoType = 'light' | 'heavy'
+export type CargoType = 'light' | 'medium' | 'heavy'
 
 interface CartStore {
   items: CartItem[]

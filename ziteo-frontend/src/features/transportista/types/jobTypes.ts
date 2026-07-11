@@ -5,7 +5,7 @@ export type UnifiedJob =
   | {
       kind: 'delivery'
       id: string
-      cargoType: 'light' | 'heavy'
+      cargoType: 'light' | 'medium' | 'heavy'
       pickupAddress: string | null
       dropoffAddress: string | null
       pickupLat: number | null
@@ -20,7 +20,7 @@ export type UnifiedJob =
   | {
       kind: 'transport'
       id: string
-      cargoType: 'light' | 'heavy'
+      cargoType: 'light' | 'medium' | 'heavy'
       pickupAddress: string | null
       dropoffAddress: string | null
       pickupLat: number | null

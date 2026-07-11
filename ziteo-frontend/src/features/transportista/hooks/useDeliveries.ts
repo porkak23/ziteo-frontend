@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { useAuthStore } from '../../auth/store/authStore'
 import type { Delivery, AcceptDeliveryResult, CargoCapability } from '../types/deliveryTypes'
+import { allowedCargoForCapability } from '../types/deliveryTypes'
 
 // ─── Query keys ──────────────────────────────────────────────────────────────
 
@@ -32,9 +33,10 @@ export function usePendingDeliveries(cargoCapability?: CargoCapability | null) {
           )
         `)
         .eq('status', 'pending')
+        .eq('fulfillment_mode', 'pool')
 
       if (cargoCapability) {
-        q = q.eq('cargo_type', cargoCapability)
+        q = q.in('cargo_type', allowedCargoForCapability(cargoCapability))
       }
 
       const { data, error } = await q

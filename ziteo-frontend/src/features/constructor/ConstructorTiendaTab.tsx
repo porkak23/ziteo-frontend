@@ -5,6 +5,8 @@ import { ZButton } from '@/shared/design/components/ZButton'
 import { SectionTitle } from '@/shared/design/shell/SectionTitle'
 import { ZHeader } from '@/shared/design/components/ZHeader'
 import { MapPicker, type MapPickerValue } from '@/shared/components/MapPicker'
+import { CargoSelector } from '../tienda/components/CargoSelector'
+import type { CargoType } from '../tienda/hooks/useCart'
 import { MisPedidosScreen } from '../tienda/components/MisPedidosScreen'
 import { TrackOrderScreen } from '../tienda/components/TrackOrderScreen'
 import { QrPagoModal } from '../tienda/components/QrPagoModal'
@@ -244,6 +246,9 @@ function ProductDetail({ product, onBack, onAdd }: {
 }
 
 // ── CartScreen ────────────────────────────────────────────────────────────────
+const detectCargoType = (w: number | null): CargoType | null =>
+  w === null ? null : w < 5 ? 'light' : w <= 100 ? 'medium' : 'heavy'
+
 function CartScreen({ cart, setCart, onBack }: {
   cart: CartItem[]; setCart: React.Dispatch<React.SetStateAction<CartItem[]>>; onBack: () => void
 }) {
@@ -251,6 +256,7 @@ function CartScreen({ cart, setCart, onBack }: {
   const [payMethod, setPayMethod] = useState('')
   const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery')
   const [deliveryLoc, setDeliveryLoc] = useState<MapPickerValue | null>(null)
+  const [cargoType, setCargoType] = useState<CargoType | null>(null)
   const [originProjectId, setOriginProjectId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [ordered, setOrdered] = useState(false)
@@ -265,6 +271,20 @@ function CartScreen({ cart, setCart, onBack }: {
   )
 
   const total = cart.reduce((sum, c) => sum + c.price_num * c.qty, 0)
+
+  const totalWeight = useMemo(() => {
+    // Product.weight es un string preformateado ("5kg" / "—"), parseamos el numérico.
+    const weightOf = (c: CartItem): number | null => {
+      const m = /^([\d.]+)kg$/.exec(c.weight)
+      return m ? parseFloat(m[1]) : null
+    }
+    const hasWeight = cart.some((c) => weightOf(c) != null)
+    if (!hasWeight) return null
+    return cart.reduce((sum, c) => sum + (weightOf(c) ?? 0) * c.qty, 0)
+  }, [cart])
+  const detectedCargo = useMemo(() => detectCargoType(totalWeight), [totalWeight])
+  const effectiveCargo = cargoType ?? detectedCargo
+
   const removeItem = (id: string) => setCart(prev => prev.filter(c => c.id !== id))
   const updateQty = (id: string, qty: number) => setCart(prev => prev.map(c => c.id === id ? { ...c, qty: Math.max(1, Math.min(c.stock, qty)) } : c))
 
@@ -305,7 +325,7 @@ function CartScreen({ cart, setCart, onBack }: {
           p_delivery_address: deliveryMethod === 'delivery' ? deliveryLoc?.address ?? undefined : undefined,
           p_delivery_lat: deliveryMethod === 'delivery' ? deliveryLoc?.lat || undefined : undefined,
           p_delivery_lng: deliveryMethod === 'delivery' ? deliveryLoc?.lng || undefined : undefined,
-          p_cargo_type: undefined,
+          p_cargo_type: effectiveCargo ?? undefined,
           p_project_id: deliveryMethod === 'delivery' ? (originProjectId ?? undefined) : undefined,
         })
         if (rpcError) throw rpcError
@@ -472,6 +492,16 @@ function CartScreen({ cart, setCart, onBack }: {
                     }}
                     placeholder="¿A dónde enviamos tu pedido?"
                     height={200}
+                  />
+                </div>
+              )}
+              {deliveryMethod === 'delivery' && (
+                <div style={{ marginTop: 12 }}>
+                  <CargoSelector
+                    value={cargoType}
+                    detected={detectedCargo}
+                    hasWeight={totalWeight !== null}
+                    onChange={setCargoType}
                   />
                 </div>
               )}

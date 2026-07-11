@@ -19,6 +19,10 @@ export interface VendedorProfileData {
   store_address: string | null
   store_lat: number | null
   store_lng: number | null
+  vehicle_type: string | null
+  vehicle_plate: string | null
+  fleet_driver_name: string | null
+  vehicle_available: boolean | null
 }
 
 export function useVendedorProfile(vendedorId: string) {
@@ -62,6 +66,10 @@ export function useVendedorProfile(vendedorId: string) {
         store_address: role?.store_address ?? null,
         store_lat: role?.store_lat ?? null,
         store_lng: role?.store_lng ?? null,
+        vehicle_type: role?.vehicle_type ?? null,
+        vehicle_plate: role?.vehicle_plate ?? null,
+        fleet_driver_name: role?.fleet_driver_name ?? null,
+        vehicle_available: role?.vehicle_available ?? null,
       } satisfies VendedorProfileData
     },
   })
@@ -81,6 +89,10 @@ export interface UpdateVendedorVars {
   store_address?: string | null
   store_lat?: number | null
   store_lng?: number | null
+  vehicle_type?: string | null
+  vehicle_plate?: string | null
+  fleet_driver_name?: string | null
+  vehicle_available?: boolean
 }
 
 export function useUpdateVendedorProfile() {
@@ -100,6 +112,10 @@ export function useUpdateVendedorProfile() {
       if (fields.store_address !== undefined) roleUpdate.store_address = fields.store_address
       if (fields.store_lat !== undefined) roleUpdate.store_lat = fields.store_lat
       if (fields.store_lng !== undefined) roleUpdate.store_lng = fields.store_lng
+      if (fields.vehicle_type !== undefined) roleUpdate.vehicle_type = fields.vehicle_type
+      if (fields.vehicle_plate !== undefined) roleUpdate.vehicle_plate = fields.vehicle_plate
+      if (fields.fleet_driver_name !== undefined) roleUpdate.fleet_driver_name = fields.fleet_driver_name
+      if (fields.vehicle_available !== undefined) roleUpdate.vehicle_available = fields.vehicle_available
 
       if (Object.keys(roleUpdate).length > 0) {
         const { error } = await supabase
