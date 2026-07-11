@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { registerWithPin, resendOtp, verifyOtpAndLogin, AuthServiceError } from '../services/authService'
+import { registerWithPin, resendOtp, verifyOtpAndLogin, loginWithPin, AuthServiceError } from '../services/authService'
 import { useAuthStore } from '../store/authStore'
 import { useBiometricAuth } from '../../../shared/hooks/useBiometricAuth'
 import type { UserRole } from '../types/authTypes'
@@ -242,6 +242,15 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
         },
         pin
       )
+      if (!result.requires_otp) {
+        // Piloto sin WhatsApp: el backend ya verificó el teléfono y no hay
+        // código que ingresar. Logueamos directo con el PIN recién creado.
+        const user = await loginWithPin('+591' + phone, pin)
+        setUser(user)
+        track.onboardingComplete(selectedRole)
+        setSheetStep('biometric')
+        return
+      }
       // auth-register created the user and sent the OTP (or returned debug_otp in dev)
       if (result.debug_otp) setDebugOtp(result.debug_otp)
       setSheetStep('code')

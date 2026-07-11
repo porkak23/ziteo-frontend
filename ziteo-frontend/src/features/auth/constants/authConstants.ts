@@ -2,7 +2,7 @@ import type { UserRole } from '../types/authTypes'
 import { CIUDADES_ACTIVAS } from '../../../shared/constants/geography'
 export type { CiudadActiva as BolivianCity } from '../../../shared/constants/geography'
 
-export const PIN_LENGTH = 8
+export const PIN_LENGTH = 6
 export const OTP_LENGTH = 6
 export const OTP_EXPIRY_SECONDS = 300
 
@@ -19,7 +19,7 @@ export const USER_ROLES: Record<UserRole, string> = {
 export const AUTH_ERRORS: Record<string, string> = {
   PHONE_ALREADY_REGISTERED: 'Este número ya tiene una cuenta',
   INVALID_PIN: 'Contraseña incorrecta',
-  INVALID_PIN_FORMAT: 'La contraseña debe tener exactamente 8 dígitos',
+  INVALID_PIN_FORMAT: 'La contraseña debe tener exactamente 6 dígitos',
   INVALID_EMAIL: 'El correo electrónico no es válido',
   INVALID_OTP: 'El código no es válido',
   OTP_EXPIRED: 'El código expiró, solicita uno nuevo',

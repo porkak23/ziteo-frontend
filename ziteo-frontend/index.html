@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#D94F00">
+    <meta name="theme-color" content="#A43700">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -26,20 +26,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Google Fonts: Barlow (headlines) + Figtree (body) -->
+    <!-- Google Fonts: Space Grotesk (headlines) + Manrope (body/label) -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Barlow:wght@700;900&family=Figtree:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
 
-    <!-- Google Fonts: Manrope (design system) -->
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-
-    <!-- Google Fonts: Material Symbols Outlined (icon font used app-wide) -->
+    <!-- Google Fonts: Material Symbols Outlined — loaded async so it never blocks FCP.
+         Icons only render after the font arrives; they are not part of first text paint. -->
     <link
+      rel="preload"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..700,0..1,-50..200&display=block"
-      rel="stylesheet"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..700,0..1,-50..200&display=block"
+        rel="stylesheet"
+      />
+    </noscript>
     <!-- Microsoft Clarity — heatmaps y rage clicks (solo si VITE_CLARITY_ID está definido) -->
     <script>
       var clarityId = '%VITE_CLARITY_ID%';

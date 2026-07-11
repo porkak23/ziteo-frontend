@@ -253,7 +253,12 @@ export function LicitacionFeed() {
                       : 'bg-primary text-on-primary'
                   }`}
                 >
-                  {lic._ya_postulado ? 'Ya postulado ✓' : 'Postularme'}
+                  {lic._ya_postulado ? (
+                    <span className="flex items-center gap-1">
+                      Ya postulado
+                      <span className="material-symbols-outlined text-[14px] leading-none">check</span>
+                    </span>
+                  ) : 'Postularme'}
                 </button>
               </div>
             </div>

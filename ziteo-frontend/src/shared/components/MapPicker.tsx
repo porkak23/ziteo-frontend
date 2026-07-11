@@ -1,8 +1,17 @@
 /// <reference types="@types/google.maps" />
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { Z } from '@/shared/design/tokens'
-import { MAPS_KEY, hasMapsKey, loadMapsLibrary } from '@/shared/lib/mapsLoader'
+import { hasMapsKey, loadMapsLibrary } from '@/shared/lib/mapsLoader'
+import { getGeoService } from '@/shared/geo'
+import { SIMULATION } from '@/shared/config/simulation'
 import { AddressInput } from '@/shared/components/AddressInput'
+import { captureException } from '@/lib/sentryClient'
+import { useToast } from '@/shared/hooks/useToast'
+import { Toast } from '@/shared/components/Toast'
+
+const MockMapPicker = SIMULATION
+  ? lazy(() => import('@/sandbox/components/MockMapPicker').then((m) => ({ default: m.MockMapPicker })))
+  : null
 
 export interface MapPickerValue {
   lat: number
@@ -23,23 +32,12 @@ const BOLIVIA_CENTER = { lat: -16.5, lng: -64.5 }
 const BOLIVIA_ZOOM = 6
 const PLACED_ZOOM = 15
 
-async function reverseGeocode(lat: number, lng: number): Promise<string> {
-  try {
-    const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=es`
-    )
-    const data = await res.json() as { results?: { formatted_address: string }[] }
-    return data.results?.[0]?.formatted_address ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
-  } catch {
-    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
-  }
-}
-
 export function MapPicker({ value, onChange, placeholder, height = 280, label }: MapPickerProps) {
   const mapDivRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const markerRef = useRef<google.maps.Marker | null>(null)
   const mountedRef = useRef(true)
+  const { toasts, showToast, removeToast } = useToast()
 
   const handleLocationResult = useCallback(
     async (lat: number, lng: number) => {
@@ -48,7 +46,13 @@ export function MapPicker({ value, onChange, placeholder, height = 280, label }:
       mapRef.current.panTo(pos)
       mapRef.current.setZoom(PLACED_ZOOM)
       markerRef.current.setPosition(pos)
-      const address = await reverseGeocode(lat, lng)
+      let address: string
+      try {
+        address = await getGeoService().reverseGeocode(lat, lng)
+      } catch (err) {
+        captureException(err, { context: 'MapPicker.reverseGeocode' })
+        address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+      }
       if (mountedRef.current) {
         onChange({ lat, lng, address })
       }
@@ -110,6 +114,11 @@ export function MapPicker({ value, onChange, placeholder, height = 280, label }:
         if (!e.latLng) return
         handleLocationResult(e.latLng.lat(), e.latLng.lng())
       })
+    }).catch((err) => {
+      captureException(err, { context: 'MapPicker.loadMapsLibrary' })
+      if (mountedRef.current) {
+        showToast('No pudimos cargar el mapa, ingresa la dirección manualmente', 'error')
+      }
     })
 
     return () => {
@@ -132,6 +141,15 @@ export function MapPicker({ value, onChange, placeholder, height = 280, label }:
     const pos = { lat: value.lat, lng: value.lng }
     markerRef.current.setPosition(pos)
   }, [value?.lat, value?.lng]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- Sandbox: mock map picker with fixed test coordinates ---
+  if (MockMapPicker && getGeoService().kind === 'mock') {
+    return (
+      <Suspense fallback={null}>
+        <MockMapPicker value={value} onChange={onChange} label={label} height={height} />
+      </Suspense>
+    )
+  }
 
   // --- Fallback: no API key ---
   if (!hasMapsKey) {
@@ -182,6 +200,7 @@ export function MapPicker({ value, onChange, placeholder, height = 280, label }:
   // --- With Google Maps ---
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <Toast toasts={toasts} onRemove={removeToast} />
       {label && (
         <label
           style={{

@@ -277,6 +277,7 @@ export function ProjectDetailScreen({ project, onBack }: ProjectDetailScreenProp
           <img
             src={project.photo_url}
             alt={project.name}
+            loading="lazy"
             className="w-full h-48 object-cover rounded-2xl"
           />
         )}

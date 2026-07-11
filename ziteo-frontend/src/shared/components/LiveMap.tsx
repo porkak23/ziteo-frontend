@@ -1,7 +1,9 @@
 /// <reference types="@types/google.maps" />
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { Z } from '@/shared/design/tokens'
 import { hasMapsKey, loadMapsLibrary } from '@/shared/lib/mapsLoader'
+import { getGeoService } from '@/shared/geo'
+import { SIMULATION } from '@/shared/config/simulation'
 
 export interface DriverPosition {
   lat: number
@@ -22,6 +24,10 @@ interface LiveMapProps {
 // Bolivia center as fallback
 const BOLIVIA_CENTER = { lat: -16.5, lng: -64.5 }
 const BOLIVIA_ZOOM = 6
+
+const MockLiveMap = SIMULATION
+  ? lazy(() => import('@/sandbox/components/MockMap').then((m) => ({ default: m.MockLiveMap })))
+  : null
 
 // Material Design truck path (simplified, fits 0-24 viewport)
 const TRUCK_SVG_PATH =
@@ -216,6 +222,22 @@ export function LiveMap({
 
     fitBounds(mapRef.current, driverPosition, pickupLat, pickupLng, dropoffLat, dropoffLng)
   }, [driverPosition, pickupLat, pickupLng, dropoffLat, dropoffLng])
+
+  // --- Sandbox: mock live map with SVG rendering ---
+  if (MockLiveMap && getGeoService().kind === 'mock') {
+    return (
+      <Suspense fallback={null}>
+        <MockLiveMap
+          driverPosition={driverPosition}
+          pickupLat={pickupLat}
+          pickupLng={pickupLng}
+          dropoffLat={dropoffLat}
+          dropoffLng={dropoffLng}
+          height={height}
+        />
+      </Suspense>
+    )
+  }
 
   // --- Fallback: no API key ---
   if (!hasMapsKey) {

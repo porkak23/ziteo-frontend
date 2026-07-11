@@ -50,7 +50,7 @@
     /* Text — true near-black for maximum contrast */
     --color-on-background:             #0D0D0D;
     --color-on-surface:                #0D0D0D;
-    --color-on-surface-variant:        #6B7280;
+    --color-on-surface-variant:        #5B616B;
 
     /* States */
     --color-error:                     #DC2626;

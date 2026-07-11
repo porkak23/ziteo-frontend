@@ -180,7 +180,7 @@ function ProviderStoreHeader({
           className="flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 rounded-xl px-3 py-1.5 font-label text-xs font-semibold shrink-0 active:opacity-70 transition-opacity"
           aria-label="Surtir pedido rápido"
         >
-          <span className="text-xs leading-none">⚡</span>
+          <span className="material-symbols-outlined text-sm leading-none">bolt</span>
           Surtir pedido
         </button>
       </div>
@@ -717,7 +717,7 @@ export function TiendaScreen() {
               <h2 className="font-headline font-black text-white text-2xl leading-tight mb-1">{banner.title}</h2>
               <p className="font-body text-white/80 text-sm mb-3">{banner.subtitle}</p>
               <div className="flex items-center justify-between">
-                <button className="bg-white/20 backdrop-blur-sm text-white text-xs font-label font-bold px-4 py-2 rounded-full border border-white/30 active:bg-white/30">
+                <button className="bg-white/25 text-white text-xs font-label font-bold px-4 py-2 rounded-full active:bg-white/35">
                   {banner.cta} →
                 </button>
                 {/* Dots */}

@@ -16,6 +16,9 @@ export interface VendedorProfileData {
   payment_qr_url: string | null
   is_available: boolean | null
   is_verified: boolean | null
+  store_address: string | null
+  store_lat: number | null
+  store_lng: number | null
 }
 
 export function useVendedorProfile(vendedorId: string) {
@@ -56,6 +59,9 @@ export function useVendedorProfile(vendedorId: string) {
         payment_qr_url: role?.payment_qr_url ?? null,
         is_available: role?.is_available ?? null,
         is_verified: role?.is_verified ?? null,
+        store_address: role?.store_address ?? null,
+        store_lat: role?.store_lat ?? null,
+        store_lng: role?.store_lng ?? null,
       } satisfies VendedorProfileData
     },
   })
@@ -72,6 +78,9 @@ export interface UpdateVendedorVars {
   payment_bank_transfer?: string | null
   payment_qr_url?: string | null
   is_available?: boolean
+  store_address?: string | null
+  store_lat?: number | null
+  store_lng?: number | null
 }
 
 export function useUpdateVendedorProfile() {
@@ -88,6 +97,9 @@ export function useUpdateVendedorProfile() {
       if (fields.payment_bank_transfer !== undefined) roleUpdate.payment_bank_transfer = fields.payment_bank_transfer
       if (fields.payment_qr_url !== undefined) roleUpdate.payment_qr_url = fields.payment_qr_url
       if (fields.is_available !== undefined) roleUpdate.is_available = fields.is_available
+      if (fields.store_address !== undefined) roleUpdate.store_address = fields.store_address
+      if (fields.store_lat !== undefined) roleUpdate.store_lat = fields.store_lat
+      if (fields.store_lng !== undefined) roleUpdate.store_lng = fields.store_lng
 
       if (Object.keys(roleUpdate).length > 0) {
         const { error } = await supabase

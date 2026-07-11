@@ -5,6 +5,9 @@ import { DashHeader } from '@/shared/design/shell/DashHeader'
 import AvatarMenu from '@/shared/components/AvatarMenu'
 import { useNavStore } from '@/shared/store/navStore'
 import { usePaymentQr } from '@/features/proveedor/hooks/usePaymentQr'
+import { useUpdateVendedorProfile } from '@/features/proveedor/hooks/useVendedorProfile'
+import { MapPicker } from '@/shared/components/MapPicker'
+import type { MapPickerValue } from '@/shared/components/MapPicker'
 import { RoleDashNav } from '@/shared/design/shell/RoleDashNav'
 import type { Tab } from '@/shared/design/shell/RoleDashNav'
 import { SummaryCard } from '@/shared/design/shell/SummaryCard'
@@ -1721,6 +1724,7 @@ function GestionEnvioScreen({
   const [plate, setPlate] = useState('')
   const [dispatching, setDispatching] = useState(false)
   const { mutate: updateStatus } = useUpdateOrderStatus()
+  const { toasts, showToast, removeToast } = useToast()
 
   const finish = onDone ?? onBack
 
@@ -1730,28 +1734,48 @@ function GestionEnvioScreen({
   const handleFlota = async () => {
     if (!driver || !plate) return
     setDispatching(true)
-    // Flota propia: crear registro de entrega en tránsito para poder dar seguimiento
-    await supabase.from('deliveries').insert({
-      order_id: order.id,
-      status: 'in_transit',
-      cargo_type: order.cargo_type ?? 'light',
+    // Flota propia: crea el registro de entrega vía RPC (deliveries_insert_rpc
+    // bloquea el INSERT directo desde el cliente). El vehículo propio de la
+    // tienda queda fuera del pool de choferes Ziteoo.
+    const { error } = await supabase.rpc('create_delivery_by_provider', {
+      p_order_id: order.id,
+      p_mode: 'flota',
+      p_driver_name: driver,
+      p_vehicle_plate: plate,
     })
+    if (error) {
+      showToast(error.message || 'No se pudo registrar la entrega', 'error')
+      setDispatching(false)
+      return
+    }
     updateStatus(
       { orderId: order.id, status: 'shipped', providerId },
-      { onSuccess: finish, onError: () => setDispatching(false) }
+      { onSuccess: finish, onError: (err) => {
+        showToast(err instanceof Error ? err.message : 'Error al cambiar estado', 'error')
+        setDispatching(false)
+      } }
     )
   }
 
   const handleRepartidor = async () => {
     setDispatching(true)
-    await supabase.from('deliveries').insert({
-      order_id: order.id,
-      status: 'pending',
-      cargo_type: order.cargo_type ?? 'light',
+    // Repartidor: entra al pool de choferes Ziteoo (status pending dispara la
+    // notificación a choferes vía trigger).
+    const { error } = await supabase.rpc('create_delivery_by_provider', {
+      p_order_id: order.id,
+      p_mode: 'repartidor',
     })
+    if (error) {
+      showToast(error.message || 'No se pudo registrar la entrega', 'error')
+      setDispatching(false)
+      return
+    }
     updateStatus(
       { orderId: order.id, status: 'processing', providerId },
-      { onSuccess: finish, onError: () => setDispatching(false) }
+      { onSuccess: finish, onError: (err) => {
+        showToast(err instanceof Error ? err.message : 'Error al cambiar estado', 'error')
+        setDispatching(false)
+      } }
     )
   }
 
@@ -1786,6 +1810,7 @@ function GestionEnvioScreen({
   return (
     <ZScreen bg={Z.bg} style={{ position: 'fixed' }}>
       <ZHeader title="Gestionar Envío" onBack={onBack} />
+      <Toast toasts={toasts} onRemove={removeToast} />
       <div style={{ flex: 1, padding: '8px 20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{
           padding: '14px', borderRadius: Z.r.md,
@@ -2208,6 +2233,9 @@ function VendedorCuentaScreen({ onClose }: { onClose: () => void }) {
   const { toasts, showToast, removeToast } = useToast()
   const { uploadQr, uploading } = usePaymentQr()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showStoreLocationModal, setShowStoreLocationModal] = useState(false)
+  const [storeLocation, setStoreLocation] = useState<MapPickerValue | null>(null)
+  const { mutateAsync: updateVendedorProfile, isPending: savingStoreLocation } = useUpdateVendedorProfile()
 
   const { data: qrStatus, refetch: refetchQr } = useQuery<{ payment_qr_url: string | null }>({
     queryKey: ['vendedor-qr-status', user?.user_id],
@@ -2225,7 +2253,54 @@ function VendedorCuentaScreen({ onClose }: { onClose: () => void }) {
     },
   })
 
+  const { data: storeLocationStatus, refetch: refetchStoreLocation } = useQuery<{
+    store_address: string | null
+    store_lat: number | null
+    store_lng: number | null
+  }>({
+    queryKey: ['vendedor-store-location', user?.user_id],
+    enabled: !!user?.user_id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('store_address, store_lat, store_lng')
+        .eq('user_id', user!.user_id)
+        .eq('role', 'proveedor')
+        .maybeSingle()
+      if (error) throw error
+      return data ?? { store_address: null, store_lat: null, store_lng: null }
+    },
+  })
+
   const hasQr = !!qrStatus?.payment_qr_url
+  const hasStoreLocation = !!storeLocationStatus?.store_address
+
+  const openStoreLocationModal = () => {
+    setStoreLocation(
+      storeLocationStatus?.store_address && storeLocationStatus.store_lat != null && storeLocationStatus.store_lng != null
+        ? { address: storeLocationStatus.store_address, lat: storeLocationStatus.store_lat, lng: storeLocationStatus.store_lng }
+        : null
+    )
+    setShowStoreLocationModal(true)
+  }
+
+  const handleSaveStoreLocation = async () => {
+    if (!user?.user_id || !storeLocation) return
+    try {
+      await updateVendedorProfile({
+        vendedorId: user.user_id,
+        store_address: storeLocation.address,
+        store_lat: storeLocation.lat,
+        store_lng: storeLocation.lng,
+      })
+      await refetchStoreLocation()
+      showToast('Ubicación de tienda guardada', 'success')
+      setShowStoreLocationModal(false)
+    } catch {
+      showToast('Error al guardar la ubicación', 'error')
+    }
+  }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -2326,7 +2401,99 @@ function VendedorCuentaScreen({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
+        {/* Sección: Ubicación de la tienda */}
+        <div>
+          <div style={{
+            fontFamily: Z.font, fontSize: 11, fontWeight: 700, color: Z.textMuted,
+            letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10,
+          }}>
+            Ubicación de la Tienda
+          </div>
+          <div style={{
+            padding: '16px', borderRadius: Z.r.md, background: Z.surface,
+            border: `1px solid ${Z.border}`, display: 'flex', flexDirection: 'column', gap: 12,
+          }}>
+            <div>
+              <div style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text }}>
+                {hasStoreLocation ? 'Ubicación configurada' : 'Sin ubicación configurada'}
+              </div>
+              <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 3 }}>
+                {hasStoreLocation
+                  ? storeLocationStatus?.store_address
+                  : 'Necesaria para que los choferes puedan recoger los pedidos'}
+              </div>
+            </div>
+
+            <button
+              onClick={openStoreLocationModal}
+              style={{
+                padding: '10px 16px', borderRadius: Z.r.sm, cursor: 'pointer',
+                background: hasStoreLocation ? Z.surface : Z.orangeDark,
+                color: hasStoreLocation ? Z.text : '#fff',
+                border: hasStoreLocation ? `1.5px solid ${Z.border}` : 'none',
+                fontFamily: Z.font, fontSize: 13, fontWeight: 700,
+                width: '100%', outline: 'none',
+              } as React.CSSProperties}
+            >
+              {hasStoreLocation ? 'Editar ubicación' : 'Configurar ubicación'}
+            </button>
+          </div>
+        </div>
+
       </div>
+
+      {/* ── Modal: Ubicación de la Tienda ── */}
+      {showStoreLocationModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 110, display: 'flex', flexDirection: 'column',
+          justifyContent: 'flex-end', background: 'rgba(0,0,0,0.4)',
+        }}>
+          <div
+            style={{ position: 'absolute', inset: 0 }}
+            onClick={() => !savingStoreLocation && setShowStoreLocationModal(false)}
+          />
+          <div style={{
+            position: 'relative', background: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            padding: '24px', display: 'flex', flexDirection: 'column', gap: 16,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ fontFamily: Z.font, fontSize: 18, fontWeight: 800, color: Z.text, margin: 0 }}>
+                Ubicación de la Tienda
+              </h2>
+              <button
+                onClick={() => !savingStoreLocation && setShowStoreLocationModal(false)}
+                style={{
+                  width: 36, height: 36, borderRadius: '50%', border: 'none', background: Z.divider,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', outline: 'none',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: Z.text }}>close</span>
+              </button>
+            </div>
+
+            <MapPicker
+              label="Dirección de la tienda"
+              value={storeLocation}
+              onChange={setStoreLocation}
+              placeholder="¿Dónde está tu tienda?"
+              height={220}
+            />
+
+            <button
+              onClick={handleSaveStoreLocation}
+              disabled={savingStoreLocation || !storeLocation?.address}
+              style={{
+                background: Z.orangeDark, color: '#fff', fontFamily: Z.font, fontSize: 14,
+                fontWeight: 700, border: 'none', borderRadius: Z.r.sm, padding: '14px',
+                cursor: 'pointer', outline: 'none', transition: 'opacity 0.2s',
+                opacity: savingStoreLocation ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              {savingStoreLocation ? 'Guardando...' : 'Confirmar ubicación'}
+            </button>
+          </div>
+        </div>
+      )}
     </ZScreen>
   )
 }

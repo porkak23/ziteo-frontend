@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { getGeoService } from '@/shared/geo'
+import { SIMULATION } from '@/shared/config/simulation'
 
 export interface GeoPosition {
   lat: number
@@ -25,6 +27,31 @@ export function useGeolocation(enabled: boolean) {
       setState({ position: null, error: null, loading: false })
       return
     }
+
+    // Sandbox: reemplaza el GPS nativo por posiciones simuladas con jitter,
+    // para que el tracking del chofer "se mueva" sin depender del dispositivo.
+    if (SIMULATION && getGeoService().kind === 'mock') {
+      setState((s) => ({ ...s, loading: true }))
+      let cancelled = false
+
+      const tick = async () => {
+        const point = await getGeoService().getCurrentPosition()
+        if (cancelled || !point) return
+        setState({
+          position: { lat: point.lat, lng: point.lng, accuracy: 15 },
+          error: null,
+          loading: false,
+        })
+      }
+
+      tick()
+      const id = setInterval(tick, 5000)
+      return () => {
+        cancelled = true
+        clearInterval(id)
+      }
+    }
+
     if (!navigator.geolocation) {
       setState({ position: null, error: 'Geolocalización no disponible en este dispositivo', loading: false })
       return

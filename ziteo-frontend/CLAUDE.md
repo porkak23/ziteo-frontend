@@ -24,6 +24,32 @@ Empresarios y contratistas independientes del rubro de la construcción en Boliv
 4. **Adaptable al contexto**: Light en oficina, dark en obra. Ambos modos first-class.
 5. **Bolivia primero**: UX auténticamente local (restringido a Sucre, Potosí y Santa Cruz por ahora), no una traducción de Silicon Valley.
 
+## Lecciones Aprendidas — Deploy a Vercel (2026-06-30)
+
+### Receta limpia (funcionó sin errores)
+El proyecto **ya está enlazado** (`ziteo-frontend/.vercel/project.json` → project `ziteo-frontend`, org `team_VpGlbcRAfVePpyVudZPlOv7y`). Para desplegar a producción, **desde `ziteo-frontend/`**:
+```bash
+vercel --prod --yes
+```
+Build remoto corre `npm run build` → `dist` (config en `vercel.json`: framework `vite`, rewrites SPA `/(.*)→/index.html`). Alias de producción: **https://ziteo-frontend.vercel.app**. Verificar con `curl -sI https://ziteo-frontend.vercel.app` → `200` + `<title>Ziteoo</title>`.
+
+### Requisitos que NO se deben romper
+- **`.npmrc` con `legacy-peer-deps=true`** es obligatorio (React 19 genera conflictos de peer deps). Sin esto, `npm install` en Vercel falla.
+- **Sanity local antes de subir:** `npm run build` local atrapa errores de TS (`tsc -b`) más rápido que esperar el build remoto.
+- El deploy es **solo frontend**. Las Edge Functions de Supabase (`auth-*`, etc.) se despliegan aparte con `npx supabase functions deploy` y NO se tocan en el deploy de Vercel.
+
+### Env vars en Vercel (producción) — estado 2026-06-30
+- **Configuradas (lo crítico):** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Sin estas dos la app no arranca.
+- **Faltantes (no bloquean el boot, pero degradan features):** `VITE_GOOGLE_MAPS_KEY` (mapas en fallback de solo-texto), `VITE_SENTRY_DSN` (sin reporte de errores), `VITE_VAPID_PUBLIC_KEY` (sin web push), `VITE_POSTHOG_KEY`/`VITE_CLARITY_ID`/`VITE_GA4_ID` (sin analytics).
+- Las `VITE_FIREBASE_*` están de sobra (legacy, ya no se usan).
+- Agregar una env var: `vercel env add VITE_GOOGLE_MAPS_KEY production` y luego re-desplegar (`vercel --prod`) para que entre al bundle — las `VITE_*` se inyectan en **build time**, no en runtime.
+
+### Notas
+- `CRLF will be replaced by LF` y advertencias de Sentry sourcemap durante el build son ruido, no errores.
+- Rutas case-sensitive: el build remoto corre en Linux; un import con mayúsculas/minúsculas incorrectas pasa en Windows local pero rompe en Vercel. Si el build local pasa y el remoto falla, sospechar de esto primero.
+
+---
+
 ## Lecciones Aprendidas — Pool unificado del Chofer (2026-06-26)
 
 ### La regla
@@ -109,4 +135,52 @@ return errorResponse('WHATSAPP_SEND_FAILED', String(waErr), 500, req)
 Revertir después del diagnóstico.
 
 ### Cuenta de prueba Meta
-La cuenta WhatsApp Business de Ziteoo es de prueba — solo envía a números pre-registrados como destinatarios en el panel de Meta. Número de prueba registrado: `+59173401469`. Para enviar a usuarios reales hay que migrar a una cuenta de producción verificada.
+La cuenta WhatsApp Business de Ziteoo es de prueba — solo envía a números pre-registrados como destinatarios en el panel de Meta. Números registrados conocidos: `+59173401469`, `+59169163386`. Para enviar a usuarios reales hay que migrar a una cuenta de producción verificada.
+
+### CRÍTICO — Verificar expiración del token ANTES de confiar en él (2026-06-30)
+La causa raíz recurrente del Error 190 es un **token temporal**. Antes de configurar `WHATSAPP_ACCESS_TOKEN`, validar SIEMPRE con:
+```bash
+curl -s "https://graph.facebook.com/v19.0/debug_token?input_token=$TOKEN&access_token=$TOKEN"
+```
+- `type: USER` + `expires_at` con valor → **token temporal**, expira pronto. NO sirve para producción.
+- `type: SYSTEM_USER` + `expires_at: 0` → **permanente** (Token Expiry = Never). El correcto para el lanzamiento.
+
+El token recibido el 2026-06-30 (app_id `1751365125904282`) era `type: USER` con `expires_at` ≈ 2026-07-01 (~18h de vida) — sirvió para pruebas pero **se debe reemplazar por un token de System User permanente antes del lanzamiento masivo**, o el registro se romperá con Error 190 al expirar.
+
+Datos vigentes de la cuenta (2026-06-30): `WHATSAPP_PHONE_NUMBER_ID=1180697468467996`, `WABA_ID=27364225239893891`, plantilla `ziteoo_otp`/`es_MX` APPROVED. El WABA ID solo se usa para gestionar/listar plantillas (`GET /{WABA_ID}/message_templates`), no para enviar.
+
+### Procedimiento para actualizar el token (sin redeploy de funciones)
+Los secrets se leen en runtime; basta con setearlos, no hace falta redesplegar las Edge Functions:
+```bash
+npx supabase secrets set WHATSAPP_ACCESS_TOKEN='...' WHATSAPP_PHONE_NUMBER_ID='1180697468467996' WHATSAPP_TEMPLATE_NAME='ziteoo_otp' --project-ref yvqbubjfhmuztknmhyvd
+```
+Verificar entrega con un envío directo de la plantilla antes de depender del flujo de la app:
+```bash
+curl -s "https://graph.facebook.com/v19.0/$PHONE_NUMBER_ID/messages" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"messaging_product":"whatsapp","to":"<sin +>","type":"template","template":{"name":"ziteoo_otp","language":{"code":"es_MX"},"components":[{"type":"body","parameters":[{"type":"text","text":"123456"}]}]}}'
+```
+`message_status: accepted` = número entregable. Error 131030 = número no está en la allow-list de la cuenta de prueba.
+
+### Error opaco PROFILE_CREATION_FAILED en el registro = `city` inválida (2026-06-30)
+`auth-register` devuelve `500 PROFILE_CREATION_FAILED` (mensaje genérico "Failed to create user profile") cuando el insert en `profiles` viola un constraint. La causa más común es **`city`**:
+- `profiles.city` es **NOT NULL** y tiene check `profiles_city_check`: solo acepta **`Sucre`, `Potosí`, `Santa Cruz`** (o NULL, pero el NOT NULL lo impide) — más `valid_city` (no vacío).
+- Si el cliente no manda `city`, o manda una ciudad fuera de esas 3, el registro falla con ese error opaco.
+- El detalle real solo aparece en los **logs de Postgres** (`get_logs service=postgres`): `null value in column "city" ... violates not-null constraint` o `violates check constraint "profiles_city_check"`. Los logs de edge-function solo muestran el `500`, no la causa.
+- Al probar el endpoint con curl, **siempre incluir `"city":"Santa Cruz"`** (o Sucre/Potosí). La app real ya manda `selectedCity`, por eso solo se rompe en pruebas crudas o si se agrega una ciudad nueva sin actualizar el check.
+
+### Probar registro end-to-end contra prod (con OTP real)
+Con `DEBUG_OTP_ENABLED=true`, mandar header `Origin: http://localhost:5173` hace que `auth-register`/`auth-otp-verify` devuelvan `debug_otp` además de enviar el WhatsApp real. Flujo de prueba:
+```bash
+ANON=$(grep -E '^VITE_SUPABASE_ANON_KEY=' .env.production | cut -d= -f2-)
+# 1) register → devuelve debug_otp y envía WhatsApp
+curl -s .../functions/v1/auth-register -H "apikey: $ANON" -H "Authorization: Bearer $ANON" -H "Origin: http://localhost:5173" \
+  -d '{"phone":"+591XXXXXXXX","name":"...","pin":"NNNNNN","initial_role":"constructor","city":"Santa Cruz"}'
+# 2) verify con ese código → onboarding_completed=true
+curl -s .../functions/v1/auth-otp-verify ... -d '{"phone":"+591XXXXXXXX","otp":"NNNNNN"}'
+# 3) login con el PIN → access_token
+curl -s .../functions/v1/auth-login ... -d '{"phone":"+591XXXXXXXX","pin":"NNNNNN"}'
+```
+El cuerpo de `otp-verify` usa la clave **`otp`** (no `code`); el de register/login usa `pin`.
+
+### Nota sobre el flag OTP_VERIFICATION_REQUIRED (divergencia local-vs-prod)
+El `register/index.ts` **local** tiene un flag `OTP_VERIFICATION_REQUIRED` (default `false` → omite OTP). La versión **desplegada en prod (v34) NO tiene ese flag** y siempre exige OTP. NO redesplegar el register local sin antes setear el secret `OTP_VERIFICATION_REQUIRED=true`, o se desactivaría el OTP de WhatsApp sin querer.

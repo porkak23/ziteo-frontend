@@ -110,9 +110,11 @@ export function OfertasEspecialesScreen({ onBack }: Props) {
                   >
                     <span style={{
                       position: 'absolute', top: 3,
-                      left: p.promo_active ? 20 : 3,
+                      left: 3,
                       width: 18, height: 18, borderRadius: '50%',
-                      background: '#fff', transition: 'left 0.2s',
+                      background: Z.surface,
+                      transform: p.promo_active ? 'translateX(17px)' : 'translateX(0)',
+                      transition: 'transform 0.2s',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                     }} />
                   </button>

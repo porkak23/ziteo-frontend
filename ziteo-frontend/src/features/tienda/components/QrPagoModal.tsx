@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { usePaymentQr } from '../../proveedor/hooks/usePaymentQr'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabaseClient'
+import { SIMULATION } from '@/shared/config/simulation'
+
+const SimulatedPaymentPanel = SIMULATION
+  ? lazy(() => import('@/sandbox/components/SimulatedPaymentPanel').then((m) => ({ default: m.SimulatedPaymentPanel })))
+  : null
 
 // How often (ms) to poll for provider confirmation while waiting
 const POLL_INTERVAL_MS = 30_000
@@ -139,8 +144,15 @@ export function QrPagoModal({ providerId, orderId, method = 'qr', onConfirmed, o
           </button>
         </div>
 
+        {/* ── Step: QR — sandbox override ─────────────────────────────────────── */}
+        {step === 'qr' && SimulatedPaymentPanel && (
+          <Suspense fallback={null}>
+            <SimulatedPaymentPanel orderId={orderId} onSimulated={() => setStep('waiting')} />
+          </Suspense>
+        )}
+
         {/* ── Step: QR / bank display ─────────────────────────────────────────── */}
-        {step === 'qr' && (() => {
+        {step === 'qr' && !SimulatedPaymentPanel && (() => {
           // Show bank details when the buyer chose "Transferencia", or as a
           // fallback when the provider has no QR configured.
           const noQr = signedUrl === null

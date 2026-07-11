@@ -258,7 +258,7 @@ function ProjectDetail({
       <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         {/* Hero */}
         {project.photo_url ? (
-          <img src={project.photo_url} alt={project.name} style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: Z.r.lg }} />
+          <img src={project.photo_url} alt={project.name} loading="lazy" style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: Z.r.lg }} />
         ) : (
           <div style={{ height: 130, borderRadius: Z.r.lg, background: `linear-gradient(135deg, ${Z.divider}, ${Z.orangeLight})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: Z.font, fontSize: 11, color: Z.textMuted }}>
             Sitio del proyecto

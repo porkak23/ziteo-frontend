@@ -27,6 +27,10 @@ export const Z = {
   border:   'var(--z-border)',
   divider:  'var(--z-divider)',
 
+  // On-color text — responds to dark mode (primary/secondary button backgrounds change)
+  onPrimary:   'var(--color-on-primary)',
+  onSecondary: 'var(--color-on-secondary)',
+
   // Static
   font: "'Manrope', sans-serif",
   r: { sm: 10, md: 14, lg: 20, xl: 28, full: 9999 },

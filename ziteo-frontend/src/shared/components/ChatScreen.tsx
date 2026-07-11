@@ -128,7 +128,7 @@ export function ChatScreen({ otherUserId, otherUserName, onClose, productContext
           <div className="bg-surface-container rounded-2xl p-3 flex items-center gap-3 mb-2">
             <div className="w-12 h-12 rounded-lg bg-surface flex items-center justify-center shrink-0">
               {productContext.image_url ? (
-                <img src={productContext.image_url} alt={productContext.name} className="w-12 h-12 rounded-lg object-cover" />
+                <img src={productContext.image_url} alt={productContext.name} loading="lazy" className="w-12 h-12 rounded-lg object-cover" />
               ) : (
                 <span className="material-symbols-outlined text-on-surface-variant text-xl">inventory_2</span>
               )}

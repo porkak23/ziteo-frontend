@@ -444,7 +444,17 @@ export function InventarioScreen() {
               </div>
               {form.weight_kg && parseFloat(form.weight_kg) > 0 && (
                 <p className="font-body text-xs text-on-surface-variant px-1">
-                  {parseFloat(form.weight_kg) >= 50 ? '🚛 Se clasificará como carga pesada' : '🛵 Se clasificará como carga ligera'}
+                  {parseFloat(form.weight_kg) >= 50 ? (
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] leading-none">local_shipping</span>
+                      Se clasificará como carga pesada
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] leading-none">two_wheeler</span>
+                      Se clasificará como carga ligera
+                    </span>
+                  )}
                 </p>
               )}
             </div>

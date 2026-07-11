@@ -140,7 +140,7 @@ export function SurtidoRapidoSheet({
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-outline-variant">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-lg shrink-0">⚡</span>
+            <span className="material-symbols-outlined text-xl shrink-0">bolt</span>
             <div className="min-w-0">
               <h2 className="font-label font-semibold text-on-surface text-base leading-tight">
                 Surtido Rápido

@@ -435,7 +435,7 @@ export function OcasionScreen({ onBack }: { onBack: () => void }) {
                     }}
                   >
                     {pub.image_url ? (
-                      <img src={pub.image_url} alt={pub.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={pub.image_url} alt={pub.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={Z.textMuted} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -518,13 +518,14 @@ export function OcasionScreen({ onBack }: { onBack: () => void }) {
                         style={{
                           position: 'absolute',
                           top: 2,
-                          left: pub.active ? 20 : 2,
+                          left: 2,
                           width: 16,
                           height: 16,
                           borderRadius: '50%',
-                          background: '#fff',
+                          background: Z.surface,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                          transition: 'left 0.2s',
+                          transform: pub.active ? 'translateX(18px)' : 'translateX(0)',
+                          transition: 'transform 0.2s',
                         }}
                       />
                     </button>
@@ -845,7 +846,7 @@ export function OcasionScreen({ onBack }: { onBack: () => void }) {
                                       borderRadius: 20,
                                       border: 'none',
                                       background: Z.orange,
-                                      color: '#fff',
+                                      color: Z.onPrimary,
                                       cursor: 'pointer',
                                       outline: 'none',
                                       fontFamily: Z.font,

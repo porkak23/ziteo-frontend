@@ -23,10 +23,10 @@ const ROLE_DATA: { role: UserRole; title: string; description: string }[] = [
 ]
 
 const VEHICLE_OPTIONS = [
-  { value: 'moto', label: 'Motocicleta', icon: '🛵', subtitle: 'Carga ligera — hasta 5 kg' },
-  { value: 'camioneta', label: 'Camioneta', icon: '🚗', subtitle: 'Carga pesada — más de 5 kg' },
-  { value: 'camion', label: 'Camión', icon: '🚛', subtitle: 'Carga pesada — más de 5 kg' },
-  { value: 'pickup', label: 'Pickup', icon: '🛻', subtitle: 'Carga pesada — más de 5 kg' },
+  { value: 'moto', label: 'Motocicleta', icon: 'two_wheeler', subtitle: 'Carga ligera — hasta 5 kg' },
+  { value: 'camioneta', label: 'Camioneta', icon: 'directions_car', subtitle: 'Carga pesada — más de 5 kg' },
+  { value: 'camion', label: 'Camión', icon: 'local_shipping', subtitle: 'Carga pesada — más de 5 kg' },
+  { value: 'pickup', label: 'Pickup', icon: 'pickup_truck', subtitle: 'Carga pesada — más de 5 kg' },
 ] as const
 
 function RoleIconConstructor() {
@@ -420,7 +420,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
                       transition: 'all 0.15s',
                     }}
                   >
-                    <span style={{ fontSize: 24, lineHeight: 1 }}>{v.icon}</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 24, lineHeight: 1 }}>{v.icon}</span>
                     <span style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: isSelected ? Z.orangeDark : Z.text }}>{v.label}</span>
                     <span style={{ fontFamily: Z.font, fontSize: 10, color: Z.textSec, lineHeight: 1.3 }}>{v.subtitle}</span>
                   </button>

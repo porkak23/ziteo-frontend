@@ -2,6 +2,9 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { Z } from '@/shared/design/tokens'
 import { MAPS_KEY, hasMapsKey, loadMapsLibrary } from '@/shared/lib/mapsLoader'
+import { captureException } from '@/lib/sentryClient'
+import { useToast } from '@/shared/hooks/useToast'
+import { Toast } from '@/shared/components/Toast'
 
 interface AddressInputProps {
   value: string
@@ -14,6 +17,7 @@ interface AddressInputProps {
 export function AddressInput({ value, onChange, onCityChange, placeholder, inputStyle }: AddressInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
+  const { toasts, showToast, removeToast } = useToast()
 
   // Sync externally-changed value (e.g. project autofill) → DOM input
   useEffect(() => {
@@ -46,6 +50,8 @@ export function AddressInput({ value, onChange, onCityChange, placeholder, input
           if (comp) onCityChange(comp.long_name)
         }
       })
+    }).catch((err) => {
+      captureException(err, { context: 'AddressInput.loadMapsLibrary' })
     })
 
     return () => {
@@ -76,15 +82,19 @@ export function AddressInput({ value, onChange, onCityChange, placeholder, input
             )
             if (comp) onCityChange(comp.long_name)
           }
-        } catch { /* silent */ }
+        } catch (err) {
+          captureException(err, { context: 'AddressInput.handleGps.reverseGeocode' })
+          showToast('No pudimos obtener la dirección, ingrésala manualmente', 'error')
+        }
       },
       undefined,
       { enableHighAccuracy: true, timeout: 8000 }
     )
-  }, [onChange, onCityChange])
+  }, [onChange, onCityChange, showToast])
 
   return (
     <div style={{ position: 'relative' }}>
+      <Toast toasts={toasts} onRemove={removeToast} />
       <input
         ref={inputRef}
         defaultValue={value}

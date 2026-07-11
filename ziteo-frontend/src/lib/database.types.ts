@@ -1097,8 +1097,22 @@ export type Database = {
             foreignKeyName: "orders_payment_confirmed_by_fkey"
             columns: ["payment_confirmed_by"]
             isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "orders_payment_confirmed_by_fkey"
+            columns: ["payment_confirmed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "orders_payment_confirmed_by_fkey"
+            columns: ["payment_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "orders_project_id_fkey"
@@ -2010,7 +2024,29 @@ export type Database = {
           reviewed_id?: string
           reviewer_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       transport_requests: {
         Row: {
@@ -2093,7 +2129,10 @@ export type Database = {
           role: string
           service_zones: string[] | null
           specialty: string | null
+          store_address: string | null
           store_description: string | null
+          store_lat: number | null
+          store_lng: number | null
           store_logo_url: string | null
           store_name: string | null
           updated_at: string | null
@@ -2122,7 +2161,10 @@ export type Database = {
           role: string
           service_zones?: string[] | null
           specialty?: string | null
+          store_address?: string | null
           store_description?: string | null
+          store_lat?: number | null
+          store_lng?: number | null
           store_logo_url?: string | null
           store_name?: string | null
           updated_at?: string | null
@@ -2151,7 +2193,10 @@ export type Database = {
           role?: string
           service_zones?: string[] | null
           specialty?: string | null
+          store_address?: string | null
           store_description?: string | null
+          store_lat?: number | null
+          store_lng?: number | null
           store_logo_url?: string | null
           store_name?: string | null
           updated_at?: string | null
@@ -2345,6 +2390,15 @@ export type Database = {
         Args: { p_order_item_id: string }
         Returns: undefined
       }
+      create_delivery_by_provider: {
+        Args: {
+          p_driver_name?: string
+          p_mode: string
+          p_order_id: string
+          p_vehicle_plate?: string
+        }
+        Returns: Json
+      }
       create_dispute: {
         Args: { p_details: string; p_order_id: string; p_reason: string }
         Returns: Json
@@ -2421,36 +2475,21 @@ export type Database = {
         Returns: undefined
       }
       mark_rental_in_use: { Args: { p_order_id: string }; Returns: undefined }
-      place_order:
-        | {
-            Args: {
-              p_cargo_type?: string
-              p_constructor_id: string
-              p_delivery_address?: string
-              p_delivery_lat?: number
-              p_delivery_lng?: number
-              p_delivery_method?: string
-              p_items: Json
-              p_provider_id: string
-              p_total: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_cargo_type?: string
-              p_constructor_id: string
-              p_delivery_address?: string
-              p_delivery_lat?: number
-              p_delivery_lng?: number
-              p_delivery_method?: string
-              p_items: Json
-              p_project_id?: string
-              p_provider_id: string
-              p_total: number
-            }
-            Returns: string
-          }
+      place_order: {
+        Args: {
+          p_cargo_type?: string
+          p_constructor_id: string
+          p_delivery_address?: string
+          p_delivery_lat?: number
+          p_delivery_lng?: number
+          p_delivery_method?: string
+          p_items: Json
+          p_project_id?: string
+          p_provider_id: string
+          p_total: number
+        }
+        Returns: string
+      }
       promote_user_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import * as Sentry from '@sentry/react'
+import { setUser as sentrySetUser } from '../../../lib/sentryClient'
 import { identifyUser, resetUser as analyticsResetUser } from '../../../lib/analytics'
 
 export type UserRole = 'constructor' | 'proveedor' | 'maestro' | 'chofer'
@@ -38,7 +38,7 @@ export const useAuthStore = create<AuthStore>()(
       setUser: (user) => {
         // Attach identity to Sentry for error attribution.
         // Only non-sensitive fields: id and display name — no phone, no tokens.
-        Sentry.setUser({ id: user.user_id, username: user.name })
+        sentrySetUser({ id: user.user_id, username: user.name })
         // Identify in PostHog — only user_id and role, no PII
         identifyUser(user.user_id, user.active_role)
         set({ user })
@@ -65,13 +65,13 @@ export const useAuthStore = create<AuthStore>()(
         }),
 
       logout: () => {
-        Sentry.setUser(null)
+        sentrySetUser(null)
         analyticsResetUser()
         set({ user: null })
       },
 
       clearSession: () => {
-        Sentry.setUser(null)
+        sentrySetUser(null)
         analyticsResetUser()
         set({ user: null })
       },
@@ -85,6 +85,18 @@ export const useAuthStore = create<AuthStore>()(
 
       isAuthenticated: () => get().user !== null,
     }),
-    { name: 'ziteo-auth' }
+    {
+      name: 'ziteo-auth',
+      // Supabase's own client already persists the session (incl. tokens) in
+      // its own storage key with proper rotation handling. Don't duplicate
+      // access_token/refresh_token here — it's a redundant copy that can
+      // drift out of sync after a silent refresh and widens the blast radius
+      // of an XSS-style token theft.
+      partialize: (state) => ({
+        user: state.user
+          ? { ...state.user, access_token: '', refresh_token: '' }
+          : null,
+      }),
+    }
   )
 )

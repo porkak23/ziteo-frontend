@@ -1,16 +1,14 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useAuthStore } from './features/auth/store/authStore'
-import type { UserRole } from './features/auth/store/authStore'
 import { useNavStore } from './shared/store/navStore'
-import { supabase } from './lib/supabaseClient'
 import { useAuthSession } from './shared/hooks/useAuthSession'
+import { performLogout } from './features/auth/services/authService'
 import { InstallPrompt } from './shared/components/InstallPrompt'
 import SplashScreen from './features/auth/components/SplashScreen'
 import WelcomeScreen from './features/auth/components/WelcomeScreen'
 import RegisterForm from './features/auth/components/RegisterForm'
 import AlreadyRegisteredNotice from './features/auth/components/AlreadyRegisteredNotice'
 import OnboardingScreen from './features/auth/components/OnboardingScreen'
-import type { OAuthUserData } from './features/auth/types/authTypes'
 import AppLayout from './shared/components/AppLayout'
 import { ThemeInitializer } from './shared/components/ThemeInitializer'
 import { FeedbackButton } from './shared/components/FeedbackButton'
@@ -62,16 +60,20 @@ function TabSkeleton() {
   )
 }
 
-type AppScreen = 'splash' | 'welcome' | 'register' | 'already-registered' | 'onboarding' | 'oauth-setup' | 'app'
+type AppScreen = 'splash' | 'welcome' | 'register' | 'already-registered' | 'onboarding' | 'app'
 
 export default function App() {
+  return <AppScreens />
+}
+
+function AppScreens() {
   const [screen, setScreen] = useState<AppScreen>('splash')
-  const [pendingOAuthUser, setPendingOAuthUser] = useState<OAuthUserData | null>(null)
   const activeTab = useNavStore((s) => s.activeTab)
   const setActiveTab = useNavStore((s) => s.setTab)
   const { isAuthenticated } = useAuthStore()
   const isAuth = useAuthStore((s) => s.user !== null)
   const currentUser = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
 
   useAuthSession()
 
@@ -82,55 +84,6 @@ export default function App() {
       setActiveTab('home')
     }
   }, [isAuth, screen, setScreen, setActiveTab])
-
-  // Handle Google / Apple OAuth redirects
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event !== 'SIGNED_IN' || !session) return
-      const provider = session.user.app_metadata?.provider
-      if (provider !== 'google' && provider !== 'apple') return
-      if (useAuthStore.getState().user) return
-
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('user_id, name, phone, city, active_role, avatar_url')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
-
-        if (profile) {
-          const { data: rolesData } = await supabase
-            .from('user_roles').select('role').eq('user_id', session.user.id)
-          useAuthStore.getState().setUser({
-            user_id: session.user.id,
-            name: profile.name,
-            phone: profile.phone ?? '',
-            email: session.user.email,
-            active_role: profile.active_role as UserRole,
-            roles: (rolesData ?? []).map((r: { role: string }) => r.role as UserRole),
-            access_token: session.access_token,
-            refresh_token: session.refresh_token ?? '',
-            avatar_url: profile.avatar_url ?? undefined,
-            city: profile.city,
-          })
-          setScreen('app')
-        } else {
-          setPendingOAuthUser({
-            userId: session.user.id,
-            email: session.user.email ?? '',
-            name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? '',
-            avatarUrl: session.user.user_metadata?.avatar_url ?? null,
-            accessToken: session.access_token,
-            refreshToken: session.refresh_token ?? '',
-          })
-          setScreen('oauth-setup')
-        }
-      } catch (err) {
-        console.error('OAuth callback error:', err)
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
 
   // Política de privacidad pública — accesible sin autenticación en /privacidad
   if (isPrivacidadRoute()) {
@@ -205,12 +158,6 @@ export default function App() {
         <OnboardingScreen onComplete={() => setScreen('app')} />
       </div>
     )
-  }
-
-  if (screen === 'oauth-setup' && pendingOAuthUser) {
-    // OAuth profile setup — redirect to onboarding if user has no profile
-    setScreen('onboarding')
-    return null
   }
 
   // ── Global screens (Settings, Perfil, Notifications) ──────────
@@ -294,7 +241,31 @@ export default function App() {
     )
   }
 
-  // Fallback: unauthenticated or unknown role
+  // Authenticated but with a corrupted/unrecognized role — show an actionable
+  // error instead of leaving the user stuck on an indefinite loading state.
+  if (currentUser) {
+    return (
+      <>
+        <ThemeInitializer />
+        <NetworkStatusBanner />
+        <div className="flex flex-col items-center justify-center h-screen gap-4 p-6 text-center">
+          <p className="text-on-surface font-heading text-lg">No pudimos cargar tu cuenta</p>
+          <p className="text-on-surface-variant font-body text-sm">
+            Tu rol de usuario no es válido. Intenta cerrar sesión y volver a entrar.
+          </p>
+          <button
+            type="button"
+            onClick={() => { void performLogout().finally(logout) }}
+            className="px-4 py-2 rounded-xl bg-primary text-on-primary font-body font-medium"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </>
+    )
+  }
+
+  // Fallback: unauthenticated
   return (
     <>
       <ThemeInitializer />

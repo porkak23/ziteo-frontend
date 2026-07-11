@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
+import { performLogout } from '../../auth/services/authService'
 import { useAuthStore } from '../../auth/store/authStore'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
@@ -121,7 +122,7 @@ export function SettingsScreen({ onLogout }: SettingsScreenProps) {
   async function handleConfirmLogout() {
     setLoggingOut(true)
     try {
-      await supabase.auth.signOut()
+      await performLogout()
     } finally {
       logout()
       onLogout()

@@ -104,6 +104,7 @@ export function ProductDetailScreen({ product, onBack, onViewProviderStore }: Pr
           <img
             src={getProductImageUrl(product.name, product.image_url)}
             alt={product.name}
+            loading="lazy"
             className="h-56 w-full object-cover"
           />
         ) : (

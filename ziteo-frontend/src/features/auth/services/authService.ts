@@ -171,7 +171,7 @@ export async function checkWhatsappCode(phone: string, code: string): Promise<vo
 export async function registerWithPin(
   input: RegisterInput,
   pin: string
-): Promise<{ user_id: string; phone: string; debug_otp?: string }> {
+): Promise<{ user_id: string; phone: string; requires_otp: boolean; debug_otp?: string }> {
   const { data, error } = await supabase.functions.invoke('auth-register', {
     body: {
       phone: input.phone,
@@ -189,7 +189,7 @@ export async function registerWithPin(
   }
 
   const resp = data as { user_id: string; phone: string; requires_otp: boolean; debug_otp?: string }
-  return { user_id: resp.user_id, phone: resp.phone, debug_otp: resp.debug_otp }
+  return { user_id: resp.user_id, phone: resp.phone, requires_otp: resp.requires_otp, debug_otp: resp.debug_otp }
 }
 
 /**
@@ -295,6 +295,21 @@ export async function signOut(): Promise<void> {
     Preferences.remove({ key: 'ziteo_bio_pin' }),
   ])
   localStorage.removeItem('ziteo_biometric_enabled')
+}
+
+/**
+ * Full logout: clears the Supabase session, biometric credentials, and every
+ * cached query (memory + IndexedDB persister), so a second user on the same
+ * device never sees the previous user's data. Callers still need to clear
+ * their own Zustand auth store afterwards.
+ */
+export async function performLogout(): Promise<void> {
+  const { queryClient, idbPersister } = await import('../../../lib/queryClient')
+  await Promise.all([
+    signOut(),
+    queryClient.clear(),
+    idbPersister.removeClient(),
+  ])
 }
 
 export async function addRole(_accessToken: string, role: UserRole): Promise<void> {
