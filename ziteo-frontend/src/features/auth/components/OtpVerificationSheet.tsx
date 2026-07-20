@@ -3,6 +3,7 @@ import { Z } from '../../../shared/design/tokens';
 import { OtpInput } from './OtpInput';
 import { PinPad } from './PinPad';
 import { ZButton } from '../../../shared/design/components/ZButton';
+import { RECAPTCHA_CONTAINER_ID } from '../otp/constants';
 
 export type VerificationStep = 'sending' | 'code' | 'pin-create' | 'pin-confirm' | 'biometric';
 
@@ -509,6 +510,10 @@ export function OtpVerificationSheet({
         </div>
 
         {stepContent()}
+
+        {/* Ancla del reCAPTCHA invisible de Firebase — solo se usa cuando
+            VITE_OTP_PROVIDER=firebase; inocuo para el proveedor whatsapp. */}
+        <div id={RECAPTCHA_CONTAINER_ID} style={{ display: 'none' }} />
       </div>
     </>
   );

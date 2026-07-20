@@ -19,6 +19,7 @@ const ROLE_LABELS: Record<string, string> = {
   proveedor:   'Vendedor',
   maestro:     'Maestro',
   chofer:      'Chofer',
+  admin:       'Admin',
 }
 
 export function DashHeader({

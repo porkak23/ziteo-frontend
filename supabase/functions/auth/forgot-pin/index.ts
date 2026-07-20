@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { handleOptions, jsonResponse, errorResponse, isDevOrigin } from '../../_shared/cors.ts'
-import { sendOtp } from '../../_shared/otp-sender.ts'
+import { handleOptions, jsonResponse, errorResponse } from '../../_shared/cors.ts'
+import { getOtpProvider } from '../../_shared/otp-provider.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -29,6 +29,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
+  // Rate-limit resend spam: max 5 requests per phone per 15 minutes.
+  // Fail-closed: an RPC error is treated as throttled.
+  const { data: throttled, error: throttleErr } = await adminClient.rpc('check_throttle', {
+    p_identifier: `forgot_pin:${phone}`,
+    p_max_attempts: 5,
+    p_window_minutes: 15,
+  })
+  if (throttleErr || throttled === true) {
+    return errorResponse('RATE_LIMITED', 'Too many attempts. Please wait 15 minutes before trying again.', 429, req)
+  }
+
   const { data: profile } = await adminClient
     .from('profiles')
     .select('user_id')
@@ -39,36 +50,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return errorResponse('USER_NOT_FOUND', 'No account found for this phone number', 404, req)
   }
 
-  // Invalidate all existing unused OTPs for this phone
-  await adminClient.from('otps').update({ used: true }).eq('phone', phone).eq('used', false)
-
-  const otpCode = String(Math.floor(100000 + Math.random() * 900000))
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
-
-  const { error: otpError } = await adminClient
-    .from('otps')
-    .insert({ phone, code: otpCode, expires_at: expiresAt, used: false, purpose: 'reset_pin' })
-
-  if (otpError) {
-    console.error('OTP insert error:', otpError)
-    return errorResponse('OTP_CREATE_FAILED', 'Failed to generate verification code', 500, req)
-  }
-
-  // Send via WhatsApp (primary) with automatic SMS fallback
+  const provider = getOtpProvider()
+  let issueResult
   try {
-    await sendOtp(phone, otpCode)
-  } catch (waErr) {
-    const isNotConfigured = String(waErr).includes('OTP_NOT_CONFIGURED')
-    if (!isNotConfigured) {
-      console.error('OTP send error:', waErr)
-      return errorResponse('WHATSAPP_SEND_FAILED', 'Failed to send code via WhatsApp', 500, req)
-    }
-    const payload: Record<string, unknown> = { sent: true }
-    if (isDevOrigin(req)) payload.debug_otp = otpCode
-    return jsonResponse(payload, 200, {}, req)
+    issueResult = await provider.issue(adminClient, phone, 'reset_pin', req)
+  } catch (err) {
+    console.error('OTP issue error:', err)
+    const code = String(err).includes('WHATSAPP_SEND_FAILED') ? 'WHATSAPP_SEND_FAILED' : 'OTP_CREATE_FAILED'
+    return errorResponse(code, 'Failed to send verification code', 500, req)
   }
 
-  const successPayload: Record<string, unknown> = { sent: true }
-  if (isDevOrigin(req)) successPayload.debug_otp = otpCode
-  return jsonResponse(successPayload, 200, {}, req)
+  const payload: Record<string, unknown> = { sent: issueResult.channel === 'server', otp_provider: provider.name }
+  if (issueResult.debug_otp) payload.debug_otp = issueResult.debug_otp
+  return jsonResponse(payload, 200, {}, req)
 })

@@ -28,12 +28,21 @@ async function persistActiveRole(userId: string, role: UserRole): Promise<boolea
   return true
 }
 
+// Mapa de display (label/icon) para todos los roles, incluido admin —
+// user.active_role puede ser cualquiera de estos. La restricción real de
+// seguridad está en ASSIGNABLE_ROLES más abajo: admin nunca aparece como
+// rol ofrecido para auto-agregar (se otorga solo por SQL manual, ver
+// 20260719000001_admin_role_foundation.sql).
 const USER_ROLES: Record<UserRole, { label: string; icon: string }> = {
   constructor: { label: 'Constructor', icon: 'engineering' },
   proveedor: { label: 'Vendedor', icon: 'storefront' },
   maestro: { label: 'Trabajador', icon: 'construction' },
   chofer: { label: 'Delivery', icon: 'local_shipping' },
+  admin: { label: 'Admin', icon: 'shield_person' },
 }
+
+type AssignableUserRole = Exclude<UserRole, 'admin'>
+const ASSIGNABLE_ROLES: AssignableUserRole[] = ['constructor', 'proveedor', 'maestro', 'chofer']
 
 interface RoleRowData {
   store_name?: string | null
@@ -734,11 +743,11 @@ export function PerfilScreen() {
             })}
 
             {/* Agregar nuevos roles */}
-            {(Object.keys(USER_ROLES) as UserRole[]).filter((r) => !user.roles.includes(r)).length > 0 && (
+            {ASSIGNABLE_ROLES.filter((r) => !user.roles.includes(r)).length > 0 && (
               <div className="flex flex-col gap-2">
                 <span className="font-label text-[11px] text-on-surface-variant/50">Agregar rol</span>
                 <div className="flex flex-wrap gap-2">
-                  {(Object.keys(USER_ROLES) as UserRole[])
+                  {ASSIGNABLE_ROLES
                     .filter((r) => !user.roles.includes(r))
                     .map((role) => (
                       <button

@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          severity: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          payload?: Json
+          severity: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          severity?: string
+        }
+        Relationships: []
+      }
       auth_throttle: {
         Row: {
           attempts: number
@@ -94,6 +124,7 @@ export type Database = {
       categories: {
         Row: {
           active: boolean | null
+          commodity_key: string | null
           created_at: string | null
           description: string | null
           icon_name: string
@@ -103,6 +134,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          commodity_key?: string | null
           created_at?: string | null
           description?: string | null
           icon_name: string
@@ -112,6 +144,7 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          commodity_key?: string | null
           created_at?: string | null
           description?: string | null
           icon_name?: string
@@ -526,6 +559,33 @@ export type Database = {
           },
         ]
       }
+      driver_location_history: {
+        Row: {
+          driver_id: string
+          heading: number | null
+          id: number
+          lat: number
+          lng: number
+          recorded_at: string
+        }
+        Insert: {
+          driver_id: string
+          heading?: number | null
+          id?: number
+          lat: number
+          lng: number
+          recorded_at?: string
+        }
+        Update: {
+          driver_id?: string
+          heading?: number | null
+          id?: number
+          lat?: number
+          lng?: number
+          recorded_at?: string
+        }
+        Relationships: []
+      }
       driver_locations: {
         Row: {
           driver_id: string
@@ -547,6 +607,57 @@ export type Database = {
           lat?: number
           lng?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      edge_function_health: {
+        Row: {
+          created_at: string
+          duration_ms: number
+          error_message: string | null
+          function_name: string
+          id: number
+          status_code: number
+        }
+        Insert: {
+          created_at?: string
+          duration_ms: number
+          error_message?: string | null
+          function_name: string
+          id?: number
+          status_code: number
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number
+          error_message?: string | null
+          function_name?: string
+          id?: number
+          status_code?: number
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: number
+          properties: Json
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: number
+          properties?: Json
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: number
+          properties?: Json
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -843,6 +954,74 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      market_prices: {
+        Row: {
+          captured_at: string
+          commodity: string
+          currency: string
+          id: number
+          meta: Json
+          price: number
+          source: string
+          unit: string
+        }
+        Insert: {
+          captured_at?: string
+          commodity: string
+          currency: string
+          id?: number
+          meta?: Json
+          price: number
+          source: string
+          unit: string
+        }
+        Update: {
+          captured_at?: string
+          commodity?: string
+          currency?: string
+          id?: number
+          meta?: Json
+          price?: number
+          source?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_prices_source_fkey"
+            columns: ["source"]
+            isOneToOne: false
+            referencedRelation: "market_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      market_sources: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          label: string
+          last_error: string | null
+          last_ok_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id: string
+          label: string
+          last_error?: string | null
+          last_ok_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string
+          last_error?: string | null
+          last_ok_at?: string | null
+        }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -2273,6 +2452,184 @@ export type Database = {
       }
     }
     Views: {
+      admin_abandoned_carts: {
+        Row: {
+          added_at: string | null
+          price_unit: number | null
+          product_id: string | null
+          product_name: string | null
+          provider_id: string | null
+          quantity: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "cart_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "cart_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "products_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "products_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "products_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      admin_drivers_online: {
+        Row: {
+          driver_id: string | null
+          heading: number | null
+          is_available: boolean | null
+          lat: number | null
+          lng: number | null
+          updated_at: string | null
+          vehicle_plate: string | null
+          vehicle_type: string | null
+        }
+        Relationships: []
+      }
+      admin_edge_health_summary: {
+        Row: {
+          error_count: number | null
+          error_rate_pct: number | null
+          function_name: string | null
+          last_seen_at: string | null
+          p95_duration_ms: number | null
+          request_count: number | null
+        }
+        Relationships: []
+      }
+      admin_payment_transactions: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          created_by: string | null
+          delivery_id: string | null
+          evidence_url: string | null
+          id: string | null
+          method: string | null
+          order_id: string | null
+          settled_at: string | null
+          status: string | null
+          token_used: boolean | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          delivery_id?: string | null
+          evidence_url?: string | null
+          id?: string | null
+          method?: string | null
+          order_id?: string | null
+          settled_at?: string | null
+          status?: string | null
+          token_used?: boolean | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          delivery_id?: string | null
+          evidence_url?: string | null
+          id?: string | null
+          method?: string | null
+          order_id?: string | null
+          settled_at?: string | null
+          status?: string | null
+          token_used?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_price_deviation: {
+        Row: {
+          avg_catalog_price: number | null
+          captured_at: string | null
+          category_name: string | null
+          commodity_key: string | null
+          currency: string | null
+          deviation_pct: number | null
+          market_price: number | null
+          product_count: number | null
+        }
+        Relationships: []
+      }
       kpi_active_maestros: {
         Row: {
           available: number | null
@@ -2375,6 +2732,7 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: Json
       }
+      acknowledge_admin_alert: { Args: { p_alert_id: string }; Returns: Json }
       advance_own_fleet_delivery: {
         Args: { p_action: string; p_order_id: string }
         Returns: Json
@@ -2388,6 +2746,9 @@ export type Database = {
         Returns: number
       }
       cargo_rank: { Args: { p_cargo: string }; Returns: number }
+      check_silent_drivers: { Args: never; Returns: undefined }
+      check_stale_market_sources: { Args: never; Returns: undefined }
+      check_stale_payment_evidence: { Args: never; Returns: undefined }
       check_throttle: {
         Args: {
           p_identifier: string
@@ -2436,6 +2797,7 @@ export type Database = {
           total_reviews: number
         }[]
       }
+      is_admin: { Args: never; Returns: boolean }
       list_orders_cursor: {
         Args: {
           p_cursor_created_at?: string
@@ -2478,6 +2840,10 @@ export type Database = {
       }
       log_contact_event: {
         Args: { p_event_type: string; p_maestro_id: string }
+        Returns: undefined
+      }
+      log_event: {
+        Args: { p_event_name: string; p_properties?: Json }
         Returns: undefined
       }
       mark_notification_read: {
@@ -2546,6 +2912,7 @@ export type Database = {
         Returns: undefined
       }
       switch_active_role: { Args: { new_role: string }; Returns: undefined }
+      trigger_market_prices_ingest: { Args: never; Returns: undefined }
       update_delivery_status: {
         Args: { p_delivery_id: string; p_new_status: string }
         Returns: Json

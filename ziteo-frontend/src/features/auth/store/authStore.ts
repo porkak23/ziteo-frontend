@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import { setUser as sentrySetUser } from '../../../lib/sentryClient'
 import { identifyUser, resetUser as analyticsResetUser } from '../../../lib/analytics'
 
-export type UserRole = 'constructor' | 'proveedor' | 'maestro' | 'chofer'
+export type UserRole = 'constructor' | 'proveedor' | 'maestro' | 'chofer' | 'admin'
 
 export interface AuthUser {
   user_id: string

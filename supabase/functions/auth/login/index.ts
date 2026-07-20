@@ -51,6 +51,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
+  // Rate-limit PIN guessing: max 5 attempts per phone per 15 minutes.
+  // Fail-closed: an RPC error is treated as throttled.
+  const { data: throttled, error: throttleErr } = await adminClient.rpc('check_throttle', {
+    p_identifier: `login:${phone}`,
+    p_max_attempts: 5,
+    p_window_minutes: 15,
+  })
+  if (throttleErr || throttled === true) {
+    return errorResponse('RATE_LIMITED', 'Too many attempts. Please wait 15 minutes before trying again.', 429, req)
+  }
+
   // Synthetic email — new users registered via auth/register use @phone.ziteo.bo
   const syntheticEmail = `${phone.replace('+', '')}@phone.ziteo.bo`
 

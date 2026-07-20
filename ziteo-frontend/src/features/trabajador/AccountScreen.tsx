@@ -46,12 +46,19 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
   )
 }
 
+// Mapa de display para todos los roles, incluido admin (user.active_role
+// puede ser cualquiera). admin nunca aparece como asignable — ver
+// ASSIGNABLE_ROLES y 20260719000001_admin_role_foundation.sql.
 const ROLE_LABELS: Record<UserRole, string> = {
   constructor: 'Constructor',
   proveedor: 'Proveedor',
   maestro: 'Maestro / Trabajador',
   chofer: 'Chofer / Repartidor',
+  admin: 'Admin',
 }
+
+type AssignableUserRole = Exclude<UserRole, 'admin'>
+const ASSIGNABLE_ROLES: AssignableUserRole[] = ['constructor', 'proveedor', 'maestro', 'chofer']
 
 export function AccountScreen({ onClose, onLogout }: AccountScreenProps) {
   const user = useAuthStore((s) => s.user)
@@ -75,9 +82,9 @@ export function AccountScreen({ onClose, onLogout }: AccountScreenProps) {
     onClose()
   }
 
-  const [addingRole, setAddingRole] = useState<UserRole | null>(null)
+  const [addingRole, setAddingRole] = useState<AssignableUserRole | null>(null)
 
-  const handleAddRole = async (newRole: UserRole) => {
+  const handleAddRole = async (newRole: AssignableUserRole) => {
     if (!user || addingRole) return
     setAddingRole(newRole)
     try {
@@ -393,7 +400,7 @@ export function AccountScreen({ onClose, onLogout }: AccountScreenProps) {
               )
             })}
             
-            {(Object.keys(ROLE_LABELS) as UserRole[]).filter(r => !availableRoles.includes(r)).map((r, i, arr) => (
+            {ASSIGNABLE_ROLES.filter(r => !availableRoles.includes(r)).map((r, i, arr) => (
               <button
                 key={r}
                 onClick={() => handleAddRole(r)}

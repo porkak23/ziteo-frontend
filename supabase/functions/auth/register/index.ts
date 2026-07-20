@@ -1,9 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { handleOptions, jsonResponse, errorResponse, isDevOrigin } from '../../_shared/cors.ts'
-import { sendOtp } from '../../_shared/otp-sender.ts'
+import { handleOptions, jsonResponse, errorResponse } from '../../_shared/cors.ts'
+import { getOtpProvider } from '../../_shared/otp-provider.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+
+// Piloto sin WhatsApp: la cuenta de Meta es de prueba y solo entrega OTP a
+// números pre-registrados, lo que bloquearía el registro masivo. Con este
+// flag en 'false' (default), el registro omite el OTP y el usuario queda
+// verificado y logueable de inmediato con su PIN. Poner OTP_VERIFICATION_REQUIRED=true
+// en los secrets de Supabase cuando la cuenta de WhatsApp pase a producción.
+const OTP_VERIFICATION_REQUIRED = Deno.env.get('OTP_VERIFICATION_REQUIRED') === 'true'
 
 type UserRole = 'constructor' | 'proveedor' | 'maestro' | 'chofer'
 
@@ -120,44 +127,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return errorResponse('PROFILE_CREATION_FAILED', 'Failed to create user profile', 500, req)
   }
 
-  // Insert role (onboarding_completed stays false until OTP verified)
+  // Insert role. With OTP_VERIFICATION_REQUIRED=false (piloto), el teléfono
+  // queda verificado de inmediato: no hay forma de probarlo por WhatsApp,
+  // así que onboarding_completed se marca true ya mismo.
   const { error: roleError } = await adminClient
     .from('user_roles')
-    .insert({ user_id: userId, role: initial_role, onboarding_completed: false })
+    .insert({ user_id: userId, role: initial_role, onboarding_completed: !OTP_VERIFICATION_REQUIRED })
   if (roleError) {
     console.error('User role insert error:', roleError)
     await adminClient.auth.admin.deleteUser(userId)
     return errorResponse('ROLE_CREATION_FAILED', 'Failed to assign role', 500, req)
   }
 
-  // Generate OTP
-  const otpCode = String(Math.floor(100000 + Math.random() * 900000))
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
-
-  const { error: otpError } = await adminClient
-    .from('otps')
-    .insert({ phone, code: otpCode, expires_at: expiresAt, used: false, purpose: 'verify_phone' })
-  if (otpError) {
-    console.error('OTP insert error:', otpError)
-    return errorResponse('OTP_CREATE_FAILED', 'Failed to generate verification code', 500, req)
+  if (!OTP_VERIFICATION_REQUIRED) {
+    return jsonResponse({ user_id: userId, phone, requires_otp: false }, 201, {}, req)
   }
 
-  // Send OTP via WhatsApp (primary) with automatic SMS fallback
+  const provider = getOtpProvider()
+  let issueResult
   try {
-    await sendOtp(phone, otpCode)
-  } catch (waErr) {
-    const isNotConfigured = String(waErr).includes('OTP_NOT_CONFIGURED')
-    if (!isNotConfigured) {
-      console.error('OTP send error:', waErr)
-      return errorResponse('WHATSAPP_SEND_FAILED', 'Failed to send verification code via WhatsApp', 500, req)
-    }
-    // Dev fallback: no transport configured — return debug_otp only to local origins
-    const debugPayload: Record<string, unknown> = { user_id: userId, phone, requires_otp: true }
-    if (isDevOrigin(req)) debugPayload.debug_otp = otpCode
-    return jsonResponse(debugPayload, 201, {}, req)
+    issueResult = await provider.issue(adminClient, phone, 'verify_phone', req)
+  } catch (err) {
+    console.error('OTP issue error:', err)
+    const code = String(err).includes('WHATSAPP_SEND_FAILED') ? 'WHATSAPP_SEND_FAILED' : 'OTP_CREATE_FAILED'
+    return errorResponse(code, 'Failed to issue verification code', 500, req)
   }
 
-  const successPayload: Record<string, unknown> = { user_id: userId, phone, requires_otp: true }
-  if (isDevOrigin(req)) successPayload.debug_otp = otpCode
-  return jsonResponse(successPayload, 201, {}, req)
+  const payload: Record<string, unknown> = { user_id: userId, phone, requires_otp: true, otp_provider: provider.name }
+  if (issueResult.debug_otp) payload.debug_otp = issueResult.debug_otp
+  return jsonResponse(payload, 201, {}, req)
 })

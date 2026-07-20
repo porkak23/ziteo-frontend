@@ -5,6 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'https://esm.sh/web-push@3.6.7'
 import { handleOptions, jsonResponse, errorResponse } from '../../_shared/cors.ts'
+import { withTelemetry } from '../../_shared/telemetry.ts'
 
 const SUPABASE_URL      = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -12,7 +13,7 @@ const VAPID_PUBLIC_KEY  = Deno.env.get('VAPID_PUBLIC_KEY')!
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!
 const VAPID_SUBJECT     = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:admin@ziteo.bo'
 
-export default async function handler(req: Request): Promise<Response> {
+async function rawHandler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return handleOptions(req)
   if (req.method !== 'POST') {
     return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is accepted', 405, req)
@@ -76,3 +77,5 @@ export default async function handler(req: Request): Promise<Response> {
   const sent = results.filter((r) => r.status === 'fulfilled').length
   return jsonResponse({ sent, total: subscriptions.length }, 200, {}, req)
 }
+
+export default withTelemetry('notifications-send-push', rawHandler)

@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { handleOptions, jsonResponse, errorResponse, isDevOrigin } from '../../_shared/cors.ts'
-import { sendOtp } from '../../_shared/otp-sender.ts'
+import { handleOptions, jsonResponse, errorResponse } from '../../_shared/cors.ts'
+import { getOtpProvider } from '../../_shared/otp-provider.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -44,52 +44,36 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return errorResponse('USER_NOT_FOUND', 'No account found for this phone number', 404, req)
   }
 
-  // Rate-limit: block if an unused, non-expired OTP was issued in the last 60 seconds
-  const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
-  const { data: recentOtp } = await adminClient
-    .from('otps')
-    .select('id')
-    .eq('phone', phone)
-    .eq('used', false)
-    .gt('expires_at', new Date().toISOString())
-    .gt('created_at', oneMinuteAgo)
-    .maybeSingle()
+  const provider = getOtpProvider()
 
-  if (recentOtp) {
-    return errorResponse('RATE_LIMITED', 'Please wait at least 60 seconds before requesting a new code', 429, req)
-  }
+  // El cooldown de reenvío solo aplica al canal servidor (WhatsApp/SMS ya
+  // enviados desde aquí). Con Firebase, el reenvío lo dispara el cliente.
+  if (provider.name === 'whatsapp') {
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
+    const { data: recentOtp } = await adminClient
+      .from('otps')
+      .select('id')
+      .eq('phone', phone)
+      .eq('used', false)
+      .gt('expires_at', new Date().toISOString())
+      .gt('created_at', oneMinuteAgo)
+      .maybeSingle()
 
-  // Invalidate all existing unused OTPs for this phone
-  await adminClient.from('otps').update({ used: true }).eq('phone', phone).eq('used', false)
-
-  // Issue a fresh OTP — column is `code`
-  const otpCode = String(Math.floor(100000 + Math.random() * 900000))
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
-
-  const { error: insertError } = await adminClient
-    .from('otps')
-    .insert({ phone, code: otpCode, expires_at: expiresAt, used: false, purpose: 'verify_phone' })
-
-  if (insertError) {
-    return errorResponse('OTP_FAILED', 'Failed to generate verification code', 500, req)
-  }
-
-  // Send via WhatsApp (primary) with automatic SMS fallback; fall back to
-  // debug_otp on local dev only if no transport is configured.
-  try {
-    await sendOtp(phone, otpCode)
-  } catch (waErr) {
-    const isNotConfigured = String(waErr).includes('OTP_NOT_CONFIGURED')
-    if (!isNotConfigured) {
-      console.error('OTP resend error:', waErr)
-      return errorResponse('WHATSAPP_SEND_FAILED', 'Failed to resend verification code', 500, req)
+    if (recentOtp) {
+      return errorResponse('RATE_LIMITED', 'Please wait at least 60 seconds before requesting a new code', 429, req)
     }
-    const payload: Record<string, unknown> = { sent: true }
-    if (isDevOrigin(req)) payload.debug_otp = otpCode
-    return jsonResponse(payload, 200, {}, req)
   }
 
-  const successPayload: Record<string, unknown> = { sent: true }
-  if (isDevOrigin(req)) successPayload.debug_otp = otpCode
-  return jsonResponse(successPayload, 200, {}, req)
+  let issueResult
+  try {
+    issueResult = await provider.issue(adminClient, phone, 'verify_phone', req)
+  } catch (err) {
+    console.error('OTP resend error:', err)
+    const code = String(err).includes('WHATSAPP_SEND_FAILED') ? 'WHATSAPP_SEND_FAILED' : 'OTP_FAILED'
+    return errorResponse(code, 'Failed to resend verification code', 500, req)
+  }
+
+  const payload: Record<string, unknown> = { sent: issueResult.channel === 'server', otp_provider: provider.name }
+  if (issueResult.debug_otp) payload.debug_otp = issueResult.debug_otp
+  return jsonResponse(payload, 200, {}, req)
 })

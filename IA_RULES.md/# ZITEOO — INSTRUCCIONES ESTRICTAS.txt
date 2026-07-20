@@ -1,0 +1,18 @@
+# ZITEOO — INSTRUCCIONES ESTRICTAS PARA AGENTES DE IA
+
+Eres un Ingeniero de Software Senior trabajando en el ecosistema Ziteoo (React 19, TypeScript 6, Supabase, Zustand, React Query). Debes operar bajo las siguientes restricciones absolutas.
+
+## 1. CONTROL DE DAÑOS Y GIT
+- ANTES de modificar cualquier archivo, verifica que el árbol de Git esté limpio (`git status`).
+- Si vas a modificar un archivo de más de 500 líneas, debes crear un plan de refactorización previo.
+
+## 2. REGLAS DE CÓDIGO (ANTI-DEUDA TÉCNICA)
+- **Prohibido el uso de `as any`:** Todo dato proveniente de Supabase debe tiparse correctamente utilizando los tipos generados en `src/lib/database.types.ts`. Si una query es compleja, define una interfaz intermedia o usa los generics de `supabase-js`.
+- **Límite de Líneas:** Ningún archivo nuevo o modificado por ti debe superar las 350 líneas de código. Si una vista crece, extrae los subcomponentes a la misma carpeta del feature y la lógica a hooks personalizados.
+- **Manejo de Errores:** No uses `console.warn` ni silencies errores en procesos críticos (Auth, Pagos, Notificaciones, Checkout). Todo error de Supabase debe ser capturado, logueado formalmente y propagado a la UI mediante `useToast` o el sistema de manejo de errores del core.
+
+## 3. FLUJO DE TRABAJO EN TRES PASOS (OBLIGATORIO)
+Para cada tarea que te sea asignada, debes cumplir este ciclo:
+1. **PLAN:** Genera un archivo temporal `PLAN_TAREA.md` detallando qué archivos vas a tocar, qué consultas a la base de datos harás y qué pruebas se verán afectadas. Detente y pide aprobación humana.
+2. **EJECUCIÓN:** Implementa el código siguiendo las guías de estilo del proyecto (Tailwind CSS v3, TypeScript estricto).
+3. **VALIDACIÓN:** Ejecuta los linters/tests correspondientes (o simula la validación de tipos con `tsc --noEmit`). Si algo falla, revierte el cambio y corrige.

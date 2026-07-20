@@ -44,6 +44,7 @@ function isPrivacidadRoute(): boolean {
 // in the initial bundle. Each role's chunk is only fetched after login.
 const TrabajadorApp       = lazy(() => import('./features/trabajador/TrabajadorApp').then(m => ({ default: m.TrabajadorApp })))
 const ChofersApp          = lazy(() => import('./features/transportista/ChofersApp').then(m => ({ default: m.ChofersApp })))
+const AdminApp            = lazy(() => import('./features/admin/AdminApp').then(m => ({ default: m.AdminApp })))
 const ConstructorApp      = lazy(() => import('./features/constructor/ConstructorApp').then(m => ({ default: m.ConstructorApp })))
 const ProveedorApp        = lazy(() => import('./features/proveedor/ProveedorApp').then(m => ({ default: m.ProveedorApp })))
 const SettingsScreen      = lazy(() => import('./features/settings/components/SettingsScreen').then(m => ({ default: m.SettingsScreen })))
@@ -222,6 +223,18 @@ function AppScreens() {
         <InstallPrompt />
         <BetaAcknowledgment />
         <FeedbackButton />
+      </>
+    )
+  }
+
+  if (currentUser?.active_role === 'admin') {
+    return (
+      <>
+        <ThemeInitializer />
+        <NetworkStatusBanner />
+        <Suspense fallback={<TabSkeleton />}>
+          <AdminApp />
+        </Suspense>
       </>
     )
   }

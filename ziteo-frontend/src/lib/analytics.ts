@@ -9,6 +9,7 @@
  * Calls made before PostHog loads are queued and flushed once the SDK is ready.
  */
 import type { PostHog } from 'posthog-js'
+import { supabase } from './supabaseClient'
 
 type PendingCall =
   | { kind: 'identify'; userId: string; role: string }
@@ -66,6 +67,18 @@ export function resetUser(): void {
 function capture(event: string, props?: Record<string, string>): void {
   if (posthog) posthog.capture(event, props)
   else queue.push({ kind: 'capture', event, props })
+  logEventToSupabase(event, props)
+}
+
+// Dual-write al feed de actividad del Command Center admin (tabla `events`,
+// ver 20260719000002_admin_events_and_activity.sql). Fire-and-forget: nunca
+// debe bloquear ni afectar la UX si falla o el usuario no está autenticado
+// (log_event() ya no-opea silenciosamente sin auth.uid()).
+function logEventToSupabase(event: string, props?: Record<string, string>): void {
+  supabase.rpc('log_event', { p_event_name: event, p_properties: props ?? {} }).then(
+    () => {},
+    () => {}
+  )
 }
 
 export const track = {

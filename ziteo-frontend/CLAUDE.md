@@ -184,3 +184,21 @@ El cuerpo de `otp-verify` usa la clave **`otp`** (no `code`); el de register/log
 
 ### Nota sobre el flag OTP_VERIFICATION_REQUIRED (divergencia local-vs-prod)
 El `register/index.ts` **local** tiene un flag `OTP_VERIFICATION_REQUIRED` (default `false` → omite OTP). La versión **desplegada en prod (v34) NO tiene ese flag** y siempre exige OTP. NO redesplegar el register local sin antes setear el secret `OTP_VERIFICATION_REQUIRED=true`, o se desactivaría el OTP de WhatsApp sin querer.
+
+---
+
+## Lecciones Aprendidas — God Mode Admin (2026-07-19)
+
+### Vistas Administrativas y Seguridad
+- **Vistas nuevas DEBEN llevar explícitamente `WITH (security_invoker = true)`**: El owner de las tablas (`postgres`) posee la propiedad `BYPASSRLS` en Supabase. Si una vista se define de manera ordinaria, no evaluará políticas RLS y expondrá datos privados a cualquier rol. Forzar `security_invoker = true` en cada declaración de vista.
+
+### Realtime y Sockets
+- **Límite estricto de 3 canales realtime activos en AdminApp**: Para no agotar sockets y cuotas, AdminApp solo debe suscribirse a los canales `events`, `admin_alerts` y `driver_locations`. Cualquier otra actualización periódica o de datos dinámicos debe resolverse vía **polling clásico**.
+
+### Gestión de Roles y Credenciales
+- **Rol admin nunca auto-asignable**: El rol `admin` no puede asignarse mediante flujos de frontend/UI (está excluido de `ASSIGNABLE_ROLES`). Sólo se otorga manualmente mediante sentencias SQL en la BD.
+- **Sincronización manual de secretos de Ingesta**: El secreto para invocar la Edge Function de cronjob `market-prices-ingest` se encuentra tanto en el manejador de Postgres (`Vault`) como en el manejador de Edge Secrets de Supabase (`MARKET_INGEST_SECRET`). Al rotar o crear uno, ambos deben actualizarse manualmente.
+
+### Generación de Tipos de Supabase
+- **npm run gen:types**: Tras aplicar migraciones, regenerar tipos de TS. Redirigir siempre solo el stdout (`npm run gen:types > src/types/supabase.ts`) para evitar que logs redundantes de stderr ensucien el archivo generado.
+

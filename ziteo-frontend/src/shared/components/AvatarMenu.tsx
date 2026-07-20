@@ -12,6 +12,7 @@ const ROLE_ICONS: Record<UserRole, string> = {
   proveedor: 'storefront',
   maestro: 'construction',
   chofer: 'local_shipping',
+  admin: 'shield_person',
 }
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -19,9 +20,15 @@ const ROLE_LABELS: Record<UserRole, string> = {
   proveedor: 'Vendedor',
   maestro: 'Trabajador',
   chofer: 'Transportista',
+  admin: 'Admin',
 }
 
-const ALL_ROLES: UserRole[] = ['constructor', 'proveedor', 'maestro', 'chofer']
+// admin nunca pasa por este flujo de agregar/quitar rol — se otorga solo
+// por SQL manual (ver 20260719000001_admin_role_foundation.sql), por eso
+// ALL_ROLES y las funciones de abajo usan el UserRole restringido.
+type AssignableUserRole = Exclude<UserRole, 'admin'>
+
+const ALL_ROLES: AssignableUserRole[] = ['constructor', 'proveedor', 'maestro', 'chofer']
 
 interface AvatarMenuExtraItem {
   icon: string
@@ -44,8 +51,8 @@ export default function AvatarMenu({ isOpen, onClose, extraItems, onSettingsClic
   const setTab = useNavStore((s) => s.setTab)
   const { mode, setMode } = useThemeStore()
   const [addedToast, setAddedToast] = useState<string | null>(null)
-  const [addingRole, setAddingRole] = useState<UserRole | null>(null)
-  const [removingRole, setRemovingRole] = useState<UserRole | null>(null)
+  const [addingRole, setAddingRole] = useState<AssignableUserRole | null>(null)
+  const [removingRole, setRemovingRole] = useState<AssignableUserRole | null>(null)
   const [roleError, setRoleError] = useState<string | null>(null)
   const removeRoleStore = useAuthStore((s) => s.removeRole)
 
@@ -74,7 +81,7 @@ export default function AvatarMenu({ isOpen, onClose, extraItems, onSettingsClic
     onClose()
   }
 
-  const handleAddRole = async (role: UserRole) => {
+  const handleAddRole = async (role: AssignableUserRole) => {
     if (!user || addingRole) return
     setAddingRole(role)
     setRoleError(null)
@@ -90,7 +97,7 @@ export default function AvatarMenu({ isOpen, onClose, extraItems, onSettingsClic
     }
   }
 
-  const handleRemoveRole = async (role: UserRole) => {
+  const handleRemoveRole = async (role: AssignableUserRole) => {
     if (!user || user.roles.length <= 1 || removingRole) return
     const confirmed = window.confirm(`¿Estás seguro de que quieres eliminar tu perfil de ${ROLE_LABELS[role]}? Se borrarán todos tus datos de este perfil.`)
     if (!confirmed) return
@@ -162,7 +169,9 @@ export default function AvatarMenu({ isOpen, onClose, extraItems, onSettingsClic
           <div className="flex flex-col gap-1.5">
              {user.roles.map((role) => {
                const isActive = role === user.active_role
-               const canRemove = user.roles.length > 1
+               // admin nunca se puede quitar desde esta UI genérica — se
+               // revoca solo por SQL manual.
+               const canRemove = user.roles.length > 1 && role !== 'admin'
                const isRemoving = removingRole === role
                return (
                  <div key={role} className="flex items-center gap-1.5 w-full">

@@ -32,6 +32,10 @@ const TAB_CONFIG: Record<UserRole, Tab[]> = {
     { id: 'ganancias',    label: 'Ganancias',    icon: 'account_balance_wallet' },
     { id: 'perfil',       label: 'Perfil',       icon: 'person' },
   ],
+  // AdminApp tiene su propio shell (RoleDashNav con OverviewScreen) y
+  // nunca renderiza este BottomNav genérico — entrada vacía solo para
+  // satisfacer la exhaustividad del Record.
+  admin: [],
 }
 
 interface BottomNavProps {

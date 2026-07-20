@@ -1,0 +1,5 @@
+# Supabase local state — nunca versionar el estado de link ni credenciales.
+.branches
+.temp
+.env
+.env.local

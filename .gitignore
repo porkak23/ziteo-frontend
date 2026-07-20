@@ -12,3 +12,6 @@ build/
 .vercel/
 # Graphify generated artifacts (graph.json ~2MB, graph.html ~2MB)
 graphify-out/
+
+# Test scripts
+test_otp_resend.js

@@ -138,19 +138,17 @@ entrypoint = "./functions/auth/reset-pin/index.ts"
 verify_jwt = false
 entrypoint = "./functions/auth/forgot-pin/index.ts"
 
-[functions.auth-oauth-setup]
-verify_jwt = true
-entrypoint = "./functions/auth/oauth-setup/index.ts"
-
 [functions.auth-add-role]
 verify_jwt = true
 entrypoint = "./functions/auth/add-role/index.ts"
 
-[functions.auth]
+[functions.market-prices-ingest]
 verify_jwt = false
+entrypoint = "./functions/market-prices-ingest/index.ts"
 
-[functions.beta-signup]
-verify_jwt = false
+[functions.admin-telemetry]
+verify_jwt = true
+entrypoint = "./functions/admin-telemetry/index.ts"
 
 [analytics]
 enabled = false

@@ -1,6 +1,8 @@
 import { supabase } from '../../../lib/supabaseClient'
 import { Preferences } from '@capacitor/preferences'
 import type { AuthUser, UserRole } from '../types/authTypes'
+import { getClientOtpProvider } from '../otp'
+import { FIREBASE_ERRORS } from '../constants/authConstants'
 
 export class AuthServiceError extends Error {
   code: string
@@ -130,8 +132,22 @@ async function loginLegacyBeta(phone: string): Promise<AuthUser> {
 // WhatsApp OTP — Forgot PIN flow
 // ---------------------------------------------------------------------------
 
+/** Traduce un código de error de Firebase Auth (auth/*) a un mensaje o lo deja pasar tal cual. */
+function translateFirebaseError(err: unknown): AuthServiceError {
+  const code = err instanceof Error ? err.message : String(err)
+  const match = /auth\/[a-z-]+/.exec(code)
+  const firebaseCode = match?.[0]
+  if (firebaseCode && FIREBASE_ERRORS[firebaseCode]) {
+    return new AuthServiceError(firebaseCode, FIREBASE_ERRORS[firebaseCode])
+  }
+  return new AuthServiceError('OTP_CLIENT_ERROR', 'No se pudo verificar el código, intenta de nuevo.')
+}
+
 /**
- * Sends a WhatsApp OTP to a registered phone number (forgot-PIN flow).
+ * Inicia la verificación OTP para el flujo de "olvidé mi PIN". Con el
+ * proveedor whatsapp, el backend ya generó y envió el código. Con firebase,
+ * el backend no envía nada (channel:'client') y aquí se dispara
+ * signInWithPhoneNumber para que Firebase entregue su propio SMS.
  * Maps to auth-forgot-pin edge function.
  */
 export async function startWhatsappVerification(phone: string): Promise<{ debug_otp?: string } | undefined> {
@@ -141,16 +157,35 @@ export async function startWhatsappVerification(phone: string): Promise<{ debug_
   if (error) {
     throw new AuthServiceError(extractEdgeError(error), extractEdgeError(error))
   }
-  return data as { debug_otp?: string }
+  const resp = data as { sent?: boolean; otp_provider?: string; debug_otp?: string }
+  if (resp?.otp_provider === 'firebase') {
+    try {
+      const provider = await getClientOtpProvider()
+      await provider.requestCode(phone)
+    } catch (err) {
+      throw translateFirebaseError(err)
+    }
+  }
+  return { debug_otp: resp?.debug_otp }
 }
 
 /**
  * Verifies the OTP code (post-registration or forgot-PIN).
- * Maps to auth-otp-verify. Returns void — call loginWithPin afterward to get a session.
+ * Con firebase, `code` es el código de 6 dígitos que el usuario recibió por
+ * SMS de Google; se convierte localmente en un ID token antes de mandarlo al
+ * backend. Maps to auth-otp-verify. Returns void — call loginWithPin afterward.
  */
 export async function checkWhatsappCode(phone: string, code: string): Promise<void> {
+  const provider = await getClientOtpProvider()
+  let proof: string
+  try {
+    proof = await provider.getProof(code)
+  } catch (err) {
+    throw translateFirebaseError(err)
+  }
+
   const { error } = await supabase.functions.invoke('auth-otp-verify', {
-    body: { phone, otp: code },
+    body: { phone, otp: proof },
   })
   if (error) {
     throw new AuthServiceError(extractEdgeError(error), extractEdgeError(error))
@@ -188,12 +223,26 @@ export async function registerWithPin(
     throw new AuthServiceError(code, code)
   }
 
-  const resp = data as { user_id: string; phone: string; requires_otp: boolean; debug_otp?: string }
+  const resp = data as {
+    user_id: string; phone: string; requires_otp: boolean; otp_provider?: string; debug_otp?: string
+  }
+
+  if (resp.requires_otp && resp.otp_provider === 'firebase') {
+    try {
+      const provider = await getClientOtpProvider()
+      await provider.requestCode(resp.phone)
+    } catch (err) {
+      throw translateFirebaseError(err)
+    }
+  }
+
   return { user_id: resp.user_id, phone: resp.phone, requires_otp: resp.requires_otp, debug_otp: resp.debug_otp }
 }
 
 /**
- * Resends an OTP to a phone that has a pending registration.
+ * Resends an OTP to a phone that has a pending registration. Con el
+ * proveedor firebase, el reenvío lo dispara el cliente directamente (el
+ * backend responde sent:false, sin generar/enviar nada).
  * Maps to auth-otp-resend. Returns { debug_otp? } in local dev.
  */
 export async function resendOtp(phone: string): Promise<{ debug_otp?: string }> {
@@ -204,7 +253,17 @@ export async function resendOtp(phone: string): Promise<{ debug_otp?: string }> 
     const code = extractEdgeError(error)
     throw new AuthServiceError(code, code)
   }
-  const resp = data as { sent: boolean; debug_otp?: string }
+  const resp = data as { sent: boolean; otp_provider?: string; debug_otp?: string }
+
+  if (resp.otp_provider === 'firebase') {
+    try {
+      const provider = await getClientOtpProvider()
+      await provider.requestCode(phone)
+    } catch (err) {
+      throw translateFirebaseError(err)
+    }
+  }
+
   return { debug_otp: resp?.debug_otp }
 }
 
@@ -273,10 +332,21 @@ export async function loginWithPinOrLegacy(phone: string, pin: string): Promise<
 // PIN reset
 // ---------------------------------------------------------------------------
 
-/** Resetea PIN via WhatsApp OTP (code from auth-forgot-pin) */
+/**
+ * Resetea PIN via OTP (code from auth-forgot-pin). Con firebase, `code` es
+ * el código de 6 dígitos recibido por SMS; se convierte a ID token localmente.
+ */
 export async function resetPin(phone: string, code: string, newPin: string): Promise<void> {
+  const provider = await getClientOtpProvider()
+  let proof: string
+  try {
+    proof = await provider.getProof(code)
+  } catch (err) {
+    throw translateFirebaseError(err)
+  }
+
   const { error } = await supabase.functions.invoke('auth-reset-pin', {
-    body: { phone, code, new_pin: newPin },
+    body: { phone, code: proof, new_pin: newPin },
   })
   if (error) {
     const errCode = extractEdgeError(error)

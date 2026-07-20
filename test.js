@@ -10,10 +10,10 @@ async function test() {
         'apikey': ANON_KEY
       },
       body: JSON.stringify({
-        phone: '+59170000000',
+        phone: '+59173401469',
         pin: '12345678',
-        name: 'Test',
-        city: 'La Paz',
+        name: 'Test Pereyra',
+        city: 'Sucre',
         initial_role: 'constructor'
       })
     });

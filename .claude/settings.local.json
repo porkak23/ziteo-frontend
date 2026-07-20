@@ -20,7 +20,16 @@
       "Bash(echo \"EXIT=$?\")",
       "Bash(vercel --prod --yes)",
       "Bash(vercel --version)",
-      "Bash(vercel whoami *)"
+      "Bash(vercel whoami *)",
+      "Bash(pip --version)",
+      "Bash(pip show *)",
+      "Bash(pip install *)",
+      "Bash(markitdown --help)",
+      "Bash(python -c \"import markitdown; print\\(markitdown.__file__\\)\")",
+      "Bash(ls -la \"/c/Users/pereira/AppData/Roaming/Python/Python313/Scripts/\" | grep -i markitdown)",
+      "Bash(rm -rf /d/prompt-master)",
+      "Bash(mkdir -p ~/.claude/skills)",
+      "Bash(git clone *)"
     ]
   }
 }
