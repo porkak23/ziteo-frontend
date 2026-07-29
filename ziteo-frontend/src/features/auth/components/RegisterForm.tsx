@@ -216,7 +216,7 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
       case 'RATE_LIMITED':
         return 'Demasiados intentos. Espera 15 minutos antes de intentarlo de nuevo.'
       case 'WHATSAPP_SEND_FAILED':
-        return 'No pudimos enviar el código por WhatsApp. Inténtalo de nuevo más tarde.'
+        return 'No pudimos enviar el código de verificación. Inténtalo de nuevo más tarde.'
       case 'INVALID_PHONE_FORMAT':
         return 'Número de teléfono inválido. Verifica el número e inténtalo de nuevo.'
       default:

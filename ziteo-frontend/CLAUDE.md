@@ -38,11 +38,17 @@ Build remoto corre `npm run build` → `dist` (config en `vercel.json`: framewor
 - **Sanity local antes de subir:** `npm run build` local atrapa errores de TS (`tsc -b`) más rápido que esperar el build remoto.
 - El deploy es **solo frontend**. Las Edge Functions de Supabase (`auth-*`, etc.) se despliegan aparte con `npx supabase functions deploy` y NO se tocan en el deploy de Vercel.
 
-### Env vars en Vercel (producción) — estado 2026-06-30
+### Env vars en Vercel (producción) — estado 2026-07-29
 - **Configuradas (lo crítico):** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Sin estas dos la app no arranca.
+- **`VITE_OTP_PROVIDER=firebase`** activo — junto con `VITE_FIREBASE_API_KEY`/`AUTH_DOMAIN`/`PROJECT_ID`/`APP_ID`, son **requeridas**, ya NO son legacy. Sin ellas el registro/login no puede verificar el teléfono.
 - **Faltantes (no bloquean el boot, pero degradan features):** `VITE_GOOGLE_MAPS_KEY` (mapas en fallback de solo-texto), `VITE_SENTRY_DSN` (sin reporte de errores), `VITE_VAPID_PUBLIC_KEY` (sin web push), `VITE_POSTHOG_KEY`/`VITE_CLARITY_ID`/`VITE_GA4_ID` (sin analytics).
-- Las `VITE_FIREBASE_*` están de sobra (legacy, ya no se usan).
 - Agregar una env var: `vercel env add VITE_GOOGLE_MAPS_KEY production` y luego re-desplegar (`vercel --prod`) para que entre al bundle — las `VITE_*` se inyectan en **build time**, no en runtime.
+
+### Trampa — `vercel env add` vía stdin agrega un `\n` final (2026-07-29)
+`echo "firebase" | vercel env add VITE_OTP_PROVIDER production` guarda literalmente `"firebase\n"`. Como la comparación en código es `=== 'firebase'` exacta, el valor con newline nunca matchea y Vite pliega el bundle a la rama `whatsapp` — **sin ningún error visible**, el build pasa limpio y el deploy "funciona", solo que con el proveedor equivocado. Pasó en producción: la env decía `firebase` en el dashboard pero el bundle servido usaba `whatsapp`.
+- Usar `printf 'firebase'` (sin `echo`, que sí agrega `\n`) al pipear a `vercel env add`.
+- Verificar el valor real con `vercel env pull <archivo> --environment=production` y mirar el `.env` resultante — el dashboard de Vercel no muestra si hay un `\n` colado.
+- Si algo "debería estar activo" pero el comportamiento en prod dice lo contrario, sospechar esto antes que del código.
 
 ### Notas
 - `CRLF will be replaced by LF` y advertencias de Sentry sourcemap durante el build son ruido, no errores.
@@ -113,6 +119,8 @@ El camino del Constructor creaba la orden con `place_order` RPC pero nunca notif
 ---
 
 ## Lecciones Aprendidas — OTP WhatsApp (2026-06-28)
+
+> **Superado (2026-07-29):** el proveedor OTP activo en prod es **Firebase Phone Auth** (secret `OTP_PROVIDER=firebase`), no WhatsApp. El código WhatsApp sigue intacto como fallback — ver sección "OTP Firebase" más abajo para el estado vigente. Esta sección queda como referencia histórica del sistema WhatsApp.
 
 ### La regla
 El sistema OTP usa Meta WhatsApp como canal primario (plantilla `ziteoo_otp` / `es_MX`), con fallback automático a Twilio SMS. Las 6 funciones de auth (`auth-register`, `auth-otp-resend`, `auth-forgot-pin`, `auth-otp-verify`, `auth-reset-pin`, `auth-login`) todas tienen `verify_jwt: false` y viven en `supabase/functions/auth/<slug>/index.ts` con dependencias compartidas en `supabase/functions/_shared/`.
@@ -201,4 +209,26 @@ El `register/index.ts` **local** tiene un flag `OTP_VERIFICATION_REQUIRED` (defa
 
 ### Generación de Tipos de Supabase
 - **npm run gen:types**: Tras aplicar migraciones, regenerar tipos de TS. Redirigir siempre solo el stdout (`npm run gen:types > src/types/supabase.ts`) para evitar que logs redundantes de stderr ensucien el archivo generado.
+
+---
+
+## Lecciones Aprendidas — OTP Firebase activo en producción (2026-07-29)
+
+### La regla
+`OTP_PROVIDER=firebase` (secret Supabase) + `VITE_OTP_PROVIDER=firebase` (env Vercel) están **activos en prod**. El teléfono se verifica con Firebase Phone Auth (proyecto `ziteo-a08f4`): el cliente dispara `signInWithPhoneNumber` con reCAPTCHA invisible, y `auth-otp-verify`/`auth-reset-pin` validan el ID token contra el JWKS de Google (`_shared/otp-firebase-adapter.ts`), sin Admin SDK. El código WhatsApp sigue intacto — volver es solo cambiar el secret `OTP_PROVIDER`, cero cambios de código (ver comentario en `_shared/otp-provider.ts`).
+
+### Bug corregido — anti-replay roto en silencio
+`otps.code` era `varchar(6)` (pensado para códigos WhatsApp de 6 dígitos), pero el adaptador Firebase guarda ahí el jti (`sub:auth_time`, ~39 chars) para bloquear reuso del mismo ID token. El insert fallaba y el error no se chequeaba → un mismo ID token de Firebase se podía reverificar indefinidamente dentro de su ventana de 10 min, sin dejar rastro. Fix: migración `20260729000001_widen_otps_code_for_firebase_jti.sql` (columna a `varchar(128)`) + el adaptador ahora chequea el error del insert y devuelve `{ok:false, reason:'INVALID'}` si falla (fail-closed).
+
+### Throttle por IP (`_shared/ip-throttle.ts`)
+Con SMS pagados (Firebase Blaze), el throttle por teléfono no alcanza — un bot rota números para quemar saldo (toll fraud). Se agregó `isIpThrottled()`, que reusa el RPC `check_throttle` ya existente con identificador `sms_ip:<ip>` (20/hora, lee `x-forwarded-for`). Aplicado en `auth/register`, `auth/otp-resend`, `auth/forgot-pin` — los tres puntos que disparan `provider.issue()`/`requestCode()`.
+
+### Firebase Console — requisitos para SMS real
+- **Blaze (Cloud Billing) obligatorio** desde sept-2024 para enviar SMS reales; sin eso solo responden los números de prueba configurados en Authentication → Sign-in method → Phone → *Phone numbers for testing*.
+- **SMS region policy**: restringir a Bolivia (BO) — mitigación principal contra fraude de peaje, la mayoría de los ataques apuntan a rangos premium de otros países.
+- **Authorized domains**: `ziteo-frontend.vercel.app` + `localhost`.
+- Costo por SMS a Bolivia no está en las tablas públicas de Google (Phone Number Verification pricing solo lista 8 países); se ve recién en la consola al activar Blaze.
+
+### Verificar con navegador real, no headless
+El reCAPTCHA invisible de Firebase no completa su handshake en Playwright headless contra prod (se cuelga en `requestStorageAccess`/`getProjectConfig`). Usar el Browser pane (`mcp__Claude_Browser__*`) con compositing real, o un headed run. Un intento con Playwright headless simple también reveló un 403 real (`Requests from referer ... are blocked`) que resultó ser ruido del entorno headless, no del código — no confundir con un problema de Authorized domains.
 

@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { handleOptions, jsonResponse, errorResponse } from '../../_shared/cors.ts'
 import { getOtpProvider } from '../../_shared/otp-provider.ts'
+import { isIpThrottled } from '../../_shared/ip-throttle.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -28,6 +29,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
+
+  // Rate-limit por IP: corta el bot que rota números para quemar saldo de SMS.
+  if (await isIpThrottled(adminClient, req)) {
+    return errorResponse('RATE_LIMITED', 'Too many requests from this network. Please try again later.', 429, req)
+  }
 
   // Rate-limit resend spam: max 5 requests per phone per 15 minutes.
   // Fail-closed: an RPC error is treated as throttled.

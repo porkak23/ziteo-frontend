@@ -88,13 +88,20 @@ async function verify(
 
   // Registrar el token como consumido (fila ya `used:true`, no se verifica
   // por expires_at — el anti-replay depende de auth_time arriba).
-  await admin.from('otps').insert({
+  // Fail-closed: si no podemos dejar constancia del jti, no hay garantía de
+  // anti-replay, así que rechazamos en vez de aceptar a ciegas.
+  const { error: insertError } = await admin.from('otps').insert({
     phone,
     code: jti,
     purpose,
     used: true,
     expires_at: new Date(Date.now() + 600 * 1000).toISOString(),
   })
+
+  if (insertError) {
+    console.error('[otp-firebase-adapter] no se pudo registrar el jti consumido:', insertError)
+    return { ok: false, reason: 'INVALID' }
+  }
 
   return { ok: true }
 }

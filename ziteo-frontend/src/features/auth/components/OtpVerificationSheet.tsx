@@ -212,7 +212,7 @@ export function OtpVerificationSheet({
                 Enviando código
               </p>
               <p style={{ fontFamily: Z.font, fontSize: 14, color: Z.textSec, margin: 0, lineHeight: 1.5 }}>
-                Enviando por WhatsApp a{' '}
+                Enviando a{' '}
                 <span style={{ fontWeight: 600, color: Z.text }}>{formatPhone(phone)}</span>
               </p>
             </div>
