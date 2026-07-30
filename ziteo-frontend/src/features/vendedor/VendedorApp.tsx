@@ -1061,6 +1061,7 @@ interface EnvioOrderInfo {
   total: number
   cargo_type?: 'light' | 'medium' | 'heavy'
   delivery_method?: 'delivery' | 'pickup'
+  status?: string
 }
 
 function PedidosFilterDropdown({
@@ -1653,6 +1654,7 @@ function EnviosScreen({ onClose }: { onClose: () => void }) {
                           total: order.total,
                           cargo_type: order.cargo_type,
                           delivery_method: order.delivery_method,
+                          status: order.status,
                         })}
                         style={{
                           padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${Z.border}`, cursor: 'pointer',
@@ -1773,6 +1775,20 @@ function GestionEnvioScreen({
     )
   }
 
+  const handleConfirmPickupDelivered = async () => {
+    setDispatching(true)
+    const { error } = await supabase.rpc('confirm_pickup_delivered', { p_order_id: order.id })
+    setDispatching(false)
+    if (error) {
+      showToast(error.message || 'No se pudo confirmar la entrega', 'error')
+      return
+    }
+    // Sin esto la orden recién cerrada sigue apareciendo como "Listo para
+    // despachar" en la lista de EnviosScreen hasta que expire el cache.
+    await queryClient.invalidateQueries({ queryKey: queryKeys.incomingOrders(providerId) })
+    finish()
+  }
+
   const handleAdvanceFleet = async (action: 'start' | 'delivered' | 'derive_pool') => {
     setDispatching(true)
     const { error } = await supabase.rpc('advance_own_fleet_delivery', {
@@ -1785,6 +1801,7 @@ function GestionEnvioScreen({
       return
     }
     if (action === 'delivered') {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.incomingOrders(providerId) })
       finish()
       return
     }
@@ -1796,7 +1813,11 @@ function GestionEnvioScreen({
   }
 
   return (
-    <ZScreen bg={Z.bg} style={{ position: 'fixed' }}>
+    // zIndex 40: por encima de EnviosScreen (30), que es quien abre esta
+    // pantalla. Sin él, `position: fixed` deja el stacking en 'auto' y las
+    // tarjetas del home (position: relative, posteriores en el DOM) se pintan
+    // encima y se comen los clicks de los botones de despacho.
+    <ZScreen bg={Z.bg} style={{ position: 'fixed', zIndex: 40 }}>
       <ZHeader title="Gestionar Envío" onBack={onBack} />
       <Toast toasts={toasts} onRemove={removeToast} />
       <div style={{ flex: 1, padding: '8px 20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1823,9 +1844,20 @@ function GestionEnvioScreen({
             <div style={{ fontFamily: Z.font, fontSize: 11, color: Z.textSec, marginTop: 8 }}>
               El comprador elegido recoger su pedido · Compártelo al entregar
             </div>
-            <ZButton variant="blue" style={{ marginTop: 16 }} onClick={handleRetiro}>
-              Notificar al cliente
-            </ZButton>
+            {order.status === 'delivered' ? (
+              <div style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.blueDark, marginTop: 16 }}>
+                Pedido entregado
+              </div>
+            ) : (
+              <>
+                <ZButton variant="blue" style={{ marginTop: 16 }} onClick={handleRetiro}>
+                  Notificar al cliente
+                </ZButton>
+                <ZButton disabled={dispatching} style={{ marginTop: 12 }} onClick={handleConfirmPickupDelivered}>
+                  {dispatching ? 'Confirmando...' : 'Confirmar entrega al cliente'}
+                </ZButton>
+              </>
+            )}
           </div>
         )}
 
@@ -2391,7 +2423,9 @@ function VendedorCuentaScreen({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <ZScreen bg={Z.bg} style={{ position: 'fixed' }}>
+    // Mismo motivo que GestionEnvioScreen: sin zIndex explícito, el home se
+    // pinta encima de esta pantalla full-screen y roba los clicks.
+    <ZScreen bg={Z.bg} style={{ position: 'fixed', zIndex: 40 }}>
       <Toast toasts={toasts} onRemove={removeToast} />
       <ZHeader title="Mi cuenta" onBack={onClose} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>

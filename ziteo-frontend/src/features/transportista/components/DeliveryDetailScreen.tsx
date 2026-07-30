@@ -5,6 +5,8 @@ import { deliveryFee } from '../utils/deliveryUtils'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
 import { PaymentCloseSheet } from './PaymentCloseSheet'
+import { LiveMap } from '../../../shared/components/LiveMap'
+import { useGeolocation } from '../../../shared/hooks/useGeolocation'
 import type { Delivery } from '../types/deliveryTypes'
 
 interface DeliveryDetailScreenProps {
@@ -42,6 +44,11 @@ export function DeliveryDetailScreen({ deliveryId, onBack, readOnly }: DeliveryD
   const { toasts, showToast, removeToast } = useToast()
   const { mutate: acceptDelivery, isPending: isAccepting } = useAcceptDelivery()
   const { mutate: updateStatus, isPending: isUpdating }    = useUpdateDeliveryStatus()
+
+  // Only poll GPS while the driver actually has this job in hand — no point
+  // tracking position for a still-pending job or a read-only Historial view.
+  const trackingActive = delivery?.status === 'accepted' || delivery?.status === 'in_transit'
+  const geo = useGeolocation(!readOnly && trackingActive)
 
   const [arrivedPickup, setArrivedPickup]         = useState(false)
   const [paymentSheetOpen, setPaymentSheetOpen]   = useState(false)
@@ -128,6 +135,18 @@ export function DeliveryDetailScreen({ deliveryId, onBack, readOnly }: DeliveryD
           <Meta icon="payments" label="Pago" value={fee} accent />
           <Meta icon="schedule" label="Creado" value={createdRelative} small />
         </section>
+
+        {/* Route map — driver's own live position + pickup/dropoff pins */}
+        {trackingActive && (
+          <LiveMap
+            driverPosition={geo.position ? { lat: geo.position.lat, lng: geo.position.lng } : null}
+            pickupLat={delivery.pickup_lat}
+            pickupLng={delivery.pickup_lng}
+            dropoffLat={delivery.dropoff_lat}
+            dropoffLng={delivery.dropoff_lng}
+            height={220}
+          />
+        )}
 
         {/* Navigation — delegates to native app so GPS stays reliable in background */}
         <div className="grid grid-cols-2 gap-2">

@@ -1,4 +1,4 @@
-import { IconMoto, IconCamion } from './VehicleIcons'
+import { IconMoto, IconCamioneta, IconCamion } from './VehicleIcons'
 import type { UnifiedJob } from '../types/jobTypes'
 
 interface JobFocusCardProps {
@@ -8,8 +8,14 @@ interface JobFocusCardProps {
   isAccepting: boolean
 }
 
+const CARGO_CHIP: Record<UnifiedJob['cargoType'], { label: string; Icon: typeof IconMoto; className: string }> = {
+  light:  { label: 'Ligero', Icon: IconMoto,      className: 'bg-surface-container text-on-surface-variant' },
+  medium: { label: 'Media',  Icon: IconCamioneta, className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+  heavy:  { label: 'Pesado', Icon: IconCamion,    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+}
+
 export function JobFocusCard({ job, onAccept, onSkip, isAccepting }: JobFocusCardProps) {
-  const isHeavy = job.cargoType === 'heavy'
+  const cargoChip = CARGO_CHIP[job.cargoType]
 
   return (
     <div className="bg-surface rounded-3xl border border-outline-variant overflow-hidden">
@@ -26,13 +32,9 @@ export function JobFocusCard({ job, onAccept, onSkip, isAccepting }: JobFocusCar
           </span>
           {job.kind === 'delivery' ? 'Entrega' : 'Transporte'}
         </span>
-        <span className={`flex items-center gap-1 font-label text-xs font-bold px-2.5 py-1 rounded-full ${
-          isHeavy
-            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-            : 'bg-surface-container text-on-surface-variant'
-        }`}>
-          {isHeavy ? <IconCamion size={13} /> : <IconMoto size={13} />}
-          {isHeavy ? 'Pesado' : 'Ligero'}
+        <span className={`flex items-center gap-1 font-label text-xs font-bold px-2.5 py-1 rounded-full ${cargoChip.className}`}>
+          <cargoChip.Icon size={13} />
+          {cargoChip.label}
         </span>
         <span className="ml-auto font-headline font-black text-primary text-2xl">{job.feeLabel}</span>
       </div>

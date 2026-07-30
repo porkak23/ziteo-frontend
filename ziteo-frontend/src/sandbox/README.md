@@ -15,6 +15,27 @@ Prueba la cadena Comprador → Vendedor → Transportista sin pasarela de pago r
 3. Usuarios de prueba ya sembrados ahí: `constructor@sandbox.ziteoo.test`, `vendedor@sandbox.ziteoo.test`, `chofer@sandbox.ziteoo.test` (password `Sandbox123!`), con el vendedor con tienda geolocalizada (`STORE` en `src/sandbox/fixtures/coords.ts`) y 2 productos `[SIM]`.
 4. `npm run dev` con esas env vars.
 
+   **Trampa conocida (encontrada 2026-07-29):** el login por password de estos 3 usuarios puede
+   fallar con `500 Database error querying schema` / `converting NULL to string is unsupported`.
+   Causa: `auth.users.email_change`, `email_change_token_new` y `recovery_token` quedaron en
+   `NULL` en vez de `''` al sembrarlos (GoTrue no tolera `NULL` en esas columnas al escanear la
+   fila). Fix de una vez, vía SQL editor del proyecto sandbox:
+   ```sql
+   UPDATE auth.users SET email_change = '', email_change_token_new = '', recovery_token = ''
+   WHERE email LIKE '%@sandbox.ziteoo.test' AND (email_change IS NULL OR email_change_token_new IS NULL OR recovery_token IS NULL);
+   ```
+   No hace falta repetirlo salvo que se re-siembren los usuarios desde cero.
+
+   **Para automatizar el login de estos 3 usuarios (agentes/tests):** el flujo de login real de
+   la app es por teléfono + Firebase, no por este email/password de prueba — no hay pantalla que
+   lo use directo. Para entrar como uno de ellos sin tocar la UI de teléfono, pedir el
+   `access_token`/`refresh_token` por API (`POST {SUPABASE_URL}/auth/v1/token?grant_type=password`
+   con `email`+`password`) e inyectar la sesión en `localStorage` antes de cargar la app:
+   `ziteo-supabase-auth` = el `Session` completo devuelto por ese endpoint (formato de
+   supabase-js v2), y `ziteo-auth` = `{"state":{"user":{...AuthUser...}},"version":0}` con los
+   campos de `authStore.ts` (`user_id`, `name`, `phone`, `active_role`, `roles`, `city`,
+   `access_token:''`, `refresh_token:''`). Después de setear ambas claves, recargar la página.
+
 ## Qué se simula
 
 - **Mapas**: `GeoService` en modo `mock` (sin necesidad de `VITE_GOOGLE_MAPS_KEY`) — `MapPicker`/`LiveMap` degradan a `MockMapPicker`/`MockLiveMap` (SVG propio, sin dependencias). Coordenadas fijas en Santa Cruz (`fixtures/coords.ts`).

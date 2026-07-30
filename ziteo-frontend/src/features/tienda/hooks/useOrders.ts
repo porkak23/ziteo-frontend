@@ -156,7 +156,11 @@ export function useMyOrders(constructorId?: string) {
           price_unit: item.unit_price ?? item.price_unit,
           product:    item.product ?? null,
         })),
-        deliveries: o.deliveries ?? [],
+        // deliveries.order_id is UNIQUE, so PostgREST embeds this relation as a
+        // single object (or null) instead of an array — Array.isArray guards
+        // against that shape, not just null/undefined. See MEMORY: crashed
+        // MisPedidosScreen with "deliveries.some is not a function".
+        deliveries: Array.isArray(o.deliveries) ? o.deliveries : o.deliveries ? [o.deliveries] : [],
       })) as OrderWithItems[]
     },
   })

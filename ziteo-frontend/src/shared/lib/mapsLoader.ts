@@ -28,12 +28,15 @@ function ensureOptions() {
 export async function loadMapsLibrary(library: 'maps'): Promise<google.maps.MapsLibrary | null>
 export async function loadMapsLibrary(library: 'places'): Promise<google.maps.PlacesLibrary | null>
 export async function loadMapsLibrary(library: 'core'): Promise<google.maps.CoreLibrary | null>
+export async function loadMapsLibrary(library: 'geocoding'): Promise<google.maps.GeocodingLibrary | null>
 export async function loadMapsLibrary(
   library: string
-): Promise<google.maps.MapsLibrary | google.maps.PlacesLibrary | google.maps.CoreLibrary | null> {
+): Promise<
+  google.maps.MapsLibrary | google.maps.PlacesLibrary | google.maps.CoreLibrary | google.maps.GeocodingLibrary | null
+> {
   if (!hasMapsKey) return null
   ensureOptions()
   return google.maps.importLibrary(library) as Promise<
-    google.maps.MapsLibrary | google.maps.PlacesLibrary | google.maps.CoreLibrary
+    google.maps.MapsLibrary | google.maps.PlacesLibrary | google.maps.CoreLibrary | google.maps.GeocodingLibrary
   >
 }

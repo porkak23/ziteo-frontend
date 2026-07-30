@@ -69,7 +69,16 @@ export function useUnifiedPool(cargoCapability: CargoCapability | null, driverPo
 
   function accept(job: UnifiedJob, callbacks: { onSuccess?: () => void; onError?: (e: Error) => void }) {
     if (job.kind === 'delivery') {
-      acceptDelivery(job.id, callbacks)
+      acceptDelivery(job.id, {
+        onSuccess: (result) => {
+          if (!result.success) {
+            callbacks.onError?.(new Error(result.message ?? 'No disponible'))
+          } else {
+            callbacks.onSuccess?.()
+          }
+        },
+        onError: callbacks.onError,
+      })
     } else {
       acceptTransport(job.id, {
         onSuccess: (result) => {

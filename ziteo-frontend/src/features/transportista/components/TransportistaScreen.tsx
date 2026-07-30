@@ -8,13 +8,20 @@ import { useGeolocation } from '../../../shared/hooks/useGeolocation'
 import { useUnifiedPool } from '../hooks/useUnifiedPool'
 import { DeliveryDetailScreen } from './DeliveryDetailScreen'
 import { RadarActive } from './RadarActive'
+import { DriverPoolMap } from './DriverPoolMap'
 import { JobFocusCard } from './JobFocusCard'
 import { ActiveJobsList } from './ActiveJobsList'
 import { IconMoto, IconCamioneta, IconPickup, IconCamion } from './VehicleIcons'
 import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
+import { hasMapsKey } from '../../../shared/lib/mapsLoader'
+import { getGeoService } from '../../../shared/geo'
 import type { VehicleType } from '../types/deliveryTypes'
 import { vehicleToCargoCapability } from '../types/deliveryTypes'
+
+// Real map available when there's a Google Maps key, or in the sandbox's
+// mock geo mode (which renders its own SVG map, no key needed).
+const HAS_MAP = hasMapsKey || getGeoService().kind === 'mock'
 
 // ─── VehicleSetupBanner ───────────────────────────────────────────────────────
 
@@ -221,7 +228,19 @@ export function TransportistaScreen() {
             </div>
           ))}
         </div>
-        <RadarActive jobCount={pool.length} hasLocation={geo.position !== null} />
+        {HAS_MAP && geo.position ? (
+          <DriverPoolMap
+            driverPos={geo.position}
+            jobs={pool}
+            selectedJobId={currentJob?.id ?? null}
+            onSelectJob={(id) => {
+              const idx = pool.findIndex((j) => j.id === id)
+              if (idx !== -1) setPoolIndex(idx)
+            }}
+          />
+        ) : (
+          <RadarActive jobCount={pool.length} hasLocation={geo.position !== null} />
+        )}
       </div>
 
       {driverProfile !== undefined && driverProfile.vehicle_type === null && <VehicleSetupBanner />}

@@ -2761,6 +2761,7 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: Json
       }
+      confirm_pickup_delivered: { Args: { p_order_id: string }; Returns: Json }
       confirm_rental_return: {
         Args: { p_order_item_id: string }
         Returns: undefined

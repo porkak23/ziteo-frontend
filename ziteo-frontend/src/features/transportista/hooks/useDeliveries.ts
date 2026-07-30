@@ -66,6 +66,21 @@ export function usePendingDeliveries(cargoCapability?: CargoCapability | null) {
           queryClientRef.current.invalidateQueries({ queryKey: POOL_KEY(cargoCapability) })
         },
       )
+      .on(
+        // Another driver accepting a job flips status away from 'pending' —
+        // without this the job stays a phantom in everyone else's pool until
+        // they manually refresh. No `filter` here: the row's new status is
+        // no longer 'pending' so a `status=eq.pending` filter would never match.
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'deliveries',
+        },
+        () => {
+          queryClientRef.current.invalidateQueries({ queryKey: POOL_KEY(cargoCapability) })
+        },
+      )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }

@@ -1,18 +1,26 @@
 /// <reference types="@types/google.maps" />
-import { MAPS_KEY, hasMapsKey } from '@/shared/lib/mapsLoader'
+import { hasMapsKey, loadMapsLibrary } from '@/shared/lib/mapsLoader'
 import { captureException } from '@/lib/sentryClient'
 import type { GeoAddress, GeoPoint, GeoService } from './types'
 
+// Reverse geocoding goes through the Maps JS SDK's Geocoder, not a raw
+// fetch() to the REST endpoint. Google rejects HTTP-referrer-restricted keys
+// on server-style REST calls (Geocoding/Places/Directions) — referrer
+// restriction only authenticates requests made through the JS SDK's own
+// channel. An IP-restricted key would work over REST, but that means a
+// second key to manage; reusing the one key already loaded for the map is
+// simpler and matches how MapPicker/DriverPoolMap already load it.
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  const fallback = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
   try {
-    const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=es`
-    )
-    const data = (await res.json()) as { results?: { formatted_address: string }[] }
-    return data.results?.[0]?.formatted_address ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+    const geocodingLib = await loadMapsLibrary('geocoding')
+    if (!geocodingLib) return fallback
+    const geocoder = new geocodingLib.Geocoder()
+    const { results } = await geocoder.geocode({ location: { lat, lng }, language: 'es' })
+    return results[0]?.formatted_address ?? fallback
   } catch (err) {
     captureException(err, { context: 'googleProvider.reverseGeocode' })
-    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+    return fallback
   }
 }
 
