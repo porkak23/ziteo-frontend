@@ -6,6 +6,7 @@ import type { UserRole } from '../types/authTypes'
 import { Z } from '@/shared/design/tokens'
 import LegalModal, { type LegalDocType } from '@/shared/components/LegalModal'
 import { track } from '../../../lib/analytics'
+import { FIREBASE_ERRORS } from '../constants/authConstants'
 import { OtpVerificationSheet } from './OtpVerificationSheet'
 import type { VerificationStep } from './OtpVerificationSheet'
 
@@ -209,7 +210,13 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
     void handleRegister(pin)
   }
 
-  function mapRegisterError(code: string): string {
+  function mapRegisterError(code: string, message?: string): string {
+    if (FIREBASE_ERRORS[code]) {
+      return FIREBASE_ERRORS[code]
+    }
+    if (code.startsWith('auth/')) {
+      return message ?? `Error de Firebase [${code}]. Inténtalo de nuevo.`
+    }
     switch (code) {
       case 'PHONE_ALREADY_REGISTERED':
         return 'Este número ya está registrado. Por favor, inicia sesión.'
@@ -220,7 +227,7 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
       case 'INVALID_PHONE_FORMAT':
         return 'Número de teléfono inválido. Verifica el número e inténtalo de nuevo.'
       default:
-        return `No pudimos completar tu registro en este momento. Inténtalo más tarde o contacta a soporte indicando el código [${code}].`
+        return message ?? `No pudimos completar tu registro en este momento. Inténtalo más tarde o contacta a soporte indicando el código [${code}].`
     }
   }
 
@@ -257,7 +264,8 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
     } catch (err) {
       console.error('Registration failed:', err)
       const code = err instanceof AuthServiceError ? err.code : 'ERR_AUTH_EDGE'
-      setSheetError(mapRegisterError(code))
+      const msg = err instanceof Error ? err.message : undefined
+      setSheetError(mapRegisterError(code, msg))
       // Return to pin-create so the user can retry (PIN fields reset by OtpVerificationSheet)
       setSheetStep('pin-create')
     } finally {

@@ -216,6 +216,10 @@ El `register/index.ts` **local** tiene un flag `OTP_VERIFICATION_REQUIRED` (defa
 
 ## Lecciones Aprendidas — OTP Firebase activo en producción (2026-07-29)
 
+> 📄 **Estado completo, aciertos, errores y el bloqueo abierto del SMS real: [`docs/OTP_FIREBASE.md`](../docs/OTP_FIREBASE.md).** Leerlo antes de tocar nada de OTP — incluye qué hipótesis ya están descartadas para no repetir diagnósticos.
+>
+> **Al 2026-07-31 el registro por SMS real NO funciona**: `sendVerificationCode` devuelve `503 Service Unavailable`. Todo lo demás de la cadena está verificado y funcionando (con números de prueba el flujo completo cierra).
+
 ### La regla
 `OTP_PROVIDER=firebase` (secret Supabase) + `VITE_OTP_PROVIDER=firebase` (env Vercel) están **activos en prod**. El teléfono se verifica con Firebase Phone Auth (proyecto `ziteo-a08f4`): el cliente dispara `signInWithPhoneNumber` con reCAPTCHA invisible, y `auth-otp-verify`/`auth-reset-pin` validan el ID token contra el JWKS de Google (`_shared/otp-firebase-adapter.ts`), sin Admin SDK. El código WhatsApp sigue intacto — volver es solo cambiar el secret `OTP_PROVIDER`, cero cambios de código (ver comentario en `_shared/otp-provider.ts`).
 
