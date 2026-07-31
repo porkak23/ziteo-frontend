@@ -6,11 +6,24 @@
 // si está en la whitelist; un origen desconocido recibe el origen primario y
 // el navegador bloquea la lectura de la respuesta.
 //
-// Orígenes adicionales (p.ej. dominio propio futuro) sin tocar código:
-//   supabase secrets set ALLOWED_ORIGINS="https://ziteo.app,https://www.ziteo.app"
+// Orígenes adicionales sin tocar código:
+//   supabase secrets set ALLOWED_ORIGINS="https://otro.dominio"
+// OJO: el secret se llama ALLOWED_ORIGINS (plural). Existe uno viejo llamado
+// ALLOWED_ORIGIN (singular) en prod que este código NO lee — es de la
+// generación previa de las funciones y no tiene efecto.
+//
+// 2026-07-30: prod corre con ALLOWED_ORIGINS="https://www.ziteo.company,https://ziteo.company"
+// porque el CLI de Supabase subió una versión cacheada de este archivo y la
+// lista estática de abajo no llegó a desplegarse. Al redesplegar estas
+// funciones, verificar con:
+//   curl -si -X OPTIONS <fn-url> -H "Origin: https://www.ziteo.company" \
+//     -H "Access-Control-Request-Method: POST" | grep -i allow-origin
+// Si el header refleja el origen, el código nuevo ya está activo y el secret
+// pasa a ser redundante (se puede quitar).
 
 const STATIC_ALLOWED_ORIGINS = [
-  'https://ziteo-frontend.vercel.app', // PWA producción (Vercel) / TWA Play Store
+  'https://www.ziteo.company',         // PWA producción (dominio propio) — también PRIMARY_ORIGIN
+  'https://ziteo.company',             // apex (hace 307 a www, pero por si un cliente pega directo)
   'https://localhost',                 // Capacitor WebView (Android, androidScheme https / iOS)
   'capacitor://localhost',             // Capacitor iOS (scheme nativo)
   'http://localhost:5173',             // Vite dev

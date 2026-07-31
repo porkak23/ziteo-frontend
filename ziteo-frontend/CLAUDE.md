@@ -31,7 +31,9 @@ El proyecto **ya está enlazado** (`ziteo-frontend/.vercel/project.json` → pro
 ```bash
 vercel --prod --yes
 ```
-Build remoto corre `npm run build` → `dist` (config en `vercel.json`: framework `vite`, rewrites SPA `/(.*)→/index.html`). Alias de producción: **https://ziteo-frontend.vercel.app**. Verificar con `curl -sI https://ziteo-frontend.vercel.app` → `200` + `<title>Ziteoo</title>`.
+Build remoto corre `npm run build` → `dist` (config en `vercel.json`: framework `vite`, rewrites SPA `/(.*)→/index.html`). Dominio de producción: **https://www.ziteo.company** (el apex `ziteo.company` hace 307 a www). Verificar con `curl -sI https://www.ziteo.company` → `200` + `<title>Ziteoo</title>`.
+
+> El alias viejo `ziteo-frontend.vercel.app` quedó en `DEPLOYMENT_NOT_FOUND` al agregarse el dominio propio (2026-07-30) y **no se restauró** por decisión del usuario: `ziteo.company` es la única URL. Cualquier PWA instalada desde la URL vieja quedó rota.
 
 ### Requisitos que NO se deben romper
 - **`.npmrc` con `legacy-peer-deps=true`** es obligatorio (React 19 genera conflictos de peer deps). Sin esto, `npm install` en Vercel falla.
@@ -226,9 +228,26 @@ Con SMS pagados (Firebase Blaze), el throttle por teléfono no alcanza — un bo
 ### Firebase Console — requisitos para SMS real
 - **Blaze (Cloud Billing) obligatorio** desde sept-2024 para enviar SMS reales; sin eso solo responden los números de prueba configurados en Authentication → Sign-in method → Phone → *Phone numbers for testing*.
 - **SMS region policy**: restringir a Bolivia (BO) — mitigación principal contra fraude de peaje, la mayoría de los ataques apuntan a rangos premium de otros países.
-- **Authorized domains**: `ziteo-frontend.vercel.app` + `localhost`.
+- **Authorized domains** (Firebase Console → Authentication → Settings): `www.ziteo.company`, `ziteo.company`, `localhost`.
 - Costo por SMS a Bolivia no está en las tablas públicas de Google (Phone Number Verification pricing solo lista 8 países); se ve recién en la consola al activar Blaze.
 
+### DOS listas de dominios, no una — la que muerde es la de la API key
+Un dominio nuevo necesita estar en **dos lugares distintos**, y solo fallar en el segundo produce un error que no menciona Firebase Auth:
+1. **Firebase Console → Authentication → Settings → Authorized domains**.
+2. **Google Cloud Console → APIs y servicios → Credenciales → la API key → Restricciones de sitios web** ([link](https://console.cloud.google.com/apis/credentials?project=ziteo-a08f4)). Si falta acá, el SDK muere con `403 Requests from referer https://... are blocked` en `recaptchaParams` y la UI se queda colgada en "Enviando código" para siempre.
+
+El proyecto tiene **dos** API keys y es fácil editar la equivocada:
+- `AIzaSyClRQwdvb...ezAahWas` — **la que usa el frontend** (está en `VITE_FIREBASE_API_KEY` y en el chunk `firebaseClient-*.js`). Es la que necesita los referers.
+- `AIzaSyBDxUaVv...W8TK1Y` — restringida a Maps/Places/Geocoding. Si le agregás referers no pasa nada para Auth; devuelve `Requests to this API identitytoolkit... are blocked`.
+
+Diagnóstico rápido sin abrir el navegador — distingue los dos fallos por el mensaje:
+```bash
+curl -s "https://identitytoolkit.googleapis.com/v1/recaptchaParams?key=$KEY" -H "Referer: https://www.ziteo.company/"
+```
+`recaptchaStoken` en la respuesta = OK.
+
 ### Verificar con navegador real, no headless
-El reCAPTCHA invisible de Firebase no completa su handshake en Playwright headless contra prod (se cuelga en `requestStorageAccess`/`getProjectConfig`). Usar el Browser pane (`mcp__Claude_Browser__*`) con compositing real, o un headed run. Un intento con Playwright headless simple también reveló un 403 real (`Requests from referer ... are blocked`) que resultó ser ruido del entorno headless, no del código — no confundir con un problema de Authorized domains.
+El reCAPTCHA de Firebase no completa su handshake en Playwright headless (se cuelga en `requestStorageAccess`). Usar `chromium.launch({ headless: false })`: ahí resuelve el challenge visual solo. Dos detalles del flujo que cuestan tiempo si se asumen:
+- Tras `sendVerificationCode` el iframe del captcha **queda visible tapando el sheet** y los inputs del código tardan hasta ~30s en aparecer. No usar `waitForTimeout` fijo — hacer poll de `input[maxlength="1"]` hasta que haya 6.
+- El botón del PIN nuevo dice **"CONFIRMAR PIN"** en la segunda ronda, no "CONTINUAR"; sin ese click `auth-reset-pin` nunca se llama y el flujo parece colgado sin error.
 
