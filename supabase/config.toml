@@ -107,6 +107,16 @@ secret = "env(GOOGLE_CLIENT_SECRET)"
 redirect_uri = ""
 url = ""
 
+# MFA/TOTP para el panel admin (God Mode). Lectura del panel funciona con
+# aal1 (solo PIN); las escrituras admin (reset de PIN de usuarios, etc.)
+# exigen aal2 vía is_admin_mfa() — ver 20260801000002_admin_role_hardening.sql.
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
 [edge_runtime]
 enabled = true
 # Configure one of the supported request policies: `oneshot`, `per_worker`.
@@ -149,6 +159,20 @@ entrypoint = "./functions/market-prices-ingest/index.ts"
 [functions.admin-telemetry]
 verify_jwt = true
 entrypoint = "./functions/admin-telemetry/index.ts"
+
+[functions.admin-user-actions]
+verify_jwt = true
+entrypoint = "./functions/admin-user-actions/index.ts"
+
+# Router de Web Push. verify_jwt = false porque la validación la hace
+# requireUser() dentro de cada sub-ruta: así el 401 sale por errorResponse()
+# con los headers CORS correctos, en vez del rechazo opaco del gateway (que
+# el navegador reporta como error de CORS y esconde la causa real).
+# El guard NO es opcional — sin él estas funciones corren con service_role
+# sobre un body sin autenticar.
+[functions.notifications]
+verify_jwt = false
+entrypoint = "./functions/notifications/index.ts"
 
 [analytics]
 enabled = false

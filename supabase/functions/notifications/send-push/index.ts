@@ -6,6 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'https://esm.sh/web-push@3.6.7'
 import { handleOptions, jsonResponse, errorResponse } from '../../_shared/cors.ts'
 import { withTelemetry } from '../../_shared/telemetry.ts'
+import { requireUser } from '../../_shared/require-user.ts'
 
 const SUPABASE_URL      = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -18,6 +19,12 @@ async function rawHandler(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
     return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is accepted', 405, req)
   }
+
+  // Cualquier usuario autenticado puede disparar un push (el constructor al
+  // hacer un pedido, el maestro al enviar una oferta), pero un request sin
+  // sesión no: si no, cualquiera notifica a cualquier user_id.
+  const auth = await requireUser(req)
+  if (!auth.ok) return auth.response
 
   let payload: { user_id: string; title: string; body: string; url?: string }
   try {

@@ -3,7 +3,6 @@ import { Z } from '../../../shared/design/tokens';
 import { OtpInput } from './OtpInput';
 import { PinPad } from './PinPad';
 import { ZButton } from '../../../shared/design/components/ZButton';
-import { RECAPTCHA_CONTAINER_ID } from '../otp/constants';
 
 export type VerificationStep = 'sending' | 'code' | 'pin-create' | 'pin-confirm' | 'biometric';
 
@@ -129,7 +128,11 @@ function SpinnerIcon() {
   );
 }
 
-const SUPPORT_WHATSAPP = 'https://wa.me/59175000000' // placeholder — update with real support number
+// Número de soporte real, vía env (formato internacional sin '+', ej: 59173401469).
+// Mientras no esté configurado, el enlace no se renderiza: mandar a un usuario
+// bloqueado a un número inexistente es peor que no ofrecerle el enlace.
+const SUPPORT_PHONE = import.meta.env.VITE_SUPPORT_WHATSAPP?.trim()
+const SUPPORT_WHATSAPP = SUPPORT_PHONE ? `https://wa.me/${SUPPORT_PHONE}` : null
 
 export function OtpVerificationSheet({
   phone,
@@ -150,6 +153,7 @@ export function OtpVerificationSheet({
   const [pinMismatch, setPinMismatch] = useState(false);
   const [visible, setVisible] = useState(false);
   const [prevStep, setPrevStep] = useState(step);
+  const [showNotArrived, setShowNotArrived] = useState(false);
 
   useEffect(() => {
     // Trigger entrance animation after mount
@@ -165,10 +169,18 @@ export function OtpVerificationSheet({
     }
   }, [debugOtp, step]);
 
+  // Si el SMS no llegó en ~25s, ofrecer la salida explícitamente en vez de
+  // dejar la pantalla esperando en silencio.
+  useEffect(() => {
+    if (step !== 'code') return;
+    const t = setTimeout(() => setShowNotArrived(true), 25000);
+    return () => clearTimeout(t);
+  }, [step]);
+
   // React-recommended pattern: reset derived state during render when prop changes
   if (prevStep !== step) {
     setPrevStep(step);
-    if (step === 'code') setOtpValue(debugOtp ?? '');
+    if (step === 'code') { setOtpValue(debugOtp ?? ''); setShowNotArrived(false); }
     if (step === 'pin-create') { setPinDraft(''); setPinConfirm(''); setPinMismatch(false); }
     if (step === 'pin-confirm') { setPinConfirm(''); setPinMismatch(false); }
   }
@@ -242,21 +254,31 @@ export function OtpVerificationSheet({
               error={!!error}
             />
 
+            {!error && showNotArrived && (
+              <p style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
+                ¿No te llegó? Revisa tu señal, reenvía el código o cambia el número.
+              </p>
+            )}
+
             {error && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
                 <p style={{ fontFamily: Z.font, fontSize: 13, color: 'var(--z-error)', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
                   {error}
                 </p>
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <a
-                    href={SUPPORT_WHATSAPP}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.orangeDark, textDecoration: 'underline', textUnderlineOffset: 3 }}
-                  >
-                    Contactar soporte
-                  </a>
-                  <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted }}>·</span>
+                  {SUPPORT_WHATSAPP && (
+                    <>
+                      <a
+                        href={SUPPORT_WHATSAPP}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.orangeDark, textDecoration: 'underline', textUnderlineOffset: 3 }}
+                      >
+                        Contactar soporte
+                      </a>
+                      <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted }}>·</span>
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={onChangePhone}
@@ -352,15 +374,19 @@ export function OtpVerificationSheet({
                   {error}
                 </p>
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <a
-                    href={SUPPORT_WHATSAPP}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.orangeDark, textDecoration: 'underline', textUnderlineOffset: 3 }}
-                  >
-                    Contactar soporte
-                  </a>
-                  <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted }}>·</span>
+                  {SUPPORT_WHATSAPP && (
+                    <>
+                      <a
+                        href={SUPPORT_WHATSAPP}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ fontFamily: Z.font, fontSize: 12, fontWeight: 700, color: Z.orangeDark, textDecoration: 'underline', textUnderlineOffset: 3 }}
+                      >
+                        Contactar soporte
+                      </a>
+                      <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted }}>·</span>
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={onChangePhone}
@@ -511,9 +537,9 @@ export function OtpVerificationSheet({
 
         {stepContent()}
 
-        {/* Ancla del reCAPTCHA invisible de Firebase — solo se usa cuando
-            VITE_OTP_PROVIDER=firebase; inocuo para el proveedor whatsapp. */}
-        <div id={RECAPTCHA_CONTAINER_ID} style={{ display: 'none' }} />
+        {/* El ancla del reCAPTCHA invisible la crea y mantiene firebaseProvider
+            en document.body. No renderizarla aquí: dos nodos con el mismo id
+            cuelgan el widget al reenviar el código. */}
       </div>
     </>
   );
