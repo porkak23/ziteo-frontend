@@ -955,7 +955,7 @@ export function MaestroPublicProfile({
                       onClick={() => !qrUploading && qrInputRef.current?.click()}
                       className="border-2 border-dashed border-outline-variant hover:border-primary/50 transition-colors rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer mt-1"
                     >
-                      <span className="text-2xl">📷</span>
+                      <span className="material-symbols-outlined text-3xl text-on-surface-variant/40">qr_code_2</span>
                       <span className="font-label text-xs font-semibold text-on-surface-variant">
                         {qrUploading ? 'Subiendo código...' : 'Cargar imagen de tu QR de Pago'}
                       </span>

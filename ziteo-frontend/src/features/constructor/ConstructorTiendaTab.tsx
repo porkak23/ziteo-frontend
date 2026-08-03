@@ -37,7 +37,7 @@ interface CartItem extends Product { qty: number }
 const FILTER_OPTIONS = ['Todos', 'Materiales', 'Herramientas', 'Máquinas', 'Seguridad']
 
 const OFFERS = [
-  { title: '¡Felicidades Sucre! 🇧🇴', subtitle: '15% OFF en Herramientas y flete gratis por el 25 de Mayo', from: '#E53935', to: '#FFA000' },
+  { title: '15% OFF en Herramientas', subtitle: 'Y flete gratis en tu primer pedido', from: '#E53935', to: '#FFA000' },
   { title: '15% OFF en Cemento',  subtitle: 'Fancesa IP-30 · Compra mín. 50 bolsas', from: '#E8733A', to: '#A43700' },
   { title: 'Combo Cimentación',   subtitle: 'Cemento + Fierro + Arena desde Bs 2,400', from: '#3A7BD5', to: '#1E5FAD' },
   { title: 'Envío Gratis',        subtitle: 'En pedidos mayores a Bs 1,000', from: '#A43700', to: '#7A2900' },

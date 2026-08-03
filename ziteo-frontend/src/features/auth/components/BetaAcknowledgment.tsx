@@ -72,18 +72,31 @@ export function BetaAcknowledgment() {
             Bienvenido a Ziteoo Beta
           </h2>
           <p className="text-on-surface-variant text-sm leading-relaxed">
-            Estas usando una version beta de Ziteoo. Algunas funciones pueden comportarse de manera inesperada. Tus datos estan protegidos segun nuestra Politica de Privacidad.
+            Estás usando una versión beta de Ziteoo. Algunas funciones pueden comportarse de manera inesperada. Tus datos están protegidos según nuestra Política de Privacidad.
           </p>
           <p className="text-on-surface-variant text-sm leading-relaxed">
-            Si encuentras un problema, usa el boton "Reportar problema" en cualquier pantalla.
+            Si encuentras un problema, usa el botón "Reportar problema" en cualquier pantalla.
           </p>
         </div>
 
-        <label className="flex items-start gap-3 cursor-pointer">
+        {/* El onClick vive en el <label>, no en el div: un <label> solo activa
+            controles nativos, y este "checkbox" es un div con role. Con el
+            handler adentro, tocar el texto no hacía nada y había que acertarle
+            al cuadro de 20px — el usuario quedaba atrapado en el modal. */}
+        <label
+          className="flex items-start gap-3 cursor-pointer select-none -m-2 p-2"
+          onClick={() => setChecked((v) => !v)}
+        >
           <div
             role="checkbox"
             aria-checked={checked}
-            onClick={() => setChecked((v) => !v)}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault()
+                setChecked((v) => !v)
+              }
+            }}
             className="mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
             style={{
               borderColor: checked ? 'var(--color-primary, #A43700)' : 'var(--color-outline, #94A3B8)',
@@ -97,7 +110,7 @@ export function BetaAcknowledgment() {
             )}
           </div>
           <span className="text-sm text-on-surface-variant leading-relaxed">
-            Entiendo que esta es una version beta
+            Entiendo que esta es una versión beta
           </span>
         </label>
 

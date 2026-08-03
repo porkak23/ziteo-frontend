@@ -100,9 +100,9 @@ const CATEGORY_GROUPS = [
 const PROMO_BANNERS = [
   {
     id: 0,
-    title: '¡Felicidades Sucre! 🇧🇴',
-    subtitle: '217 años del Grito de Libertad. 15% OFF en herramientas y flete gratis.',
-    cta: 'Celebrar con ofertas',
+    title: '15% OFF en Herramientas',
+    subtitle: 'Y flete gratis en tu primer pedido.',
+    cta: 'Ver ofertas',
     group: 'herramientas',
     from: '#E53935', // Premium Bolivian crimson red
     to: '#FFA000', // Freedom amber/gold
