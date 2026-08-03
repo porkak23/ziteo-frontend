@@ -27,6 +27,26 @@ interface RegisterBody {
 
 const VALID_ROLES: UserRole[] = ['constructor', 'proveedor', 'maestro', 'chofer']
 
+/**
+ * Busca un usuario de auth por su email sintético sin depender de la paginación
+ * de listUsers() (50 por página): con la tabla ya crecida, un barrido de la
+ * primera página no encuentra al huérfano y el número queda bloqueado para
+ * registrarse con un error opaco. GoTrue soporta filtrar por email en la
+ * query, así que el resultado es O(1) respecto al total de usuarios.
+ */
+// deno-lint-ignore no-explicit-any
+async function findAuthUserByEmail(adminClient: any, email: string) {
+  const { data, error } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 200, email })
+  if (error) {
+    console.error('[auth/register] listUsers by email failed:', error)
+    return null
+  }
+  // El filtro `email` no está garantizado en todas las versiones de GoTrue;
+  // comparamos igual para no borrar jamás un usuario distinto al buscado.
+  // deno-lint-ignore no-explicit-any
+  return data?.users?.find((u: any) => u.email === email) ?? null
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') return handleOptions(req)
   if (req.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED', 'Use POST', 405, req)
@@ -108,12 +128,47 @@ Deno.serve(async (req: Request): Promise<Response> => {
     user_metadata: { phone, name: name.trim(), initial_role },
   })
 
-  if (authError || !authData.user) {
-    console.error('Auth createUser error:', authError)
-    return errorResponse('REGISTRATION_FAILED', authError?.message ?? 'Failed to create account', 500, req)
-  }
+  let authDataResult = authData
+  let userId = authData?.user?.id
 
-  const userId = authData.user.id
+  if (authError || !userId) {
+    console.error('Auth createUser error:', authError)
+    if (authError?.message?.toLowerCase().includes('already registered') || authError?.message?.toLowerCase().includes('already been registered')) {
+      // Clean up orphaned auth user if profile doesn't exist.
+      //
+      // listUsers() es paginado (50 por defecto): buscar el huérfano ahí deja
+      // de encontrarlo apenas la tabla crece, y el número queda inutilizable
+      // para siempre con un REGISTRATION_FAILED opaco. Resolvemos el id por
+      // email exacto, que no depende del tamaño de la tabla.
+      const orphan = await findAuthUserByEmail(adminClient, syntheticEmail)
+      if (orphan) {
+        console.log(`[auth/register] Cleaning up orphaned auth user ${orphan.id} for ${phone}`)
+        await adminClient.from('otps').delete().eq('phone', phone)
+        await adminClient.from('user_roles').delete().eq('user_id', orphan.id)
+        await adminClient.from('profiles').delete().eq('user_id', orphan.id)
+        await adminClient.auth.admin.deleteUser(orphan.id)
+
+        // Retry user creation once
+        const { data: retryData, error: retryErr } = await adminClient.auth.admin.createUser({
+          email: syntheticEmail,
+          password: pin,
+          email_confirm: true,
+          user_metadata: { phone, name: name.trim(), initial_role },
+        })
+
+        if (!retryErr && retryData.user) {
+          authDataResult = retryData
+          userId = retryData.user.id
+        } else {
+          return errorResponse('REGISTRATION_FAILED', retryErr?.message ?? 'Failed to create account', 500, req)
+        }
+      } else {
+        return errorResponse('REGISTRATION_FAILED', authError?.message ?? 'Failed to create account', 500, req)
+      }
+    } else {
+      return errorResponse('REGISTRATION_FAILED', authError?.message ?? 'Failed to create account', 500, req)
+    }
+  }
 
   // Insert profile
   const profilePayload: Record<string, unknown> = {
@@ -133,14 +188,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return errorResponse('PROFILE_CREATION_FAILED', 'Failed to create user profile', 500, req)
   }
 
-  // Insert role. With OTP_VERIFICATION_REQUIRED=false (piloto), el teléfono
-  // queda verificado de inmediato: no hay forma de probarlo por WhatsApp,
-  // así que onboarding_completed se marca true ya mismo.
+  // Insert role
   const { error: roleError } = await adminClient
     .from('user_roles')
     .insert({ user_id: userId, role: initial_role, onboarding_completed: !OTP_VERIFICATION_REQUIRED })
   if (roleError) {
     console.error('User role insert error:', roleError)
+    await adminClient.from('profiles').delete().eq('user_id', userId)
     await adminClient.auth.admin.deleteUser(userId)
     return errorResponse('ROLE_CREATION_FAILED', 'Failed to assign role', 500, req)
   }
@@ -155,7 +209,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
     issueResult = await provider.issue(adminClient, phone, 'verify_phone', req)
   } catch (err) {
     console.error('OTP issue error:', err)
-    const code = String(err).includes('WHATSAPP_SEND_FAILED') ? 'WHATSAPP_SEND_FAILED' : 'OTP_CREATE_FAILED'
+    // Rollback created user data on OTP issue failure so the phone isn't left in an incomplete broken state
+    await adminClient.from('otps').delete().eq('phone', phone)
+    await adminClient.from('user_roles').delete().eq('user_id', userId)
+    await adminClient.from('profiles').delete().eq('user_id', userId)
+    await adminClient.auth.admin.deleteUser(userId)
+
+    const errStr = String(err)
+    const code = errStr.includes('WHATSAPP_SEND_FAILED')
+      ? 'WHATSAPP_SEND_FAILED'
+      : errStr.includes('TWILIO_SEND_FAILED')
+        ? 'SMS_SEND_FAILED'
+        : 'OTP_CREATE_FAILED'
     return errorResponse(code, 'Failed to issue verification code', 500, req)
   }
 

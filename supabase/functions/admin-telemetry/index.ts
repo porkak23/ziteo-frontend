@@ -14,12 +14,9 @@
 // (no es un error — el panel debe poder renderizar "no configurado" sin
 // que la request completa falle).
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { handleOptions, jsonResponse, errorResponse } from '../_shared/cors.ts'
 import { withTelemetry } from '../_shared/telemetry.ts'
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+import { requireAdmin } from '../_shared/require-admin.ts'
 
 const SENTRY_AUTH_TOKEN = Deno.env.get('SENTRY_AUTH_TOKEN') ?? ''
 const SENTRY_ORG = Deno.env.get('SENTRY_ORG') ?? ''
@@ -85,29 +82,8 @@ async function rawHandler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return handleOptions(req)
   if (req.method !== 'GET') return errorResponse('METHOD_NOT_ALLOWED', 'Only GET is accepted', 405, req)
 
-  const authHeader = req.headers.get('Authorization') ?? ''
-  if (!authHeader.startsWith('Bearer ')) {
-    return errorResponse('UNAUTHORIZED', 'Missing Authorization header', 401, req)
-  }
-  const accessToken = authHeader.replace('Bearer ', '')
-
-  // Cliente en contexto del propio usuario (no service_role): is_admin()
-  // usa auth.uid() internamente, así que debe correr con el JWT del
-  // caller para resolver al usuario correcto (mismo patrón que
-  // auth/add-role/index.ts).
-  const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
-  })
-  const { data: { user }, error: userError } = await userClient.auth.getUser()
-  if (userError || !user) {
-    return errorResponse('UNAUTHORIZED', 'Invalid or expired token', 401, req)
-  }
-
-  const { data: isAdmin, error: roleError } = await userClient.rpc('is_admin')
-  if (roleError || !isAdmin) {
-    return errorResponse('FORBIDDEN', 'Admin role required', 403, req)
-  }
+  const guard = await requireAdmin(req)
+  if (!guard.ok) return guard.response
 
   const source = new URL(req.url).searchParams.get('source')
 

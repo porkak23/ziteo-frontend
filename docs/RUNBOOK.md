@@ -341,4 +341,126 @@ Gracias por confiar en Ziteo.
 
 ---
 
+## Procedimiento 6: Otorgar el rol admin (God Mode)
+
+### Cuándo usar esto
+
+Cuando un miembro del equipo necesita acceso al panel de administración
+(`?godmode`) por primera vez.
+
+### Contexto de seguridad
+
+El rol `admin` **no es asignable desde el cliente bajo ninguna circunstancia**.
+Está excluido del CHECK constraint de auto-asignación de roles y las policies
+de `user_roles` bloquean explícitamente cualquier INSERT/UPDATE con
+`role = 'admin'` que no venga de este procedimiento
+(`supabase/migrations/20260801000002_admin_role_hardening.sql`). El único
+canal es la función `grant_admin_role()`, sin GRANT a `authenticated` —
+únicamente ejecutable con `service_role` o una conexión directa de Postgres.
+
+### Pasos
+
+1. Obtener el `user_id` de la persona (Dashboard de Supabase → Authentication
+   → Users, o `select user_id from profiles where phone = '+591XXXXXXXX'`
+   desde el SQL Editor).
+
+2. Desde el **SQL Editor del Dashboard de Supabase** (no desde la app, no
+   desde un script con `anon`/`authenticated` key — ninguno de los dos tiene
+   permiso):
+
+   ```sql
+   select grant_admin_role('<user_id>'::uuid);
+   ```
+
+3. Verificar que quedó asignado:
+
+   ```sql
+   select user_id, role from user_roles
+   where user_id = '<user_id>' and role = 'admin';
+   ```
+
+4. **Setear `profiles.active_role = 'admin'`** — el frontend (`App.tsx`) y
+   `auth-login` deciden qué pantalla mostrar leyendo `profiles.active_role`,
+   no `user_roles` directamente. Sin este paso la persona queda con el rol
+   otorgado pero cae en la pantalla de "rol inválido" al iniciar sesión.
+
+   ```sql
+   update profiles set active_role = 'admin' where user_id = '<user_id>';
+   ```
+
+   Si esto falla con una violación del constraint `profiles_active_role_check`,
+   es porque ese CHECK todavía no incluye `'admin'` (quedó desalineado del
+   `user_roles_role_check` cuando se amplió este último) — corregirlo una
+   sola vez por proyecto:
+
+   ```sql
+   alter table profiles drop constraint profiles_active_role_check;
+   alter table profiles add constraint profiles_active_role_check
+     check (active_role::text = any (array['constructor','proveedor','maestro','chofer','admin']::text[]));
+   ```
+
+5. La persona entra a `https://www.ziteo.company/?godmode` — el panel se ve
+   completo en modo lectura de inmediato. Para poder editar usuarios o
+   resetear PINs, debe **activar la verificación en dos pasos (TOTP)** desde
+   la pantalla que el panel le muestra al entrar por primera vez sin MFA.
+
+### Regla de oro: nunca dejar un solo admin
+
+Antes de que cualquier admin enrole su TOTP, asegurar que existan **al menos
+dos** cuentas admin. Si el único admin pierde su dispositivo con la app
+autenticadora, queda en modo solo-lectura hasta el Procedimiento 7 — con un
+segundo admin, esa persona puede seguir operando el panel mientras se
+recupera al primero.
+
+---
+
+## Procedimiento 7: Recuperar acceso admin tras perder el segundo factor (TOTP)
+
+### Cuándo usar esto
+
+Un admin perdió el dispositivo con su app autenticadora (Google Authenticator,
+Authy, etc.) y no puede completar acciones de escritura en el panel (reset de
+PIN, gestión de usuarios). **No es una emergencia total**: el panel sigue
+siendo usable en modo lectura sin el segundo factor — este procedimiento solo
+restaura la capacidad de escritura.
+
+### Pasos
+
+1. Confirmar la identidad de la persona por un canal fuera de la app (llamada,
+   verificación en persona) antes de tocar nada — este procedimiento retira
+   un factor de seguridad, así que exige la misma cautela que otorgar admin.
+
+2. Desde el SQL Editor del Dashboard de Supabase, ubicar el factor TOTP
+   inscrito:
+
+   ```sql
+   select id, friendly_name, status, created_at
+   from auth.mfa_factors
+   where user_id = '<user_id>' and factor_type = 'totp';
+   ```
+
+3. Borrar el factor perdido:
+
+   ```sql
+   delete from auth.mfa_factors
+   where user_id = '<user_id>' and factor_type = 'totp';
+   ```
+
+4. La persona vuelve a `?godmode`: el panel detecta que ya no tiene `aal2` y
+   le vuelve a ofrecer el enrollment de TOTP (`MfaEnrollScreen`). Completa el
+   escaneo del nuevo QR con su app autenticadora en el dispositivo nuevo.
+
+5. Verificar que quedó operativo probando una acción de escritura (ej.
+   reconocer una alerta desde el Centro).
+
+### Si además se perdió el acceso a la sesión (no solo el TOTP)
+
+Este runbook no cubre recuperación de sesión de Supabase Auth en general —
+seguir el flujo estándar de la app (login con teléfono + PIN). El PIN del
+propio admin se resetea con el mismo Procedimiento del
+[`docs/RESET_PIN_ADMIN.md`](RESET_PIN_ADMIN.md), vía de emergencia (SQL/Dashboard),
+ya que un admin sin sesión no puede resetearse su propio PIN desde el panel.
+
+---
+
 *Este runbook debe actualizarse cada vez que cambie la arquitectura del sistema o se agreguen nuevos procedimientos.*

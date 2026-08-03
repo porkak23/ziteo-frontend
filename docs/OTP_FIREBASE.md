@@ -1,23 +1,57 @@
-# OTP con Firebase Phone Auth — estado, arreglos y bloqueo abierto
+# OTP con Firebase Phone Auth — estado, arreglos y causa raíz resuelta
 
-**Última actualización:** 2026-07-31
+**Última actualización:** 2026-08-01
 **Proyecto Firebase:** `ziteo-a08f4` · **Supabase:** `yvqbubjfhmuztknmhyvd` · **Dominio:** https://www.ziteo.company
+
+---
+
+## ⚠️ 2026-08-01 — OTP DESACTIVADO en el registro
+
+Tras quitar el número de la lista de prueba, el SMS **siguió sin llegar**. Como el
+OTP bloqueaba por completo el alta de usuarios nuevos (0 de 4 usuarios en prod
+tenían `onboarding_completed=true`), se desactivó la verificación de teléfono:
+
+```bash
+npx supabase secrets set OTP_VERIFICATION_REQUIRED=false --project-ref yvqbubjfhmuztknmhyvd
+```
+
+**No hubo cambios de código ni redeploy** — `auth-register` v44 ya traía el flag
+(`register/index.ts:14`) y el frontend ya maneja `requires_otp:false` haciendo
+login directo (`RegisterForm.tsx:254`). Verificado end-to-end contra prod: el
+registro devuelve `requires_otp:false` y el login con PIN devuelve `access_token`.
+
+**Qué significa:** el teléfono no se verifica. El PIN es la única credencial, y
+cualquiera puede registrar un número que no le pertenece. Es una decisión de
+producto para desbloquear el MVP, no un estado final.
+
+**Consecuencia operativa:** no hay autoservicio de "olvidé mi PIN" —
+`auth-forgot-pin` depende del OTP. El reset lo hace un admin a mano:
+ver [`RESET_PIN_ADMIN.md`](RESET_PIN_ADMIN.md).
+
+**Para revertir** cuando el SMS funcione: `OTP_VERIFICATION_REQUIRED=true` (el
+secret se lee en runtime, tampoco necesita redeploy). Todo lo de abajo sigue
+vigente y verificado — la cadena Firebase está entera salvo la emisión del SMS.
 
 ---
 
 ## TL;DR
 
-El registro por SMS **todavía no funciona para usuarios reales**. La cadena está completa y verificada de punta a punta con números de prueba, pero el envío de SMS real falla con `503 Service Unavailable` desde Firebase.
+**Causa raíz encontrada: el número estaba en la lista de *números de prueba* de Firebase.**
+
+El SMS "no llegaba" porque los números ficticios (Authentication → Sign-in method → Phone → *Phone numbers for testing*) **nunca reciben un SMS real**: Firebase devuelve un `sessionInfo` válido y espera un código fijo definido en la consola. Desde la API todo parecía exitoso; simplemente no existía ningún SMS.
+
+> ⚠️ **El diagnóstico anterior (`503` → SMS region policy) era incorrecto.** El `503` no se reproduce. Ver *Errores* §6 antes de volver a sospechar de la region policy.
 
 | Capa | Estado |
 |---|---|
 | Frontend (proveedor firebase activo, chunk servido) | ✅ Verificado |
+| Envs de Firebase en el bundle de prod | ✅ Verificado (API key y `ziteo-a08f4` correctos) |
 | CORS Edge Functions desde dominio propio | ✅ Verificado |
 | Validación de ID token server-side (JWKS de Google) | ✅ Verificado |
 | Anti-replay (jti en `otps`) | ✅ Verificado con datos reales |
 | Throttle por IP | ✅ Verificado (20 pasan, el 21 → 429) |
 | Login con PIN posterior | ✅ Verificado |
-| **Emisión de SMS real** | ❌ **503 — bloqueo abierto** |
+| **Emisión de SMS real** | ⚠️ **Desbloqueado — pendiente de confirmar con un envío real** |
 
 ---
 
@@ -91,6 +125,7 @@ Vale registrarlos para no repetirlos:
 - **Culpé a reCAPTCHA Enterprise.** El mensaje `Failed to initialize reCAPTCHA Enterprise config. Triggering the reCAPTCHA v2 verification` es **ruido normal**: siempre cae a v2 y funciona. No era la causa.
 - **Di por resuelto el billing prematuramente.** Al probar con `recaptchaToken:"x"` (basura), Google valida captcha y billing **en orden variable**: a veces devuelve `CAPTCHA_CHECK_FAILED` enmascarando un `BILLING_NOT_ENABLED` de fondo, y viceversa. Un solo curl con token inválido **no es concluyente** para el estado del billing.
 - **Pasé el link de producción sin probar el registro desde ese dominio.** Verifiqué que el bundle era correcto, pero no que las Edge Functions aceptaran el origen nuevo — y no lo aceptaban. El usuario encontró el fallo, no yo.
+- **Culpé a la SMS region policy por un `503`, sin leer el body de la respuesta.** La causa real era que el número estaba en *Phone numbers for testing* (ver sección de causa raíz). Dos lecciones: (a) nunca declarar un culpable sin el cuerpo del error a la vista — "es la última capa que toqué" no es evidencia; (b) un envío que la API reporta como exitoso **no prueba** que se haya enviado un SMS. Con números ficticios el éxito es indistinguible del real salvo por el bypass del captcha.
 
 ### 5. Residuos de pruebas en prod
 
@@ -108,37 +143,51 @@ delete from auth.users where id      = '<id>';  -- este es el que se olvida
 
 ---
 
-## Bloqueo abierto: `503 Service Unavailable`
+## Causa raíz: el número era un *número de prueba* de Firebase
 
-**Síntoma.** Desde el navegador real del usuario, con un token de reCAPTCHA válido:
-```
-POST identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode → 503 (Service Unavailable)
-→ la app muestra [OTP_CLIENT_ERROR]
-```
-Persistente en varios intentos, no transitorio.
+**Síntoma.** El usuario se registra, la pantalla queda en "Ingresa el código" y **no llega ningún SMS** — ni en el envío inicial ni al pulsar "Reenviar código". Sin error visible: desde la app todo parece haber salido bien.
 
-**Qué ya está descartado:**
+**Por qué.** `+59173401469` estaba cargado en Firebase Console → Authentication → Sign-in method → Phone → **Phone numbers for testing**. Los números ficticios **nunca reciben SMS**: Firebase devuelve un `sessionInfo` válido y espera el código fijo configurado en la consola para ese número.
+
+### Cómo detectarlo en 10 segundos
+
+Un número ficticio **saltea la validación de reCAPTCHA**. Mandando un token basura, el ficticio responde `200`; cualquier número real responde `400`:
+
+```bash
+KEY="AIzaSyClRQwdvbkehMZscVgb13GGVH1ezAahWas"
+curl -s "https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=$KEY" \
+  -H "Referer: https://www.ziteo.company/" -H "Content-Type: application/json" \
+  -d '{"phoneNumber":"+591XXXXXXXX","recaptchaToken":"x"}'
+```
+
+| Respuesta | Significa |
+|---|---|
+| `200` + `sessionInfo` | **Número de prueba** — nunca recibirá SMS real |
+| `400 CAPTCHA_CHECK_FAILED` | Número normal (el captcha se está evaluando de verdad) |
+
+Medición del 2026-07-31: `+59173401469` → `200`; `+59169163386`, `+59171234567`, `+59176543210` → `400`.
+
+**Fix.** Quitar el número de esa lista. Dejar ahí sólo números ficticios reservados para QA, nunca un número real de una persona.
+
+### Qué está descartado (con evidencia, no por intuición)
 
 | Hipótesis | Cómo se descartó |
 |---|---|
 | CORS | Preflight refleja `www.ziteo.company` en las 7 funciones |
-| Authorized domains | La API devuelve `www.ziteo.company` en `authorizedDomains` |
-| Restricción de referer de la API key | `recaptchaParams` responde `recaptchaStoken` OK |
-| Billing / Blaze | Proyecto ZITEO vinculado a `014E6B-9CA270-CAB8B2`; `BILLING_NOT_ENABLED` ya no aparece |
+| Authorized domains | La API devuelve `www.ziteo.company` y `ziteo.company` |
+| Restricción de referer de la API key | `recaptchaParams` responde `recaptchaStoken` (HTTP 200) |
+| Envs de Firebase ausentes en prod | El chunk `firebaseClient-*.js` servido trae la API key y `ziteo-a08f4` |
+| Proveedor plegado a `whatsapp` | `firebaseProvider-*.js` está en el bundle con `signInWithPhoneNumber` |
+| Billing / Blaze | Proyecto ZITEO vinculado a `014E6B-9CA270-CAB8B2` |
 | Identity Platform deshabilitado | Habilitado, Phone provider activo |
+| CSP / headers | `git grep -il "content-security-policy"` → 0 resultados en el repo |
 | reCAPTCHA Enterprise | Ruido; el fallback a v2 es el comportamiento normal |
-| Bug de la app | Con número de prueba la cadena completa funciona |
 
-**Dónde cae exactamente.** El captcha pasa y el billing pasa; falla al **emitir el SMS**. Es la última capa.
+### Si el SMS real vuelve a fallar
 
-**Sospecha principal: SMS region policy.** Es la capa exacta que decide si el envío procede, y es lo último que se configuró. Un allowlist mal guardado (vacío, o sin Bolivia efectivamente seleccionada) bloquea todo.
+Recién entonces sospechar de la **SMS region policy** (Authentication → Settings): confirmar *Allow* con **Bolivia (BO)** efectivamente en la lista. Para descartarla, cambiar temporalmente a *Deny* con lista vacía (= permite todos los países) y reintentar; es reversible.
 
-### Próximos pasos
-
-1. **Revisar** Firebase Console → Authentication → Settings → **SMS region policy**. Confirmar *Allow* con **Bolivia realmente en la lista**.
-2. **Descartarla en 10 segundos:** cambiar temporalmente a *Deny* con lista vacía (= permite todos los países) y reintentar. Si el SMS sale, era la policy; se reconfigura bien después. Reversible.
-3. **Obtener el body del 503** — es el dato que falta para dejar de adivinar: DevTools → **Network** → filtro `sendVerificationCode` → click en la fila → **Response**. Google mete ahí un mensaje que la consola no muestra.
-4. Si nada de lo anterior: abrir soporte de Firebase con el project ID y el timestamp del 503.
+Y **capturar el body de la respuesta** antes de teorizar: DevTools → Network → `sendVerificationCode` → Response. Google mete ahí un mensaje que la consola no muestra. Ese dato faltó durante todo el diagnóstico anterior y fue la razón de perseguir la hipótesis equivocada.
 
 ---
 
@@ -205,3 +254,14 @@ Selectores útiles: `welcome-register-btn`, `welcome-login-btn`, `login-phone-in
 | `ziteo-frontend/CLAUDE.md` | URLs de prod + las dos listas de dominios + trampas del driver |
 
 **Commits:** `40c2320` (anti-replay + throttle IP) · `01c945a` (CORS dominio propio)
+
+### Segunda ronda (2026-07-31) — causa raíz del "no llega el código"
+
+| Archivo | Cambio |
+|---|---|
+| `ziteo-frontend/src/features/auth/otp/firebaseProvider.ts` | Ancla del reCAPTCHA reutilizable (sin `.remove()`) + aviso en dev sobre números de prueba |
+| `ziteo-frontend/src/features/auth/components/OtpVerificationSheet.tsx` | Quitado el `<div>` duplicado del reCAPTCHA; aviso "¿No te llegó?" a los 25 s |
+| `ziteo-frontend/src/lib/analytics.ts` | `log_event` sólo con sesión activa (elimina el 401 de la consola) |
+| `supabase/functions/auth/register/index.ts` | Búsqueda del huérfano por email en vez de la primera página de `listUsers()` |
+
+**Además, fuera del repo:** se quitó `+59173401469` de *Phone numbers for testing* y se borró su usuario huérfano en prod (`auth.users` + `profiles` + `user_roles`).

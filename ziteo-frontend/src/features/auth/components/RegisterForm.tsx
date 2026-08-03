@@ -187,12 +187,14 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
     } catch (err) {
       console.error('OTP verification failed:', err)
       const errCode = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
-      if (errCode === 'OTP_EXPIRED') {
+      if (FIREBASE_ERRORS[errCode]) {
+        setSheetError(FIREBASE_ERRORS[errCode])
+      } else if (errCode === 'OTP_EXPIRED' || errCode === 'auth/code-expired') {
         setSheetError('El código expiró. Solicita uno nuevo.')
-      } else if (errCode === 'INVALID_OTP') {
+      } else if (errCode === 'INVALID_OTP' || errCode === 'auth/invalid-verification-code') {
         setSheetError('Código incorrecto. Revísalo e inténtalo de nuevo.')
       } else {
-        setSheetError(`No pudimos verificar tu código. Inténtalo de nuevo o contacta a soporte [${errCode}].`)
+        setSheetError(`No pudimos verificar tu código. Inténtalo de nuevo [${errCode}].`)
       }
     } finally {
       setSheetLoading(false)
@@ -300,8 +302,10 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
       }, 1000)
     } catch (err) {
       const errCode = err instanceof AuthServiceError ? err.code : 'UNKNOWN'
-      if (errCode === 'RATE_LIMITED') {
-        setSheetError('Espera al menos 60 segundos antes de solicitar un nuevo código.')
+      if (FIREBASE_ERRORS[errCode]) {
+        setSheetError(FIREBASE_ERRORS[errCode])
+      } else if (errCode === 'RATE_LIMITED' || errCode === 'auth/too-many-requests') {
+        setSheetError('Demasiados intentos. Espera al menos 60 segundos antes de solicitar un nuevo código.')
         setResendCooldown(60)
         const interval = setInterval(() => {
           setResendCooldown((prev) => {
@@ -310,7 +314,7 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
           })
         }, 1000)
       } else {
-        setSheetError('No pudimos reenviar el código. Inténtalo de nuevo.')
+        setSheetError(err instanceof Error ? err.message : 'No pudimos reenviar el código. Inténtalo de nuevo.')
       }
     } finally {
       setSheetLoading(false)

@@ -56,10 +56,13 @@ export function usePlaceOrder() {
       if (!currentUser?.user_id) throw new Error('Usuario no autenticado')
 
       // Resolve effective cargo type: user override → auto-detection → null
+      // Mismos umbrales que ConstructorTiendaTab.tsx:detectCargoType — antes
+      // esta copia nunca emitía 'medium', dejando esos pedidos invisibles en
+      // el filtro de PedidosProveedorScreen (que solo tenía light/heavy).
       const autoDetected: CargoType | null = (() => {
         const w = totalWeight()
         if (w === null) return null
-        return w < 5 ? 'light' : 'heavy'
+        return w < 5 ? 'light' : w <= 100 ? 'medium' : 'heavy'
       })()
       const effectiveCargo: CargoType | null = cargoType ?? autoDetected
 

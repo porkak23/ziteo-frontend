@@ -24,6 +24,12 @@ export const Z = {
   success:  'var(--z-success)',
   successBg:'var(--z-success-bg)',
   successDark:'var(--z-success-dark)',
+  // Reusan --color-status-* (ya definidos en ambos temas para chips de
+  // estado de pedidos) en vez de introducir variables --z-* nuevas.
+  warning:   'var(--color-status-warning-text)',
+  warningBg: 'var(--color-status-warning-bg)',
+  info:      'var(--color-status-info-text)',
+  infoBg:    'var(--color-status-info-bg)',
   border:   'var(--z-border)',
   divider:  'var(--z-divider)',
 

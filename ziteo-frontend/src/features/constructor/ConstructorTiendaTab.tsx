@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { useAuthStore } from '@/features/auth/store/authStore'
 import { useProyectos } from '@/features/proyectos/hooks/useProyectos'
 import { getProductImageUrl } from '../tienda/utils/productImages'
+import { useGenerateQuotation } from '../tienda/hooks/useQuotation'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -262,6 +263,8 @@ function CartScreen({ cart, setCart, onBack }: {
   const [ordered, setOrdered] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [qrModalOrder, setQrModalOrder] = useState<{ orderId: string; providerId: string } | null>(null)
+  const [quoted, setQuoted] = useState(false)
+  const { mutateAsync: generateQuotation, isPending: isQuoting } = useGenerateQuotation()
 
   // Proyectos del constructor con coordenadas guardadas → permiten "comprar desde un terreno".
   const { data: proyectos = [] } = useProyectos({ constructor_id: userId })
@@ -362,6 +365,33 @@ function CartScreen({ cart, setCart, onBack }: {
       setError(hasMessage && !isTechnicalError ? msg : 'No se pudo crear el pedido. Intenta de nuevo.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // Pide cotización a cada proveedor del carrito en vez de comprar directo —
+  // usa generate_quotation (misma RPC que useGenerateQuotation ya usaba en el
+  // CartDrawer sin enrutar); una cotización por proveedor, igual criterio de
+  // agrupación que handleConfirm.
+  async function handleQuote() {
+    if (cart.length === 0) return
+    try {
+      for (const [providerId, group] of byProvider) {
+        const groupTotal = group.items.reduce((s, i) => s + i.price_num * i.qty, 0)
+        await generateQuotation({
+          provider_id: providerId,
+          items: group.items.map((i) => ({
+            product_id: i.id,
+            name: i.name,
+            quantity: i.qty,
+            price_unit: i.price_num,
+          })),
+          subtotal: groupTotal,
+        })
+      }
+      setQuoted(true)
+      setTimeout(() => { setCart([]); onBack() }, 1800)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo pedir la cotización. Intenta de nuevo.')
     }
   }
 
@@ -543,9 +573,28 @@ function CartScreen({ cart, setCart, onBack }: {
                   : '¡Pedido realizado! Redirigiendo...'}
               </div>
             )}
+            {quoted && (
+              <div role="status" style={{ padding: '14px', borderRadius: Z.r.sm, background: Z.successBg, color: Z.successDark, fontFamily: Z.font, fontSize: 13, fontWeight: 700, textAlign: 'center' }}>
+                Cotización enviada. El proveedor te responderá pronto.
+              </div>
+            )}
             <ZButton disabled={!payMethod || ordered || submitting || !!qrModalOrder} onClick={handleConfirm}>
               {submitting ? 'Procesando...' : 'Confirmar Pedido'}
             </ZButton>
+            <button
+              type="button"
+              disabled={quoted || isQuoting || ordered || submitting}
+              onClick={handleQuote}
+              style={{
+                width: '100%', marginTop: 8, padding: '12px', borderRadius: Z.r.md,
+                border: `1px solid ${Z.border}`, background: 'transparent',
+                fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.orangeDark,
+                cursor: quoted || isQuoting ? 'default' : 'pointer',
+                opacity: quoted || isQuoting ? 0.6 : 1,
+              }}
+            >
+              {isQuoting ? 'Enviando…' : 'Pedir cotización en vez de comprar'}
+            </button>
           </>
         )}
       </div>

@@ -7,7 +7,7 @@ import { useToast } from '../../../shared/hooks/useToast'
 import { Toast } from '../../../shared/components/Toast'
 import { useUploadPhoto } from '../../../shared/hooks/useUploadPhoto'
 import { UserAvatar } from '../../../shared/components/UserAvatar'
-import { addRole as addRoleService } from '../../auth/services/authService'
+import { addRole as addRoleService, performLogout } from '../../auth/services/authService'
 import { CIUDADES_ACTIVAS } from '../../../shared/constants/geography'
 import { SaveCancelRow } from '../../../shared/design/components/SaveCancelRow'
 import { SectionLabel } from '../../../shared/design/components/SectionLabel'
@@ -797,7 +797,9 @@ export function PerfilScreen() {
         <button
           onClick={() => {
             if (window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-              logout()
+              // performLogout limpia la sesión de Supabase + caché de React
+              // Query/IndexedDB antes de vaciar el store local.
+              void performLogout().finally(() => { logout() })
             }
           }}
           className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 bg-error-container text-on-error-container font-label font-semibold active:opacity-80"

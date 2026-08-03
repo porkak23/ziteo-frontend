@@ -72,11 +72,21 @@ function capture(event: string, props?: Record<string, string>): void {
 
 // Dual-write al feed de actividad del Command Center admin (tabla `events`,
 // ver 20260719000002_admin_events_and_activity.sql). Fire-and-forget: nunca
-// debe bloquear ni afectar la UX si falla o el usuario no está autenticado
-// (log_event() ya no-opea silenciosamente sin auth.uid()).
+// debe bloquear ni afectar la UX si falla.
+//
+// log_event() tiene GRANT sólo a `authenticated`, así que llamarlo sin sesión
+// (p. ej. durante el registro, antes de loginWithPin) devuelve 401 y ensucia la
+// consola justo en el flujo donde más molesta al diagnosticar. Su guard interno
+// `auth.uid() IS NULL` nunca llega a evaluarse. Filtramos aquí en su lugar.
 function logEventToSupabase(event: string, props?: Record<string, string>): void {
-  supabase.rpc('log_event', { p_event_name: event, p_properties: props ?? {} }).then(
-    () => {},
+  supabase.auth.getSession().then(
+    ({ data }) => {
+      if (!data.session) return
+      supabase.rpc('log_event', { p_event_name: event, p_properties: props ?? {} }).then(
+        () => {},
+        () => {}
+      )
+    },
     () => {}
   )
 }

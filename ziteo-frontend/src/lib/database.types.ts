@@ -44,6 +44,39 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          ip: string | null
+          metadata: Json
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          metadata?: Json
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          metadata?: Json
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
       auth_throttle: {
         Row: {
           attempts: number
@@ -2725,6 +2758,106 @@ export type Database = {
         }
         Relationships: []
       }
+      public_role_profiles: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          delivery_time_hours: number | null
+          free_shipping_threshold: number | null
+          hourly_rate: number | null
+          is_available: boolean | null
+          is_verified: boolean | null
+          min_order_amount: number | null
+          onboarding_completed: boolean | null
+          payment_bank_transfer: string | null
+          payment_cash: boolean | null
+          payment_qr_url: string | null
+          role: string | null
+          service_zones: string[] | null
+          specialty: string | null
+          store_address: string | null
+          store_description: string | null
+          store_logo_url: string | null
+          store_name: string | null
+          updated_at: string | null
+          user_id: string | null
+          vehicle_available: boolean | null
+          years_experience: number | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string | null
+          delivery_time_hours?: number | null
+          free_shipping_threshold?: number | null
+          hourly_rate?: number | null
+          is_available?: boolean | null
+          is_verified?: boolean | null
+          min_order_amount?: number | null
+          onboarding_completed?: boolean | null
+          payment_bank_transfer?: string | null
+          payment_cash?: boolean | null
+          payment_qr_url?: string | null
+          role?: string | null
+          service_zones?: string[] | null
+          specialty?: string | null
+          store_address?: string | null
+          store_description?: string | null
+          store_logo_url?: string | null
+          store_name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          vehicle_available?: boolean | null
+          years_experience?: number | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string | null
+          delivery_time_hours?: number | null
+          free_shipping_threshold?: number | null
+          hourly_rate?: number | null
+          is_available?: boolean | null
+          is_verified?: boolean | null
+          min_order_amount?: number | null
+          onboarding_completed?: boolean | null
+          payment_bank_transfer?: string | null
+          payment_cash?: boolean | null
+          payment_qr_url?: string | null
+          role?: string | null
+          service_zones?: string[] | null
+          specialty?: string | null
+          store_address?: string | null
+          store_description?: string | null
+          store_logo_url?: string | null
+          store_name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          vehicle_available?: boolean | null
+          years_experience?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "maestros_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_invalid_city"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_delivery: { Args: { p_delivery_id: string }; Returns: Json }
@@ -2791,6 +2924,17 @@ export type Database = {
         }
         Returns: string
       }
+      get_provider_qr_for_delivery: {
+        Args: { p_delivery_id: string }
+        Returns: {
+          qr_hash: string
+          qr_path: string
+        }[]
+      }
+      get_provider_qr_path: {
+        Args: { p_provider_user_id: string; p_role?: string }
+        Returns: string
+      }
       get_user_rating: {
         Args: { target_user_id: string }
         Returns: {
@@ -2798,7 +2942,9 @@ export type Database = {
           total_reviews: number
         }[]
       }
+      grant_admin_role: { Args: { target_user_id: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
+      is_admin_mfa: { Args: never; Returns: boolean }
       list_orders_cursor: {
         Args: {
           p_cursor_created_at?: string
@@ -2838,6 +2984,15 @@ export type Database = {
           stock_quantity: number
           unit_type: string
         }[]
+      }
+      log_admin_action: {
+        Args: {
+          p_action: string
+          p_metadata?: Json
+          p_target_id?: string
+          p_target_type?: string
+        }
+        Returns: undefined
       }
       log_contact_event: {
         Args: { p_event_type: string; p_maestro_id: string }

@@ -66,42 +66,24 @@ export function usePaymentQr() {
 
   async function getSignedQrUrl(providerUserId: string, role: string = 'proveedor'): Promise<string | null> {
     try {
-      // Verify that the authenticated buyer has at least one order with this provider
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-      if (authError) throw new Error('No se pudo verificar tu sesión. Intenta de nuevo.')
-      if (!authUser) return null
-
-      const { data: orderRows, error: ordersError } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('provider_id', providerUserId)
-        .eq('constructor_id', authUser.id)
-        .limit(1)
-
-      if (ordersError) throw new Error('No se pudo verificar tus pedidos con este proveedor.')
-
-      if (!orderRows || orderRows.length === 0) {
-        // If it's a maestro, we also allow the own worker or a constructor to read it without active ecommerce orders.
-        // For now let's bypass order check if the role is 'maestro', since workers are hired differently.
-        if (role !== 'maestro') return null
-      }
-
-      // Fetch the stored relative path from user_roles
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('payment_qr_url')
-        .eq('user_id', providerUserId)
-        .eq('role', role)
-        .maybeSingle()
+      // El guard (comprador con ≥1 orden con este proveedor, o cualquiera si
+      // es maestro) ahora vive en el RPC — ver get_provider_qr_path en
+      // 20260802000003_public_role_profiles_view.sql. payment_qr_url no es
+      // legible directo desde user_roles para un tercero desde que se retiró
+      // la policy pública amplia.
+      const { data: qrPath, error } = await supabase.rpc('get_provider_qr_path', {
+        p_provider_user_id: providerUserId,
+        p_role: role,
+      })
 
       if (error) throw new Error('No se pudieron cargar los datos de pago del proveedor.')
 
       // Legitimate case: provider hasn't configured a QR yet — not an error.
-      if (!data?.payment_qr_url) return null
+      if (!qrPath) return null
 
       const { data: signed, error: signError } = await supabase.storage
         .from('payment-qrs')
-        .createSignedUrl(data.payment_qr_url, 300) // 5 minutes — short window, renewable on demand
+        .createSignedUrl(qrPath, 300) // 5 minutes — short window, renewable on demand
 
       if (signError) throw new Error('No se pudo generar el enlace del QR. Intenta de nuevo.')
 
@@ -121,39 +103,25 @@ export function usePaymentQr() {
   async function getProviderQrForDelivery(
     deliveryId: string,
   ): Promise<{ signedUrl: string | null; qrHash: string | null }> {
-    // Lookup order → provider via the delivery
-    const { data: delivery } = await supabase
-      .from('deliveries')
-      .select('order_id, driver_id')
-      .eq('id', deliveryId)
-      .maybeSingle()
+    // El guard (chofer asignado a esa entrega) ahora vive en el RPC — ver
+    // get_provider_qr_for_delivery en 20260802000003_public_role_profiles_view.sql.
+    // Endurecido respecto al código anterior: el SQL ahora sí exige
+    // driver_id = auth.uid(), que antes solo estaba implícito en un
+    // comentario sin aplicarse.
+    const { data, error } = await supabase.rpc('get_provider_qr_for_delivery', {
+      p_delivery_id: deliveryId,
+    })
 
-    if (!delivery?.order_id) return { signedUrl: null, qrHash: null }
-
-    const { data: order } = await supabase
-      .from('orders')
-      .select('provider_id')
-      .eq('id', delivery.order_id)
-      .maybeSingle()
-
-    if (!order?.provider_id) return { signedUrl: null, qrHash: null }
-
-    const { data: roleRow } = await supabase
-      .from('user_roles')
-      .select('payment_qr_url, payment_qr_hash')
-      .eq('user_id', order.provider_id)
-      .eq('role', 'proveedor')
-      .maybeSingle()
-
-    if (!roleRow?.payment_qr_url) return { signedUrl: null, qrHash: null }
+    const row = Array.isArray(data) ? data[0] : data
+    if (error || !row?.qr_path) return { signedUrl: null, qrHash: null }
 
     const { data: signed } = await supabase.storage
       .from('payment-qrs')
-      .createSignedUrl(roleRow.payment_qr_url, 300)
+      .createSignedUrl(row.qr_path, 300)
 
     return {
       signedUrl: signed?.signedUrl ?? null,
-      qrHash: roleRow.payment_qr_hash ?? null,
+      qrHash: row.qr_hash ?? null,
     }
   }
 
@@ -166,8 +134,13 @@ export function usePaymentQr() {
     providerUserId: string,
     role: string = 'proveedor',
   ): Promise<{ bankTransfer: string | null; cash: boolean }> {
+    // payment_bank_transfer/payment_cash son intencionalmente públicos — se
+    // renderizan a cualquier visitante en VendedorPublicProfile/MaestroPublicProfile
+    // (ficha de cobro del vendedor). Se lee de la vista pública en vez de
+    // user_roles directo (20260802000003_public_role_profiles_view.sql) para
+    // no depender del acceso amplio a la tabla que se está retirando.
     const { data, error } = await supabase
-      .from('user_roles')
+      .from('public_role_profiles')
       .select('payment_bank_transfer, payment_cash')
       .eq('user_id', providerUserId)
       .eq('role', role)

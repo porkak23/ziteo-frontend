@@ -13,8 +13,11 @@ export function useProviderConditions(sellerId: string) {
     queryKey: ['provider-conditions', sellerId],
     queryFn: async () => {
       if (!sellerId) return null
+      // Lee de la vista pública (siempre fila ajena en este flujo — el
+      // comprador consultando condiciones de un vendedor), ver
+      // 20260802000003_public_role_profiles_view.sql.
       const { data, error } = await supabase
-        .from('user_roles')
+        .from('public_role_profiles')
         .select('min_order_amount, free_shipping_threshold, delivery_time_hours, store_name')
         .eq('user_id', sellerId)
         .eq('role', 'proveedor')

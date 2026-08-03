@@ -472,6 +472,27 @@ function InventarioTab() {
   const { data: page = [], isLoading, isFetching } = useInventario(offset)
   const { mutate: toggleActivo } = useToggleProductoActivo()
 
+  // Gate suave: sin store_address configurado, el trigger
+  // auto_create_delivery_on_processing crea la entrega sin punto de
+  // recojo (pickup_address queda NULL) — el chofer no sabe dónde pasar a
+  // buscar el pedido. Banner informativo, no bloqueante: un gate duro en
+  // place_order dejaría sin poder vender a cualquier proveedor que aún no
+  // configuró su tienda (ver 20260802000006 y ss.).
+  const { data: storeAddress } = useQuery<string | null>({
+    queryKey: ['store-address-check', user?.user_id],
+    enabled: !!user?.user_id,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('store_address')
+        .eq('user_id', user!.user_id)
+        .eq('role', 'proveedor')
+        .maybeSingle()
+      return data?.store_address ?? null
+    },
+  })
+
   useEffect(() => {
     if (page.length === 0 && offset === 0) {
       setAllProducts([])
@@ -604,6 +625,20 @@ function InventarioTab() {
     <>
       <Toast toasts={toasts} onRemove={removeToast} />
       <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {storeAddress === null && (
+          <div style={{
+            padding: '12px 14px', borderRadius: Z.r.md, background: Z.warningBg,
+            border: `1px solid ${Z.warning}`, display: 'flex', flexDirection: 'column', gap: 4,
+          }}>
+            <span style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.warning }}>
+              Falta configurar la ubicación de tu tienda
+            </span>
+            <span style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec }}>
+              Sin ella, el chofer no sabrá dónde recoger tus pedidos con entrega a domicilio.
+              Configúrala desde "Mi cuenta" → Ubicación de la Tienda.
+            </span>
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontFamily: Z.font, fontSize: 22, fontWeight: 800, color: Z.text, margin: 0 }}>Inventario</h2>
           <button
@@ -655,11 +690,11 @@ function InventarioTab() {
             <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, marginTop: 4 }}>
               Sube tu archivo Excel o CSV para actualizar el inventario completo.
             </div>
-            <button style={{
+            <button disabled title="Próximamente" style={{
               marginTop: 10, padding: '8px 16px', borderRadius: 20, border: 'none',
-              background: Z.blue, color: Z.onSecondary, fontFamily: Z.font, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              background: Z.border, color: Z.textMuted, fontFamily: Z.font, fontSize: 12, fontWeight: 700, cursor: 'not-allowed',
             }}>
-              Subir archivo
+              Subir archivo (Próximamente)
             </button>
           </div>
         )}
@@ -675,11 +710,11 @@ function InventarioTab() {
             <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textSec, marginTop: 4 }}>
               Conecta tu sistema POS o software contable para sincronización automática cada 10 min.
             </div>
-            <button style={{
+            <button disabled title="Próximamente" style={{
               marginTop: 10, padding: '8px 16px', borderRadius: 20, border: 'none',
-              background: Z.blue, color: Z.onSecondary, fontFamily: Z.font, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              background: Z.border, color: Z.textMuted, fontFamily: Z.font, fontSize: 12, fontWeight: 700, cursor: 'not-allowed',
             }}>
-              Configurar API
+              Configurar API (Próximamente)
             </button>
           </div>
         )}
@@ -1949,6 +1984,8 @@ interface Quotation {
   pdf_url: string | null
   expires_at: string | null
   created_at: string
+  offered_price: number | null
+  offered_at: string | null
   buyer?: {
     name: string | null
     phone: string | null
@@ -1986,6 +2023,25 @@ function CotizacionesTab() {
   const [offerModal, setOfferModal] = useState<{ id: string; buyerName: string } | null>(null)
   const [offerPrice, setOfferPrice] = useState('')
   const { data: quotations = [], isLoading } = useProveedorQuotations(providerId)
+
+  const { mutate: sendOffer, isPending: sendingOffer } = useMutation({
+    mutationFn: async ({ quotationId, price }: { quotationId: string; price: number }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from('quotations')
+        .update({ offered_price: price, offered_at: new Date().toISOString() })
+        .eq('id', quotationId)
+        .eq('provider_id', providerId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] })
+      showToast('Oferta enviada', 'success')
+      setOfferModal(null)
+      setOfferPrice('')
+    },
+    onError: () => showToast('No se pudo enviar la oferta', 'error'),
+  })
 
   const { mutate: acceptQuotation, isPending: accepting } = useMutation({
     mutationFn: async (quotationId: string) => {
@@ -2068,6 +2124,12 @@ function CotizacionesTab() {
             Bs {q.subtotal.toFixed(2)}
           </span>
         </div>
+
+        {q.offered_price != null && (
+          <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.success }}>
+            Oferta enviada: Bs {q.offered_price.toFixed(2)}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button
@@ -2171,11 +2233,15 @@ function CotizacionesTab() {
                 Cancelar
               </ZButton>
               <ZButton
-                disabled={!offerPrice}
+                disabled={!offerPrice || sendingOffer}
                 fullWidth={true}
-                onClick={() => { setOfferModal(null); setOfferPrice('') }}
+                onClick={() => {
+                  const price = Number(offerPrice)
+                  if (!offerModal || !Number.isFinite(price) || price <= 0) return
+                  sendOffer({ quotationId: offerModal.id, price })
+                }}
               >
-                Enviar Oferta
+                {sendingOffer ? 'Enviando…' : 'Enviar Oferta'}
               </ZButton>
             </div>
           </div>

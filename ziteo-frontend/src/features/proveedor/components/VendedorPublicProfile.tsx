@@ -40,7 +40,7 @@ export function VendedorPublicProfile({
   onContact,
   authUser,
 }: VendedorPublicProfileProps) {
-  const { data: profile, isLoading, isError, refetch } = useVendedorProfile(vendedorId)
+  const { data: profile, isLoading, isError, refetch } = useVendedorProfile(vendedorId, isOwn)
   const { mutateAsync: updateProfile } = useUpdateVendedorProfile()
   const { mutateAsync: bootstrapRole } = useBootstrapVendedorRole()
   const { upload, isUploading } = useUploadPhoto()

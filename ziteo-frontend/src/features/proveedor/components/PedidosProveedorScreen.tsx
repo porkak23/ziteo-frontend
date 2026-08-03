@@ -9,12 +9,13 @@ import { supabase } from '../../../lib/supabaseClient'
 
 // ─── Cargo type filter ───────────────────────────────────────────────────────
 
-type CargoFilter = 'all' | 'light' | 'heavy'
+type CargoFilter = 'all' | 'light' | 'medium' | 'heavy'
 
 const CARGO_TABS: { id: CargoFilter; label: string; icon: string }[] = [
-  { id: 'all',   label: 'Todos',    icon: 'inbox' },
-  { id: 'light', label: 'Ligeros',  icon: 'two_wheeler' },
-  { id: 'heavy', label: 'Pesados',  icon: 'local_shipping' },
+  { id: 'all',    label: 'Todos',    icon: 'inbox' },
+  { id: 'light',  label: 'Ligeros',  icon: 'two_wheeler' },
+  { id: 'medium', label: 'Medianos', icon: 'directions_car' },
+  { id: 'heavy',  label: 'Pesados',  icon: 'local_shipping' },
 ]
 
 // ─── Hook: deliveries for order ids ─────────────────────────────────────────
@@ -72,7 +73,10 @@ export function PedidosProveedorScreen() {
   const filteredOrders = (orders as any[]).filter((order: any) => {
     if (cargoFilter === 'all') return true
     const cargo = cargoMap[order.id]
-    if (cargoFilter === 'light') return cargo === 'light' || cargo === ''  || cargo === undefined
+    // Un pedido sin cargo_type registrado (delivery aún no creada, o vacío)
+    // cae en "Ligeros" — mismo default que usa place_order/auto_create_delivery.
+    if (cargoFilter === 'light') return cargo === 'light' || cargo === '' || cargo === undefined
+    if (cargoFilter === 'medium') return cargo === 'medium'
     if (cargoFilter === 'heavy') return cargo === 'heavy'
     return true
   })

@@ -17,7 +17,7 @@ export interface MaestroProfile {
   payment_bank_transfer: string | null
 }
 
-export function useMaestroProfile(maestroId: string) {
+export function useMaestroProfile(maestroId: string, isOwn: boolean = false) {
   return useQuery<MaestroProfile>({
     queryKey: ['maestroProfile', maestroId],
     enabled: !!maestroId,
@@ -29,10 +29,17 @@ export function useMaestroProfile(maestroId: string) {
         await supabase.auth.refreshSession()
       }
 
+      // El dueño lee user_roles directo (necesita todas sus columnas para
+      // editar); un tercero lee la vista pública, que ya no expone toda la
+      // fila (ver 20260802000003_public_role_profiles_view.sql).
+      const roleQuery = isOwn
+        ? supabase.from('user_roles').select('*').eq('user_id', maestroId).eq('role', 'maestro').maybeSingle()
+        : supabase.from('public_role_profiles').select('*').eq('user_id', maestroId).eq('role', 'maestro').maybeSingle()
+
       // Two independent queries so a missing user_roles row doesn't kill the fetch
       const [profileRes, roleRes] = await Promise.all([
         supabase.from('profiles').select('user_id, name, city, avatar_url, bio').eq('user_id', maestroId).maybeSingle(),
-        supabase.from('user_roles').select('*').eq('user_id', maestroId).eq('role', 'maestro').maybeSingle(),
+        roleQuery,
       ])
 
       if (profileRes.error) throw profileRes.error

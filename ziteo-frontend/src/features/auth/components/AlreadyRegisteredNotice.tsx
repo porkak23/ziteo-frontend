@@ -5,6 +5,7 @@ import {
   resetPin,
   AuthServiceError,
 } from '../services/authService'
+import { FIREBASE_ERRORS } from '../constants/authConstants'
 import { useAuthStore } from '../store/authStore'
 import { Z } from '@/shared/design/tokens'
 import { PinPad } from './PinPad'
@@ -136,7 +137,8 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
       }
       setForgotStep('code')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al enviar el código'
+      const errCode = err instanceof AuthServiceError ? err.code : ''
+      const msg = FIREBASE_ERRORS[errCode] ?? (err instanceof Error ? err.message : 'Error al enviar el código')
       setForgotError(msg)
       setForgotStep('code')
     }
@@ -168,7 +170,8 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
       setPinError(null)
       setPhase('pin')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al resetear el PIN'
+      const errCode = err instanceof AuthServiceError ? err.code : ''
+      const msg = FIREBASE_ERRORS[errCode] ?? (err instanceof Error ? err.message : 'Error al resetear el PIN')
       setForgotError(msg)
     } finally {
       setForgotLoading(false)
@@ -184,7 +187,8 @@ export default function AlreadyRegisteredNotice({ onBack, onRegisterAnyway, onSu
       }
       setResendCooldown(60)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al reenviar el código'
+      const errCode = err instanceof AuthServiceError ? err.code : ''
+      const msg = FIREBASE_ERRORS[errCode] ?? (err instanceof Error ? err.message : 'Error al reenviar el código')
       setForgotError(msg)
     }
   }

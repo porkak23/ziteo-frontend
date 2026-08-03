@@ -40,6 +40,19 @@ function isPrivacidadRoute(): boolean {
   return window.location.pathname === '/privacidad'
 }
 
+// Detecta si la URL contiene ?godmode o #godmode para mostrar el panel admin.
+// IMPORTANTE: esto NO es un control de seguridad — es solo una reducción de
+// exposición accidental (un admin no aterriza siempre en el panel; un
+// dispositivo compartido/comprometido no lo expone por defecto). El acceso
+// real lo decide is_admin() en Postgres vía RLS y el guard de AdminApp — ver
+// 20260719000001_admin_role_foundation.sql y 20260801000002_admin_role_hardening.sql.
+function isGodModeRoute(): boolean {
+  return (
+    window.location.search.includes('godmode') ||
+    window.location.hash === '#godmode'
+  )
+}
+
 // All role apps and heavy screens are lazy-loaded so they are not included
 // in the initial bundle. Each role's chunk is only fetched after login.
 const TrabajadorApp       = lazy(() => import('./features/trabajador/TrabajadorApp').then(m => ({ default: m.TrabajadorApp })))
@@ -227,7 +240,7 @@ function AppScreens() {
     )
   }
 
-  if (currentUser?.active_role === 'admin') {
+  if (currentUser?.active_role === 'admin' && isGodModeRoute()) {
     return (
       <>
         <ThemeInitializer />
@@ -250,6 +263,32 @@ function AppScreens() {
         <InstallPrompt />
         <BetaAcknowledgment />
         <FeedbackButton />
+      </>
+    )
+  }
+
+  // Admin sin el gate ?godmode: el rol 'admin' no tiene otro dashboard propio
+  // (nunca es asignable junto a los 4 roles normales), así que sin el
+  // parámetro no hay ninguna pantalla que mostrarle. Mensaje específico en
+  // vez de caer en el genérico de "rol inválido" de abajo.
+  if (currentUser?.active_role === 'admin') {
+    return (
+      <>
+        <ThemeInitializer />
+        <NetworkStatusBanner />
+        <div className="flex flex-col items-center justify-center h-screen gap-4 p-6 text-center">
+          <p className="text-on-surface font-heading text-lg">Panel de administración</p>
+          <p className="text-on-surface-variant font-body text-sm">
+            Agrega <code>?godmode</code> a la URL para entrar.
+          </p>
+          <button
+            type="button"
+            onClick={() => { void performLogout().finally(logout) }}
+            className="px-4 py-2 rounded-xl bg-primary text-on-primary font-body font-medium"
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </>
     )
   }

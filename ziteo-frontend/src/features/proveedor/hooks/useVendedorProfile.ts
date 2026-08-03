@@ -25,7 +25,7 @@ export interface VendedorProfileData {
   vehicle_available: boolean | null
 }
 
-export function useVendedorProfile(vendedorId: string) {
+export function useVendedorProfile(vendedorId: string, isOwn: boolean = false) {
   return useQuery<VendedorProfileData>({
     queryKey: ['vendedorProfile', vendedorId],
     enabled: !!vendedorId,
@@ -36,9 +36,18 @@ export function useVendedorProfile(vendedorId: string) {
         await supabase.auth.refreshSession()
       }
 
+      // El dueño lee user_roles directo (necesita store_lat/lng, vehicle_plate
+      // etc. para editar); un tercero lee la vista pública, que no expone esas
+      // columnas (ver 20260802000003_public_role_profiles_view.sql). Los
+      // campos ausentes de la vista (store_lat/lng, vehicle_*) quedan
+      // undefined y el spread de abajo los normaliza a null.
+      const roleQuery = isOwn
+        ? supabase.from('user_roles').select('*').eq('user_id', vendedorId).eq('role', 'proveedor').maybeSingle()
+        : supabase.from('public_role_profiles').select('*').eq('user_id', vendedorId).eq('role', 'proveedor').maybeSingle()
+
       const [profileRes, roleRes] = await Promise.all([
         supabase.from('profiles').select('user_id, name, city, avatar_url').eq('user_id', vendedorId).maybeSingle(),
-        supabase.from('user_roles').select('*').eq('user_id', vendedorId).eq('role', 'proveedor').maybeSingle(),
+        roleQuery,
       ])
 
       if (profileRes.error) throw profileRes.error

@@ -5,7 +5,7 @@ import type { UserRole } from '../../features/auth/store/authStore'
 import { useNavStore } from '../store/navStore'
 import { useThemeStore } from '../hooks/useTheme'
 import { supabase } from '../../lib/supabaseClient'
-import { addRole as addRoleService, removeRole as removeRoleService } from '../../features/auth/services/authService'
+import { addRole as addRoleService, removeRole as removeRoleService, performLogout } from '../../features/auth/services/authService'
 
 const ROLE_ICONS: Record<UserRole, string> = {
   constructor: 'engineering',
@@ -116,7 +116,10 @@ export default function AvatarMenu({ isOpen, onClose, extraItems, onSettingsClic
     }
   }
 
-  const handleLogout = () => { logout(); onClose() }
+  // performLogout limpia la sesión de Supabase + caché de React Query/IndexedDB
+  // antes de vaciar el store local — sin esto, un segundo usuario en el mismo
+  // dispositivo podía ver la sesión/caché del anterior.
+  const handleLogout = () => { void performLogout().finally(() => { logout(); onClose() }) }
   const handleSettings = () => { setTab('settings'); onClose() }
   const handlePerfil = () => { setTab('perfil'); onClose() }
 

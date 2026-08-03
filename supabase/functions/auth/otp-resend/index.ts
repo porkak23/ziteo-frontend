@@ -54,7 +54,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   // El cooldown de reenvío solo aplica al canal servidor (WhatsApp/SMS ya
   // enviados desde aquí). Con Firebase, el reenvío lo dispara el cliente.
-  if (provider.name === 'whatsapp') {
+  // Twilio cobra por SMS: sin este cooldown, un reenvío en bucle quema saldo.
+  if (provider.name === 'whatsapp' || provider.name === 'twilio') {
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
     const { data: recentOtp } = await adminClient
       .from('otps')

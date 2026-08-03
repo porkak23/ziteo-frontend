@@ -64,9 +64,9 @@ test.describe('Smoke — Login all 4 roles', () => {
     await loginAs(page, TEST_ACCOUNTS.chofer.phone, TEST_ACCOUNTS.chofer.pin)
 
     // RepartidorApp: RadarScreen is the default tab
-    // The "ACTIVAR RADAR" button confirms the chofer dashboard loaded
+    // The "CONECTARME" button confirms the chofer dashboard loaded
     await expect(
-      page.getByRole('button', { name: /activar radar/i })
+      page.getByTestId('radar-activar-btn')
     ).toBeVisible({ timeout: 15_000 })
   })
 })

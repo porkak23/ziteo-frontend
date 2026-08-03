@@ -5,11 +5,13 @@ import { RoleDashNav } from '@/shared/design/shell/RoleDashNav'
 import type { Tab } from '@/shared/design/shell/RoleDashNav'
 import { useIsAdmin } from '@/features/admin/hooks/useIsAdmin'
 import { OverviewScreen } from '@/features/admin/components/OverviewScreen'
+import { MfaEnrollScreen } from '@/features/admin/security/MfaEnrollScreen'
 
 const LiveMapScreen = lazy(() => import('@/features/admin/map/LiveMapScreen').then((m) => ({ default: m.LiveMapScreen })))
 const CommerceScreen = lazy(() => import('@/features/admin/commerce/CommerceScreen').then((m) => ({ default: m.CommerceScreen })))
 const MarketScreen = lazy(() => import('@/features/admin/market/MarketScreen').then((m) => ({ default: m.MarketScreen })))
 const HealthScreen = lazy(() => import('@/features/admin/health/HealthScreen').then((m) => ({ default: m.HealthScreen })))
+const UsersScreen = lazy(() => import('@/features/admin/users/UsersScreen').then((m) => ({ default: m.UsersScreen })))
 
 // ─── Nav icons ────────────────────────────────────────────────────────────────
 
@@ -60,15 +62,26 @@ function NavIconPulse({ color = Z.textMuted, size = 22 }: { color?: string; size
   )
 }
 
+function NavIconUsers({ color = Z.textMuted, size = 22 }: { color?: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="8" r="3" stroke={color} strokeWidth="1.8" />
+      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <path d="M15 6.5a3 3 0 010 5.9M21 20c0-2.8-2-5.1-4.5-5.8" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+    </svg>
+  )
+}
+
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
-type AdminTab = 'overview' | 'map' | 'commerce' | 'market' | 'health'
+type AdminTab = 'overview' | 'map' | 'commerce' | 'market' | 'health' | 'users'
 
 const ADMIN_TABS: Tab[] = [
   { key: 'overview', label: 'Centro',   Icon: NavIconGrid },
   { key: 'map',      label: 'Mapa',     Icon: NavIconMap },
   { key: 'commerce', label: 'Comercio', Icon: NavIconCommerce },
   { key: 'market',   label: 'Mercado',  Icon: NavIconTrend },
+  { key: 'users',    label: 'Usuarios', Icon: NavIconUsers },
   { key: 'health',   label: 'Salud',    Icon: NavIconPulse },
 ]
 
@@ -87,8 +100,11 @@ function ScreenSkeleton() {
 // (ver 20260719000001_admin_role_foundation.sql). Si la sesión no tiene
 // el rol admin en user_roles, no se muestra ningún dato.
 export function AdminApp() {
-  const { data: isAdmin, isLoading, isError } = useIsAdmin()
+  const { data, isLoading, isError } = useIsAdmin()
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
+  // "Ahora no" en el enrollment de MFA no debe forzar el flujo en cada carga
+  // de la pestaña — solo se re-ofrece si la sesión se renueva (F5).
+  const [mfaSkipped, setMfaSkipped] = useState(false)
 
   if (isLoading) {
     return (
@@ -98,14 +114,49 @@ export function AdminApp() {
     )
   }
 
-  if (isError || !isAdmin) {
+  if (isError || !data?.isAdmin) {
+    // Sin redirect automático: is_admin() es la fuente de verdad, no queremos
+    // que un error de red se confunda con "sin permiso". El botón limpia el
+    // ?godmode de la URL y recarga, devolviendo al usuario a la app normal
+    // (o al login si no hay sesión) sin dejarlo varado en una pantalla muerta.
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: Z.bg, padding: 24, textAlign: 'center' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: Z.bg, padding: 24, textAlign: 'center', gap: 16 }}>
         <span style={{ color: Z.textMuted, fontSize: 14 }}>
-          No tienes acceso al panel de administración.
+          {isError
+            ? 'No pudimos verificar tu acceso. Intenta de nuevo.'
+            : 'No tienes acceso al panel de administración.'}
         </span>
+        <button
+          type="button"
+          onClick={() => {
+            const url = new URL(window.location.href)
+            url.searchParams.delete('godmode')
+            if (url.hash === '#godmode') url.hash = ''
+            window.location.href = url.toString()
+          }}
+          style={{
+            padding: '10px 20px',
+            borderRadius: 12,
+            background: Z.orangeDark,
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: 600,
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          Volver a Ziteo
+        </button>
       </div>
     )
+  }
+
+  // Ofrecer enrollment de MFA antes de entrar al panel — no bloquea el acceso
+  // (se puede posponer con "Ahora no"), solo lectura queda disponible sin él.
+  // Las escrituras admin (reset de PIN, etc.) validan aal2 server-side en
+  // cada RPC vía is_admin_mfa(), independientemente de lo que decida este flag.
+  if (!data.hasMfa && !mfaSkipped) {
+    return <MfaEnrollScreen onDone={() => setMfaSkipped(true)} />
   }
 
   // Mapa vivo tiene su propio layout full-screen (sin header estándar),
@@ -125,10 +176,17 @@ export function AdminApp() {
     <div style={{ minHeight: '100vh', paddingBottom: 102, background: Z.bg }}>
       <DashHeader onProfile={() => {}} onBell={() => {}} unreadCount={0} />
 
+      {!data.hasMfa && (
+        <div style={{ padding: '10px 16px', background: Z.orangePastel, color: Z.orangeDark, fontSize: 13, textAlign: 'center' }}>
+          Modo solo lectura — activa la verificación en dos pasos para poder editar usuarios o resetear PINs.
+        </div>
+      )}
+
       <Suspense fallback={<ScreenSkeleton />}>
         {activeTab === 'overview' && <OverviewScreen />}
         {activeTab === 'commerce' && <CommerceScreen />}
         {activeTab === 'market' && <MarketScreen />}
+        {activeTab === 'users' && <UsersScreen />}
         {activeTab === 'health' && <HealthScreen />}
       </Suspense>
 

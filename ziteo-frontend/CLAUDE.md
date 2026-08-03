@@ -192,8 +192,14 @@ curl -s .../functions/v1/auth-login ... -d '{"phone":"+591XXXXXXXX","pin":"NNNNN
 ```
 El cuerpo de `otp-verify` usa la clave **`otp`** (no `code`); el de register/login usa `pin`.
 
-### Nota sobre el flag OTP_VERIFICATION_REQUIRED (divergencia local-vs-prod)
-El `register/index.ts` **local** tiene un flag `OTP_VERIFICATION_REQUIRED` (default `false` → omite OTP). La versión **desplegada en prod (v34) NO tiene ese flag** y siempre exige OTP. NO redesplegar el register local sin antes setear el secret `OTP_VERIFICATION_REQUIRED=true`, o se desactivaría el OTP de WhatsApp sin querer.
+### Flag OTP_VERIFICATION_REQUIRED — hoy en `false` (2026-08-01)
+`auth-register` (v44 en prod) tiene el flag `OTP_VERIFICATION_REQUIRED`. **La divergencia local-vs-prod que decía esta nota ya no existe**: prod tiene el flag desde v44.
+
+Desde el **2026-08-01 el secret está en `false`**: el registro omite el OTP, marca `onboarding_completed:true` y el usuario queda logueable de inmediato con su PIN. Se hizo porque el SMS de Firebase seguía sin llegar incluso después de quitar el número de la lista de prueba, y el OTP bloqueaba todas las altas nuevas. El teléfono **no se verifica**; el PIN es la única credencial.
+
+- Sin OTP no hay autoservicio de "olvidé mi PIN" → reset manual por admin: [`docs/RESET_PIN_ADMIN.md`](../docs/RESET_PIN_ADMIN.md).
+- Revertir cuando el SMS funcione: `npx supabase secrets set OTP_VERIFICATION_REQUIRED=true --project-ref yvqbubjfhmuztknmhyvd`. El secret se lee en runtime — **no hace falta redesplegar** ninguna función.
+- Detalle completo en [`docs/OTP_FIREBASE.md`](../docs/OTP_FIREBASE.md).
 
 ---
 
@@ -216,9 +222,18 @@ El `register/index.ts` **local** tiene un flag `OTP_VERIFICATION_REQUIRED` (defa
 
 ## Lecciones Aprendidas — OTP Firebase activo en producción (2026-07-29)
 
-> 📄 **Estado completo, aciertos, errores y el bloqueo abierto del SMS real: [`docs/OTP_FIREBASE.md`](../docs/OTP_FIREBASE.md).** Leerlo antes de tocar nada de OTP — incluye qué hipótesis ya están descartadas para no repetir diagnósticos.
+> 📄 **Estado completo, aciertos, errores y la causa raíz: [`docs/OTP_FIREBASE.md`](../docs/OTP_FIREBASE.md).** Leerlo antes de tocar nada de OTP — incluye qué hipótesis ya están descartadas para no repetir diagnósticos.
 >
-> **Al 2026-07-31 el registro por SMS real NO funciona**: `sendVerificationCode` devuelve `503 Service Unavailable`. Todo lo demás de la cadena está verificado y funcionando (con números de prueba el flujo completo cierra).
+> **Al 2026-07-31 (2ª revisión) la causa del "no llega el código" está resuelta:** el número estaba en *Phone numbers for testing* de Firebase, y esos números **nunca reciben SMS real** (la API responde exitosa igual). El `503` que se documentó antes no se reproduce y la SMS region policy **no** era la causa.
+
+### Si "no llega el código": revisar primero los números de prueba
+Un número ficticio saltea el reCAPTCHA. Con un token basura, el ficticio responde `200` y cualquier número real `400`:
+```bash
+curl -s "https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=$KEY" \
+  -H "Referer: https://www.ziteo.company/" -H "Content-Type: application/json" \
+  -d '{"phoneNumber":"+591XXXXXXXX","recaptchaToken":"x"}'
+```
+`200` + `sessionInfo` = está en Authentication → Sign-in method → Phone → *Phone numbers for testing*. Nunca dejar ahí el número real de una persona.
 
 ### La regla
 `OTP_PROVIDER=firebase` (secret Supabase) + `VITE_OTP_PROVIDER=firebase` (env Vercel) están **activos en prod**. El teléfono se verifica con Firebase Phone Auth (proyecto `ziteo-a08f4`): el cliente dispara `signInWithPhoneNumber` con reCAPTCHA invisible, y `auth-otp-verify`/`auth-reset-pin` validan el ID token contra el JWKS de Google (`_shared/otp-firebase-adapter.ts`), sin Admin SDK. El código WhatsApp sigue intacto — volver es solo cambiar el secret `OTP_PROVIDER`, cero cambios de código (ver comentario en `_shared/otp-provider.ts`).

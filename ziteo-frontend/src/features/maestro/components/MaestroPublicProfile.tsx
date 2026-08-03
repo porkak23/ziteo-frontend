@@ -70,7 +70,7 @@ export function MaestroPublicProfile({
   onChat,
   authUser,
 }: MaestroPublicProfileProps) {
-  const { data: profile, isLoading, isError, refetch } = useMaestroProfile(maestroId)
+  const { data: profile, isLoading, isError, refetch } = useMaestroProfile(maestroId, isOwn)
   const { data: habilidades = [] } = useHabilidades(maestroId)
   const { data: reviewsData } = useProfileReviews(maestroId)
   const { mutateAsync: updateProfile } = useUpdateMaestroProfile()

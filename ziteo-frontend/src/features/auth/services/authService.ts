@@ -134,13 +134,16 @@ async function loginLegacyBeta(phone: string): Promise<AuthUser> {
 
 /** Traduce un código de error de Firebase Auth (auth/*) a un mensaje o lo deja pasar tal cual. */
 function translateFirebaseError(err: unknown): AuthServiceError {
-  const code = err instanceof Error ? err.message : String(err)
-  const match = /auth\/[a-z-]+/.exec(code)
+  console.error('[Firebase Auth Raw Error]:', err)
+  const errObj = err as { code?: string; message?: string }
+  const rawStr = `${errObj?.code ?? ''} ${errObj?.message ?? ''} ${String(err)}`
+  const match = /auth\/[a-z-]+/.exec(rawStr)
   const firebaseCode = match?.[0]
-  if (firebaseCode && FIREBASE_ERRORS[firebaseCode]) {
-    return new AuthServiceError(firebaseCode, FIREBASE_ERRORS[firebaseCode])
+  if (firebaseCode) {
+    const message = FIREBASE_ERRORS[firebaseCode] ?? `Error de autenticación de Firebase (${firebaseCode})`
+    return new AuthServiceError(firebaseCode, message)
   }
-  return new AuthServiceError('OTP_CLIENT_ERROR', 'No se pudo verificar el código, intenta de nuevo.')
+  return new AuthServiceError('OTP_CLIENT_ERROR', errObj?.message ?? 'No se pudo verificar el código, intenta de nuevo.')
 }
 
 /**
@@ -246,25 +249,48 @@ export async function registerWithPin(
  * Maps to auth-otp-resend. Returns { debug_otp? } in local dev.
  */
 export async function resendOtp(phone: string): Promise<{ debug_otp?: string }> {
-  const { data, error } = await supabase.functions.invoke('auth-otp-resend', {
-    body: { phone },
-  })
-  if (error) {
-    const code = extractEdgeError(error)
-    throw new AuthServiceError(code, code)
-  }
-  const resp = data as { sent: boolean; otp_provider?: string; debug_otp?: string }
-
-  if (resp.otp_provider === 'firebase') {
-    try {
-      const provider = await getClientOtpProvider()
-      await provider.requestCode(phone)
-    } catch (err) {
-      throw translateFirebaseError(err)
+  try {
+    const { data, error } = await supabase.functions.invoke('auth-otp-resend', {
+      body: { phone },
+    })
+    if (error) {
+      const code = extractEdgeError(error)
+      // Si el perfil aún no existe porque la persona está en pleno proceso de registro,
+      // con Firebase Auth igual permitimos disparar el reenvío desde el cliente.
+      if (code === 'USER_NOT_FOUND' || code.includes('404')) {
+        const provider = await getClientOtpProvider()
+        if (provider.name === 'firebase') {
+          await provider.requestCode(phone)
+          return {}
+        }
+      }
+      throw new AuthServiceError(code, code)
     }
-  }
+    const resp = data as { sent: boolean; otp_provider?: string; debug_otp?: string }
 
-  return { debug_otp: resp?.debug_otp }
+    if (resp.otp_provider === 'firebase') {
+      try {
+        const provider = await getClientOtpProvider()
+        await provider.requestCode(phone)
+      } catch (err) {
+        throw translateFirebaseError(err)
+      }
+    }
+
+    return { debug_otp: resp?.debug_otp }
+  } catch (err) {
+    if (err instanceof AuthServiceError) throw err
+    const provider = await getClientOtpProvider()
+    if (provider.name === 'firebase') {
+      try {
+        await provider.requestCode(phone)
+        return {}
+      } catch (fbErr) {
+        throw translateFirebaseError(fbErr)
+      }
+    }
+    throw translateFirebaseError(err)
+  }
 }
 
 /**
@@ -444,12 +470,17 @@ export async function removeRole(role: UserRole): Promise<void> {
       console.error('Error deleting payment QR from storage:', storageErr)
     }
   } else if (role === 'proveedor') {
+    // Soft-delete: mismo patrón que Ocasión (useOcasion.ts:233). Un DELETE
+    // físico acá era irreversible — tocar el toggle de rol borraba el
+    // catálogo entero sin posibilidad de recuperarlo si el usuario volvía
+    // a activar el rol proveedor.
     const { error: productsError } = await supabase
       .from('products')
-      .delete()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ active: false, is_deleted: true } as any)
       .eq('provider_id', userId)
     if (productsError) {
-      console.error('Error deleting provider products:', productsError.message)
+      console.error('Error soft-deleting provider products:', productsError.message)
     }
 
     try {

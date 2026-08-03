@@ -7,7 +7,7 @@ export type { ClientOtpProvider } from './types'
 // Literal-foldable: Vite elimina en build time la rama del import dinámico no
 // alcanzable, así que el SDK de Firebase (y firebaseClient.ts) nunca entra al
 // bundle cuando el proveedor activo es whatsapp.
-const OTP_PROVIDER = import.meta.env.VITE_OTP_PROVIDER === 'firebase' ? 'firebase' : 'whatsapp'
+const OTP_PROVIDER = import.meta.env.VITE_OTP_PROVIDER === 'whatsapp' ? 'whatsapp' : 'firebase'
 
 let cached: ClientOtpProvider | null = null
 
