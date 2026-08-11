@@ -12,6 +12,7 @@ import { CIUDADES_ACTIVAS } from '../../../shared/constants/geography'
 import { SaveCancelRow } from '../../../shared/design/components/SaveCancelRow'
 import { SectionLabel } from '../../../shared/design/components/SectionLabel'
 import { usePaymentQr } from '../../proveedor/hooks/usePaymentQr'
+import { useFocusTrap } from '../../../shared/hooks/useFocusTrap'
 
 const VendedorPublicProfile = lazy(() => import('../../proveedor/components/VendedorPublicProfile').then(m => ({ default: m.VendedorPublicProfile })))
 const MaestroPublicProfile  = lazy(() => import('../../maestro/components/MaestroPublicProfile').then(m => ({ default: m.MaestroPublicProfile })))
@@ -79,6 +80,7 @@ export function PerfilScreen() {
   const { uploadQr, getSignedQrUrl, uploading: qrUploading } = usePaymentQr()
   const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [qrModalOpen, setQrModalOpen] = useState(false)
+  const qrModalRef = useFocusTrap<HTMLDivElement>(qrModalOpen, () => setQrModalOpen(false))
 
   const [roleData, setRoleData] = useState<Record<string, RoleRowData>>({})
 
@@ -131,13 +133,15 @@ export function PerfilScreen() {
       })
   }, [user?.user_id])
 
+  const qrRoleStoreName = user ? roleData[user.active_role]?.store_name : undefined
+
   useEffect(() => {
     if (!user) return
-    const qrRoleData = roleData[user.active_role]
-    if (qrRoleData?.store_name !== undefined || user.active_role === 'proveedor' || user.active_role === 'maestro') {
+    if (qrRoleStoreName !== undefined || user.active_role === 'proveedor' || user.active_role === 'maestro') {
       getSignedQrUrl(user.user_id, user.active_role).then((url) => setQrUrl(url))
     }
-  }, [user?.user_id, user?.active_role, roleData])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.user_id, user?.active_role, qrRoleStoreName])
 
   if (!user) return null
 
@@ -324,7 +328,7 @@ export function PerfilScreen() {
 
         <div className="flex flex-col items-center gap-1 text-on-primary">
           <div className="flex items-center gap-2">
-            <span className="font-headline font-extrabold text-2xl">{user.name}</span>
+            <h1 className="font-headline font-extrabold text-2xl">{user.name}</h1>
             <button
               onClick={() => setEditName(user.name)}
               className="flex items-center gap-1 px-2 py-1 rounded-full border border-white/40 text-xs font-label opacity-90 active:opacity-60"
@@ -820,6 +824,10 @@ export function PerfilScreen() {
       {/* QR Modal */}
       {qrModalOpen && qrUrl && (
         <div
+          ref={qrModalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="QR de cobro"
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6"
           onClick={() => setQrModalOpen(false)}
         >
@@ -827,6 +835,7 @@ export function PerfilScreen() {
             <img src={qrUrl} alt="QR de cobro" className="w-64 h-64 object-contain rounded-2xl" />
             <button
               onClick={() => setQrModalOpen(false)}
+              aria-label="Cerrar"
               className="absolute -top-3 -right-3 w-9 h-9 bg-surface rounded-full flex items-center justify-center shadow-lg active:opacity-70"
             >
               <span className="material-symbols-outlined text-on-surface">close</span>

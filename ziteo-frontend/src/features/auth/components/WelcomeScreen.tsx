@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Z } from '@/shared/design/tokens'
 import LegalModal, { type LegalDocType } from '@/shared/components/LegalModal'
+import imagotipoHorizontal from '@/assets/brand/imagotipo-horizontal-naranja.svg'
 
 interface WelcomeScreenProps {
   onNavigate: (dest: string) => void
@@ -62,15 +63,27 @@ export default function WelcomeScreen({ onNavigate }: WelcomeScreenProps) {
             lineHeight: 1.15,
           }}
         >
-          Bienvenido a<br />
-          <span
-            style={{
-              color: Z.orange,
-            }}
-          >
-            ZITEO
-          </span>
+          Bienvenido a
         </h2>
+        <img
+          src={imagotipoHorizontal}
+          alt="Ziteoo"
+          style={{ height: 34, width: 'auto', marginTop: -4, alignSelf: 'flex-start' }}
+        />
+
+        <div
+          style={{
+            display: 'flex', gap: 8, alignItems: 'center',
+            fontFamily: Z.font, fontSize: 12, fontWeight: 800, letterSpacing: 1.2,
+            color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase',
+          }}
+        >
+          <span>Conecta</span>
+          <span style={{ color: Z.orange, fontSize: 7 }}>◆</span>
+          <span>Construye</span>
+          <span style={{ color: Z.blue, fontSize: 7 }}>◆</span>
+          <span>Crece</span>
+        </div>
 
         <p
           style={{

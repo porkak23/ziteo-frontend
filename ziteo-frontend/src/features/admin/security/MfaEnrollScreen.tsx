@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Z } from '@/shared/design/tokens'
 import { supabase } from '@/lib/supabaseClient'
+import { useFocusTrap } from '@/shared/hooks/useFocusTrap'
 
 // Enrollment TOTP para el panel admin. Único lugar de la app que usa MFA —
 // las escrituras admin (reset de PIN de usuarios, gestión de roles) exigen
@@ -17,6 +18,8 @@ export function MfaEnrollScreen({ onDone }: { onDone: () => void }) {
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [secretSaved, setSecretSaved] = useState(false)
+  const containerRef = useFocusTrap<HTMLDivElement>(true, onDone)
 
   async function handleStartEnroll() {
     setLoading(true)
@@ -64,7 +67,13 @@ export function MfaEnrollScreen({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: Z.bg, padding: 24, gap: 20 }}>
+    <div
+      ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Verificación en dos pasos"
+      style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: Z.bg, padding: 24, gap: 20 }}
+    >
       <div style={{ maxWidth: 360, width: '100%', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', textAlign: 'center' }}>
         <span style={{ color: Z.text, fontSize: 18, fontWeight: 700 }}>Verificación en dos pasos</span>
 
@@ -99,31 +108,48 @@ export function MfaEnrollScreen({ onDone }: { onDone: () => void }) {
             </span>
             <img src={qrCode} alt="Código QR de verificación en dos pasos" width={200} height={200} style={{ borderRadius: 12, background: '#fff', padding: 8 }} />
             {secret && (
-              <code style={{ fontSize: 12, color: Z.textMuted, wordBreak: 'break-all', background: Z.surface, padding: '6px 10px', borderRadius: 8 }}>
-                {secret}
-              </code>
+              <>
+                <span style={{ color: Z.error, fontSize: 12, fontWeight: 700 }}>
+                  Guarda esta clave ahora — no volverá a mostrarse.
+                </span>
+                <code style={{ fontSize: 12, color: Z.textMuted, wordBreak: 'break-all', background: Z.surface, padding: '6px 10px', borderRadius: 8 }}>
+                  {secret}
+                </code>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: Z.text, cursor: 'pointer', textAlign: 'left' }}>
+                  <input
+                    type="checkbox"
+                    checked={secretSaved}
+                    onChange={(e) => setSecretSaved(e.target.checked)}
+                    style={{ marginTop: 2 }}
+                  />
+                  <span>Ya guardé esta clave en un lugar seguro.</span>
+                </label>
+              </>
             )}
             <input
               type="text"
               inputMode="numeric"
               maxLength={6}
               placeholder="000000"
+              aria-label="Código de verificación de 6 dígitos"
               value={code}
+              disabled={!secretSaved}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               style={{
                 width: '100%', padding: '12px 16px', borderRadius: 12, border: `1px solid ${Z.border}`,
                 fontSize: 20, textAlign: 'center', letterSpacing: 6, background: Z.surface, color: Z.text,
+                opacity: secretSaved ? 1 : 0.5,
               }}
             />
             <button
               type="button"
               onClick={handleVerify}
-              disabled={loading || code.length !== 6}
+              disabled={loading || code.length !== 6 || !secretSaved}
               style={{
                 padding: '10px 20px', borderRadius: 12, background: Z.orangeDark, color: '#fff',
                 fontSize: 14, fontWeight: 600, border: 'none', width: '100%',
-                cursor: loading || code.length !== 6 ? 'default' : 'pointer',
-                opacity: loading || code.length !== 6 ? 0.6 : 1,
+                cursor: loading || code.length !== 6 || !secretSaved ? 'default' : 'pointer',
+                opacity: loading || code.length !== 6 || !secretSaved ? 0.6 : 1,
               }}
             >
               {loading ? 'Verificando…' : 'Confirmar'}

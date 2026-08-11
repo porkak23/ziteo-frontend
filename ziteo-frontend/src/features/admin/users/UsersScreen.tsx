@@ -1,12 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Z } from '@/shared/design/tokens'
 import { useAdminUsers } from '@/features/admin/hooks/useAdminUsers'
 import { UserDetailSheet } from '@/features/admin/users/UserDetailSheet'
 
 export function UsersScreen() {
   const [term, setTerm] = useState('')
+  const [debouncedTerm, setDebouncedTerm] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const { data: users = [], isLoading } = useAdminUsers(term)
+  const { data: users = [], isLoading } = useAdminUsers(debouncedTerm)
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedTerm(term), 300)
+    return () => clearTimeout(id)
+  }, [term])
 
   const selectedUser = users.find((u) => u.user_id === selectedId) ?? null
 
@@ -30,7 +36,7 @@ export function UsersScreen() {
 
         {isLoading && <span style={{ fontSize: 13, color: Z.textMuted }}>Buscando…</span>}
 
-        {!isLoading && term.trim().length >= 2 && users.length === 0 && (
+        {!isLoading && debouncedTerm.trim().length >= 2 && users.length === 0 && (
           <span style={{ fontSize: 13, color: Z.textMuted }}>Sin resultados.</span>
         )}
 

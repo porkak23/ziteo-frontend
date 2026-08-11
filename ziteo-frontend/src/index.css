@@ -4,15 +4,15 @@
 
 @layer base {
   :root {
-    /* Brand — handoff Z tokens: CTA #A43700 (orangeDark), accent #E8733A (orange) */
-    --color-primary:                   #A43700;
-    --color-primary-container:         #E8733A;
-    --color-primary-fixed:             #FFF0EB;
-    --color-primary-fixed-dim:         #FFEADF;
+    /* Brand — logo Ziteoo tokens: primary #2e3192 (indigo), accent #f17824 (orange) */
+    --color-primary:                   #2e3192;
+    --color-primary-container:         #4548B0;
+    --color-primary-fixed:             #EAEAFA;
+    --color-primary-fixed-dim:         #D6D7F5;
     --color-on-primary:                #ffffff;
-    --color-on-primary-fixed:          #3A0E00;
-    --color-on-primary-fixed-variant:  #A43700;
-    --color-inverse-primary:           #E8733A;
+    --color-on-primary-fixed:          #12123B;
+    --color-on-primary-fixed-variant:  #2e3192;
+    --color-inverse-primary:           #4548B0;
 
     /* Secondary — industrial grey */
     --color-secondary:                 #374151;
@@ -36,16 +36,16 @@
 
     /* Surfaces — clean neutral grey */
     --color-background:                #F5F5F2;
-    --color-surface:                   #FFFFFF;
-    --color-surface-bright:            #FFFFFF;
+    --color-surface:                   #FAF7F2;
+    --color-surface-bright:            #FAF7F2;
     --color-surface-dim:               #E5E5E0;
     --color-surface-container:         #EFEFE9;
     --color-surface-container-low:     #F5F5F0;
     --color-surface-container-high:    #E8E8E2;
     --color-surface-container-highest: #DDDDD7;
-    --color-surface-container-lowest:  #FFFFFF;
+    --color-surface-container-lowest:  #FAF7F2;
     --color-surface-variant:           #E9E9E3;
-    --color-surface-tint:              #A43700;
+    --color-surface-tint:              #2e3192;
 
     /* Text — true near-black for maximum contrast */
     --color-on-background:             #0D0D0D;
@@ -67,7 +67,7 @@
     --color-driver-surface:            #141E2B;
 
     /* Misc */
-    --color-project-center:            #FFF0EB;
+    --color-project-center:            #EAEAFA;
 
     /* Status tokens */
     --color-status-pending-bg:   #FEF3C7;
@@ -90,13 +90,13 @@
     --color-background-dark:     #0A0A0A;
 
     /* Extended brand — for gradients */
-    --color-primary-dark:        #A43700;
+    --color-primary-dark:        #1E2066;
     --color-success:             #16A34A;
     --color-success-dark:        #166534;
 
     /* ── Z Design Token Layer (light) ───────────────────── */
     --z-bg:            #F8F6F2;
-    --z-surface:       #FFFFFF;
+    --z-surface:       #FAF7F2;
     --z-text:          #1A1A2E;
     --z-text-sec:      #64748B;
     --z-text-muted:    #637585;
@@ -107,26 +107,26 @@
     --z-success:       #16A34A;
     --z-success-bg:    #DCFCE7;
     --z-success-dark:  #166534;
-    --z-orange:        #E8733A;
-    --z-orange-dark:   #A43700;
-    --z-orange-light:  #FFF0EB;
-    --z-orange-pastel: #FFEADF;
-    --z-blue:          #3A7BD5;
-    --z-blue-dark:     #1E5FAD;
-    --z-blue-light:    #EDF4FF;
-    --z-blue-pastel:   #D6E6FF;
+    --z-orange:        #f17824;
+    --z-orange-dark:   #C25C11;
+    --z-orange-light:  #FFF0E6;
+    --z-orange-pastel: #FFE2CC;
+    --z-blue:          #2e3192;
+    --z-blue-dark:     #1E2066;
+    --z-blue-light:    #EAEAFA;
+    --z-blue-pastel:   #D6D7F5;
   }
 
   .dark {
-    /* Brand — handoff oranges on dark: bright #E8733A leads, #A43700 as inverse */
-    --color-primary:                   #E8733A;
-    --color-primary-container:         #6B2300;
-    --color-primary-fixed:             #FFF0EB;
-    --color-primary-fixed-dim:         #FFCDB3;
-    --color-on-primary:                #1A0700;
-    --color-on-primary-fixed:          #3A0E00;
-    --color-on-primary-fixed-variant:  #A43700;
-    --color-inverse-primary:           #A43700;
+    /* Brand — logo Ziteoo tokens on dark: bright #5A5EC7 leads, #2e3192 as inverse */
+    --color-primary:                   #5A5EC7;
+    --color-primary-container:         #23255F;
+    --color-primary-fixed:             #EAEAFA;
+    --color-primary-fixed-dim:         #B7B9EC;
+    --color-on-primary:                #0C0D2A;
+    --color-on-primary-fixed:          #12123B;
+    --color-on-primary-fixed-variant:  #2e3192;
+    --color-inverse-primary:           #2e3192;
 
     /* Secondary — warm grey for dark */
     --color-secondary:                 #A39890;
@@ -159,7 +159,7 @@
     --color-surface-container-highest: #30241B;
     --color-surface-container-lowest:  #100D0A;
     --color-surface-variant:           #261C15;
-    --color-surface-tint:              #E8733A;
+    --color-surface-tint:              #5A5EC7;
 
     /* Text — warm off-white */
     --color-on-background:             #EDE8E3;
@@ -177,7 +177,7 @@
     --color-outline-variant:           #2C2018;
 
     /* Misc */
-    --color-project-center:            #1E1008;
+    --color-project-center:            #12123B;
 
     /* Status tokens */
     --color-status-pending-bg:   #3A1C06;
@@ -197,7 +197,7 @@
     --color-rating:              #FBB040;
 
     /* Extended brand */
-    --color-primary-dark:        #6B2300;
+    --color-primary-dark:        #23255F;
     --color-success:             #22C55E;
     --color-success-dark:        #15803D;
 
@@ -214,14 +214,14 @@
     --z-success:       #22C55E;
     --z-success-bg:    #052e16;
     --z-success-dark:  #4ADE80;
-    --z-orange:        #FF7848;
-    --z-orange-dark:   #FF5E20;
+    --z-orange:        #FF9257;
+    --z-orange-dark:   #f17824;
     --z-orange-light:  #2D1506;
     --z-orange-pastel: #1E0E04;
-    --z-blue:          #5B9BDF;
-    --z-blue-dark:     #3A7BD5;
-    --z-blue-light:    #0D1E38;
-    --z-blue-pastel:   #091525;
+    --z-blue:          #5A5EC7;
+    --z-blue-dark:     #2e3192;
+    --z-blue-light:    #14163F;
+    --z-blue-pastel:   #0D0E2B;
   }
 
   body {
@@ -310,6 +310,10 @@
 @keyframes zPulseGlow {
   0%, 100% { box-shadow: 0 8px 32px rgba(232,115,58,0.3); }
   50%       { box-shadow: 0 8px 40px rgba(232,115,58,0.5); }
+}
+@keyframes zGlowPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.08); }
 }
 @keyframes driverPulse {
   0%   { box-shadow: 0 0 0 0 rgba(164,55,0,0.5); }

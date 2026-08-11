@@ -313,6 +313,7 @@ export function VendedorPublicProfile({
                   value={editStoreName}
                   onChange={(e) => setEditStoreName(e.target.value)}
                   placeholder="Nombre de tu tienda"
+                  aria-label="Nombre de tu tienda"
                   className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm font-body text-on-primary placeholder:text-on-primary/40 focus:outline-none"
                 />
                 <div className="flex gap-2">
@@ -333,9 +334,9 @@ export function VendedorPublicProfile({
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="font-headline font-bold text-2xl text-on-primary leading-tight">
+                <h1 className="font-headline font-bold text-2xl text-on-primary leading-tight">
                   {displayName}
-                </span>
+                </h1>
                 {isOwn && (
                   <button
                     onClick={() => setEditStoreName(resolvedProfile.store_name ?? '')}
@@ -346,7 +347,7 @@ export function VendedorPublicProfile({
                 )}
               </div>
             )}
-            {resolvedProfile.company_name && !isOwn && (
+            {resolvedProfile.company_name && isOwn && (
               <span className="font-body text-sm text-on-primary/80">{resolvedProfile.company_name}</span>
             )}
             <span className="font-body text-sm text-on-primary/60">{resolvedProfile.city || 'Bolivia'}</span>
@@ -444,6 +445,7 @@ export function VendedorPublicProfile({
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
                 placeholder="Cuéntales a los constructores qué vendes, qué materiales tienes y en qué te especializas…"
+                aria-label="Descripción de tu tienda"
                 rows={4}
                 maxLength={500}
                 className="rounded-xl border border-outline-variant bg-surface-container px-3 py-2.5 text-sm font-body text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary resize-none"
@@ -541,6 +543,7 @@ export function VendedorPublicProfile({
                       value={editBank}
                       onChange={(e) => setEditBank(e.target.value)}
                       placeholder="Ej. Banco Unión, Cuenta Ahorros: 12345678, Titular: Juan Pérez"
+                      aria-label="Datos de transferencia bancaria"
                       rows={3}
                       className="rounded-xl border border-outline-variant bg-surface-container px-3 py-2.5 text-sm font-body text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary resize-none"
                     />
@@ -592,7 +595,7 @@ export function VendedorPublicProfile({
                         <button
                           onClick={() => handleSave('payment_qr_url', null)}
                           className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center font-bold text-sm shadow-md active:opacity-85"
-                          title="Eliminar QR"
+                          aria-label="Eliminar QR"
                         >
                           ×
                         </button>
@@ -600,8 +603,7 @@ export function VendedorPublicProfile({
                     </div>
                   </div>
                 ) : isOwn ? (
-                  <div
-                    onClick={() => !qrUploading && qrInputRef.current?.click()}
+                  <label
                     className="border-2 border-dashed border-outline-variant hover:border-primary/50 transition-colors rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer mt-1"
                   >
                     <span className="material-symbols-outlined text-3xl text-on-surface-variant/40">qr_code_2</span>
@@ -613,10 +615,11 @@ export function VendedorPublicProfile({
                       ref={qrInputRef}
                       type="file"
                       accept="image/*"
+                      disabled={qrUploading}
                       className="hidden"
                       onChange={handleQrChange}
                     />
-                  </div>
+                  </label>
                 ) : (
                   <p className="font-body text-xs text-on-surface-variant/50 italic mt-0.5">
                     No tiene un código QR configurado.
@@ -658,6 +661,7 @@ export function VendedorPublicProfile({
                   setEditMinOrder(e.target.value === '' ? null : Number(e.target.value))
                 }
                 placeholder="Monto en Bs."
+                aria-label="Monto mínimo de pedido en Bolivianos"
                 min={0}
                 className="rounded-xl border border-outline-variant bg-surface-container px-3 py-2 text-sm font-body text-on-surface focus:outline-none focus:border-primary"
               />
@@ -705,6 +709,7 @@ export function VendedorPublicProfile({
                   value={editCompany}
                   onChange={(e) => setEditCompany(e.target.value)}
                   placeholder="Ej. Materiales Pérez S.R.L. o NIT 123456789"
+                  aria-label="Nombre de empresa o NIT"
                   className="rounded-xl border border-outline-variant bg-surface-container px-3 py-2.5 text-sm font-body text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary"
                 />
                 <SaveCancelRow

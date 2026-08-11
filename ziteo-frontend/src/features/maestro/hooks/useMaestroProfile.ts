@@ -22,6 +22,7 @@ export function useMaestroProfile(maestroId: string, isOwn: boolean = false) {
     queryKey: ['maestroProfile', maestroId],
     enabled: !!maestroId,
     retry: 1,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       // Ensure session is fresh before querying — access tokens expire in 1h
       const { data: sessionData } = await supabase.auth.getSession()

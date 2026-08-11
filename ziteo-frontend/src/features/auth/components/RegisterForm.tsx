@@ -535,13 +535,20 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
             </div>
 
             <div
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', marginTop: 4 }}
-              onClick={() => setTermsAccepted((v) => !v)}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 4 }}
             >
               <div
                 role="checkbox"
                 aria-checked={termsAccepted}
-                style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 1, border: `2px solid ${termsAccepted ? Z.orange : Z.border}`, background: termsAccepted ? Z.orange : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                tabIndex={0}
+                onClick={() => setTermsAccepted((v) => !v)}
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault()
+                    setTermsAccepted((v) => !v)
+                  }
+                }}
+                style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 1, border: `2px solid ${termsAccepted ? Z.orange : Z.border}`, background: termsAccepted ? Z.orange : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', cursor: 'pointer' }}
               >
                 {termsAccepted && (
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -549,7 +556,10 @@ export default function RegisterForm({ onSuccess, onNavigate }: RegisterFormProp
                   </svg>
                 )}
               </div>
-              <span style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, lineHeight: 1.6 }}>
+              <span
+                onClick={() => setTermsAccepted((v) => !v)}
+                style={{ fontFamily: Z.font, fontSize: 13, color: Z.textSec, lineHeight: 1.6, cursor: 'pointer' }}
+              >
                 Acepto los{' '}
                 <span onClick={(e) => { e.stopPropagation(); setLegalModal('terminos') }} style={{ color: Z.orange, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}>
                   Términos de Uso

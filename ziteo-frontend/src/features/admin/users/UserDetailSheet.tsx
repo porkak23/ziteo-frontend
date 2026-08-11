@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Z } from '@/shared/design/tokens'
 import type { AdminUserRow } from '@/features/admin/hooks/useAdminUsers'
 import { useResetUserPin } from '@/features/admin/hooks/useAdminUsers'
+import { useFocusTrap } from '@/shared/hooks/useFocusTrap'
 
 interface UserDetailSheetProps {
   user: AdminUserRow
@@ -18,9 +19,12 @@ export function UserDetailSheet({ user, onClose }: UserDetailSheetProps) {
   const [newPin, setNewPin] = useState('')
   const [resetPin, setResetPin] = useState<{ pin: string } | null>(null)
   const resetMutation = useResetUserPin()
+  const containerRef = useFocusTrap<HTMLDivElement>(true, onClose)
 
   function generatePin(): string {
-    return String(Math.floor(100000 + Math.random() * 900000))
+    const buf = new Uint32Array(1)
+    crypto.getRandomValues(buf)
+    return String(100000 + (buf[0] % 900000))
   }
 
   function handleResetClick() {
@@ -37,6 +41,10 @@ export function UserDetailSheet({ user, onClose }: UserDetailSheetProps) {
 
   return (
     <div
+      ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Detalle de ${user.name}`}
       style={{
         position: 'absolute',
         left: 0,

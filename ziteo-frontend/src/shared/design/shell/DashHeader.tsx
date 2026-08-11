@@ -1,6 +1,7 @@
 import { Z } from '../tokens'
 import { ZAvatar } from '../components/ZAvatar'
 import { useAuthStore } from '../../../features/auth/store/authStore'
+import imagotipo from '@/assets/brand/imagotipo-horizontal-color.svg'
 
 interface DashHeaderProps {
   onProfile: () => void
@@ -57,32 +58,36 @@ export function DashHeader({
       borderBottom: `1px solid ${Z.border}`,
       flexShrink: 0,
     }}>
-      {/* Logo + Role pill */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      {/* Logo + slogan + Role pill */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <img src={imagotipo} alt="Ziteoo" style={{ height: 24, width: 'auto' }} />
+          {activeRole && ROLE_LABELS[activeRole] && (
+            <span style={{
+              fontFamily: Z.font,
+              fontSize: 10,
+              fontWeight: 700,
+              background: Z.orangeLight,
+              color: Z.orangeDark,
+              padding: '3px 8px',
+              borderRadius: 20,
+              marginLeft: 8,
+              letterSpacing: 0.3,
+            }}>
+              {ROLE_LABELS[activeRole]}
+            </span>
+          )}
+        </div>
         <span style={{
           fontFamily: Z.font,
-          fontWeight: 800,
-          fontSize: 20,
-          letterSpacing: 2,
-          color: Z.orange,
+          fontSize: 7,
+          fontWeight: 700,
+          letterSpacing: 1,
+          color: Z.textMuted,
+          textTransform: 'uppercase',
         }}>
-          ZITEO
+          Conecta · Construye · Crece
         </span>
-        {activeRole && ROLE_LABELS[activeRole] && (
-          <span style={{
-            fontFamily: Z.font,
-            fontSize: 10,
-            fontWeight: 700,
-            background: Z.orangeLight,
-            color: Z.orangeDark,
-            padding: '3px 8px',
-            borderRadius: 20,
-            marginLeft: 8,
-            letterSpacing: 0.3,
-          }}>
-            {ROLE_LABELS[activeRole]}
-          </span>
-        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -76,37 +76,57 @@ export function usePlaceOrder() {
         return acc
       }, {})
 
-      const orderIds: string[] = []
+      // Each place_order call is an independent atomic transaction (one per
+      // provider) — safe to run in parallel. allSettled (not all) so a
+      // failure in one provider doesn't hide which orders already succeeded.
+      const entries = Object.entries(byProvider)
+      const results = await Promise.allSettled(
+        entries.map(([providerId, items]) => {
+          const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+          const rpcItems = items.map((i) => ({
+            product_id: i.productId,
+            quantity:   i.quantity,
+            price_unit: i.price,
+          }))
 
-      for (const [providerId, items] of Object.entries(byProvider)) {
-        const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
-
-        const rpcItems = items.map((i) => ({
-          product_id: i.productId,
-          quantity:   i.quantity,
-          price_unit: i.price,
-        }))
-
-        // Single atomic call — stock check + order + order_items + delivery fields in one transaction
-        const { data: orderId, error } = await supabase.rpc('place_order', {
-          p_constructor_id:   currentUser.user_id,
-          p_provider_id:      providerId,
-          p_total:            total,
-          p_items:            rpcItems,
-          p_delivery_method:  method,
-          p_delivery_address: isDelivery ? vars.deliveryAddress : undefined,
-          p_delivery_lat:     isDelivery ? vars.deliveryLat : undefined,
-          p_delivery_lng:     isDelivery ? vars.deliveryLng : undefined,
-          p_cargo_type:       effectiveCargo ?? undefined,
-          p_project_id:       vars.projectId ?? undefined,
+          // Single atomic call — stock check + order + order_items + delivery fields in one transaction
+          return supabase.rpc('place_order', {
+            p_constructor_id:   currentUser.user_id,
+            p_provider_id:      providerId,
+            p_total:            total,
+            p_items:            rpcItems,
+            p_delivery_method:  method,
+            p_delivery_address: isDelivery ? vars.deliveryAddress : undefined,
+            p_delivery_lat:     isDelivery ? vars.deliveryLat : undefined,
+            p_delivery_lng:     isDelivery ? vars.deliveryLng : undefined,
+            p_cargo_type:       effectiveCargo ?? undefined,
+            p_project_id:       vars.projectId ?? undefined,
+          }).then(({ data, error }) => {
+            if (error) throw new Error(error.message)
+            return data as string
+          })
         })
+      )
 
-        if (error) throw new Error(error.message)
+      const orderIds: string[] = []
+      const succeededProviderIds: string[] = []
+      const failures: string[] = []
 
-        orderIds.push(orderId as string)
+      results.forEach((result, i) => {
+        if (result.status === 'fulfilled') {
+          orderIds.push(result.value)
+          succeededProviderIds.push(entries[i][0])
+        } else {
+          failures.push(result.reason instanceof Error ? result.reason.message : String(result.reason))
+        }
+      })
+
+      if (failures.length > 0) {
+        const partial = orderIds.length > 0 ? ` ${orderIds.length} pedido(s) sí se crearon correctamente.` : ''
+        throw new Error(`${failures.join('; ')}.${partial}`)
       }
 
-      return { orderIds, providerIds: Object.keys(byProvider) }
+      return { orderIds, providerIds: succeededProviderIds }
     },
     onSuccess: async ({ orderIds, providerIds }) => {
       orderIds.forEach((id) => track.orderPlaced(id))

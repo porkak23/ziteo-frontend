@@ -4,6 +4,7 @@ import { useNavStore } from './shared/store/navStore'
 import { useAuthSession } from './shared/hooks/useAuthSession'
 import { performLogout } from './features/auth/services/authService'
 import { InstallPrompt } from './shared/components/InstallPrompt'
+import { BrandWatermark } from './shared/components/BrandWatermark'
 import SplashScreen from './features/auth/components/SplashScreen'
 import WelcomeScreen from './features/auth/components/WelcomeScreen'
 import RegisterForm from './features/auth/components/RegisterForm'
@@ -179,6 +180,7 @@ function AppScreens() {
     return (
       <>
         <ThemeInitializer />
+        <BrandWatermark />
         <NetworkStatusBanner />
         <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
           <Suspense fallback={<TabSkeleton />}>
@@ -199,6 +201,7 @@ function AppScreens() {
     return (
       <>
         <ThemeInitializer />
+        <BrandWatermark />
         <NetworkStatusBanner />
         <Suspense fallback={<TabSkeleton />}>
           <ConstructorApp />
@@ -214,6 +217,7 @@ function AppScreens() {
     return (
       <>
         <ThemeInitializer />
+        <BrandWatermark />
         <NetworkStatusBanner />
         <Suspense fallback={<TabSkeleton />}>
           <ProveedorApp />
@@ -229,6 +233,7 @@ function AppScreens() {
     return (
       <>
         <ThemeInitializer />
+        <BrandWatermark />
         <NetworkStatusBanner />
         <Suspense fallback={<TabSkeleton />}>
           <TrabajadorApp />
@@ -244,6 +249,7 @@ function AppScreens() {
     return (
       <>
         <ThemeInitializer />
+        <BrandWatermark />
         <NetworkStatusBanner />
         <Suspense fallback={<TabSkeleton />}>
           <AdminApp />
@@ -256,6 +262,7 @@ function AppScreens() {
     return (
       <>
         <ThemeInitializer />
+        <BrandWatermark />
         <NetworkStatusBanner />
         <Suspense fallback={<TabSkeleton />}>
           <ChofersApp />

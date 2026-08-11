@@ -43,8 +43,8 @@ export const Z = {
 
   // Gradients
   gradOrange: 'linear-gradient(135deg, var(--z-orange) 0%, var(--z-orange-dark) 100%)',
-  gradBlue:   'linear-gradient(135deg, #5B9BD5 0%, #2E6EB5 100%)',
-  gradMixed:  'linear-gradient(135deg, var(--z-orange) 0%, var(--z-blue) 100%)',
+  gradBlue:   'linear-gradient(135deg, var(--z-blue) 0%, var(--z-blue-dark) 100%)',
+  gradMixed:  'linear-gradient(135deg, var(--z-blue) 0%, var(--z-orange) 100%)',
 } as const;
 
 export type ZColor = typeof Z.orange;

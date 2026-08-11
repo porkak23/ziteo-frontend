@@ -2035,7 +2035,7 @@ function CotizacionesTab() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quotations'] })
+      queryClient.invalidateQueries({ queryKey: ['proveedor-quotations', providerId] })
       showToast('Oferta enviada', 'success')
       setOfferModal(null)
       setOfferPrice('')

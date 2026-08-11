@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Z } from '@/shared/design/tokens'
+import imagotipoVertical from '@/assets/brand/imagotipo-vertical-mono-blanco.svg'
 
 // SplashScreen is always-dark by design — onboarding identity moment, brand-locked.
 
@@ -39,8 +40,8 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           background: `
             repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 48px),
             repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 48px),
-            linear-gradient(135deg, rgba(232,115,58,0.12) 0%, transparent 45%),
-            linear-gradient(315deg, rgba(58,123,213,0.1) 0%, transparent 45%),
+            linear-gradient(135deg, rgba(46,49,146,0.14) 0%, transparent 45%),
+            linear-gradient(315deg, rgba(241,120,36,0.1) 0%, transparent 45%),
             linear-gradient(180deg, #0D1020 0%, #141930 50%, #0D1020 100%)
           `,
         }}
@@ -48,19 +49,19 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
 
       <div
         className="absolute"
-        style={{ top: 20, left: 20, width: 40, height: 40, borderTop: '2px solid rgba(232,115,58,0.3)', borderLeft: '2px solid rgba(232,115,58,0.3)', borderRadius: '4px 0 0 0' }}
+        style={{ top: 20, left: 20, width: 40, height: 40, borderTop: '2px solid rgba(46,49,146,0.35)', borderLeft: '2px solid rgba(46,49,146,0.35)', borderRadius: '4px 0 0 0' }}
       />
       <div
         className="absolute"
-        style={{ top: 20, right: 20, width: 40, height: 40, borderTop: '2px solid rgba(58,123,213,0.3)', borderRight: '2px solid rgba(58,123,213,0.3)', borderRadius: '0 4px 0 0' }}
+        style={{ top: 20, right: 20, width: 40, height: 40, borderTop: '2px solid rgba(241,120,36,0.3)', borderRight: '2px solid rgba(241,120,36,0.3)', borderRadius: '0 4px 0 0' }}
       />
       <div
         className="absolute"
-        style={{ bottom: 100, left: 20, width: 40, height: 40, borderBottom: '2px solid rgba(58,123,213,0.3)', borderLeft: '2px solid rgba(58,123,213,0.3)', borderRadius: '0 0 0 4px' }}
+        style={{ bottom: 100, left: 20, width: 40, height: 40, borderBottom: '2px solid rgba(241,120,36,0.3)', borderLeft: '2px solid rgba(241,120,36,0.3)', borderRadius: '0 0 0 4px' }}
       />
       <div
         className="absolute"
-        style={{ bottom: 100, right: 20, width: 40, height: 40, borderBottom: '2px solid rgba(232,115,58,0.3)', borderRight: '2px solid rgba(232,115,58,0.3)', borderRadius: '0 0 4px 0' }}
+        style={{ bottom: 100, right: 20, width: 40, height: 40, borderBottom: '2px solid rgba(46,49,146,0.35)', borderRight: '2px solid rgba(46,49,146,0.35)', borderRadius: '0 0 4px 0' }}
       />
 
       <div
@@ -69,31 +70,25 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
       >
         <div
           style={{
-            width: 80, height: 80, borderRadius: 20,
+            position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: Z.gradMixed,
-            boxShadow: '0 8px 32px rgba(232,115,58,0.3)',
-            animation: 'zPulseGlow 2s ease-in-out infinite',
           }}
         >
-          <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
-            <path d="M8 40V20l16-12 16 12v20" stroke="rgba(255,255,255,0.9)" strokeWidth="2.5" strokeLinejoin="round" fill="none"/>
-            <rect x="14" y="24" width="6" height="6" rx="1" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" fill="none"/>
-            <rect x="28" y="24" width="6" height="6" rx="1" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" fill="none"/>
-            <rect x="19" y="32" width="10" height="8" rx="1.5" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5" fill="none"/>
-            <path d="M24 8V4M24 4h8M24 4h-4" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
+          <div
+            style={{
+              position: 'absolute',
+              inset: '-20%',
+              background: 'radial-gradient(closest-side, rgba(46,49,146,0.35), transparent 70%)',
+              animation: 'zGlowPulse 2.4s ease-in-out infinite',
+              pointerEvents: 'none',
+            }}
+          />
+          <img
+            src={imagotipoVertical}
+            alt="Ziteoo"
+            style={{ width: 260, height: 'auto', position: 'relative' }}
+          />
         </div>
-
-        <h1
-          style={{
-            fontFamily: Z.font, fontWeight: 800, fontSize: 64, color: '#FFFFFF',
-            letterSpacing: 6, margin: 0,
-            textShadow: '0 2px 20px rgba(232,115,58,0.3)',
-          }}
-        >
-          ZITEO
-        </h1>
 
         <p
           style={{
@@ -115,22 +110,22 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
             style={{
               height: '100%', borderRadius: 2, transition: 'width 0.1s linear',
               width: `${progress * 100}%`,
-              background: 'linear-gradient(90deg, #E8733A, #3A7BD5)',
+              background: 'linear-gradient(90deg, #2e3192, #f17824)',
             }}
           />
         </div>
 
         <div
           style={{
-            display: 'flex', gap: 16, alignItems: 'center',
-            fontFamily: Z.font, fontSize: 10, fontWeight: 700, letterSpacing: 2.5,
-            color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase',
+            display: 'flex', gap: 10, alignItems: 'center',
+            fontFamily: Z.font, fontSize: 15, fontWeight: 800, letterSpacing: 1.5,
+            color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase',
           }}
         >
           <span>Conecta</span>
-          <span style={{ color: Z.orange, fontSize: 6 }}>◆</span>
+          <span style={{ color: Z.orange, fontSize: 9 }}>◆</span>
           <span>Construye</span>
-          <span style={{ color: Z.blue, fontSize: 6 }}>◆</span>
+          <span style={{ color: Z.blue, fontSize: 9 }}>◆</span>
           <span>Crece</span>
         </div>
       </div>

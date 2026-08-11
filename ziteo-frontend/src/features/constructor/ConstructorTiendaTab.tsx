@@ -220,12 +220,13 @@ function ProductDetail({ product, onBack, onAdd }: {
         <div>
           <label style={{ fontFamily: Z.font, fontSize: 13, fontWeight: 600, color: Z.textSec, display: 'block', marginBottom: 8 }}>Cantidad</label>
           <div style={{ display: 'flex', alignItems: 'center', borderRadius: Z.r.sm, overflow: 'hidden', border: `1.5px solid ${Z.border}`, width: 'fit-content' }}>
-            <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 44, height: 44, border: 'none', background: Z.surface, cursor: 'pointer', fontFamily: Z.font, fontSize: 20, fontWeight: 700, color: Z.text, outline: 'none' }}>−</button>
+            <button onClick={() => setQty(Math.max(1, qty - 1))} aria-label="Disminuir cantidad" style={{ width: 44, height: 44, border: 'none', background: Z.surface, cursor: 'pointer', fontFamily: Z.font, fontSize: 20, fontWeight: 700, color: Z.text, outline: 'none' }}>−</button>
             <input
               type="number"
               min={1}
               max={maxQty}
               value={qty}
+              aria-label="Cantidad"
               onChange={(e) => {
                 const n = parseInt(e.target.value, 10)
                 if (Number.isNaN(n)) { setQty(1); return }
@@ -233,7 +234,7 @@ function ProductDetail({ product, onBack, onAdd }: {
               }}
               style={{ width: 72, height: 44, textAlign: 'center', fontFamily: Z.font, fontSize: 16, fontWeight: 700, color: Z.text, borderTop: 'none', borderBottom: 'none', borderLeft: `1px solid ${Z.border}`, borderRight: `1px solid ${Z.border}`, background: Z.surface, outline: 'none', padding: 0 }}
             />
-            <button onClick={() => setQty(Math.min(maxQty, qty + 1))} style={{ width: 44, height: 44, border: 'none', background: Z.surface, cursor: 'pointer', fontFamily: Z.font, fontSize: 20, fontWeight: 700, color: Z.text, outline: 'none' }}>+</button>
+            <button onClick={() => setQty(Math.min(maxQty, qty + 1))} aria-label="Aumentar cantidad" style={{ width: 44, height: 44, border: 'none', background: Z.surface, cursor: 'pointer', fontFamily: Z.font, fontSize: 20, fontWeight: 700, color: Z.text, outline: 'none' }}>+</button>
           </div>
           <div style={{ fontFamily: Z.font, fontSize: 12, color: Z.textMuted, marginTop: 6 }}>
             Total: <strong style={{ color: Z.orangeDark }}>Bs {(product.price_num * qty).toLocaleString('es-BO')}</strong>
@@ -311,31 +312,58 @@ function CartScreen({ cart, setCart, onBack }: {
     setSubmitting(true)
     setError(null)
     try {
-      let lastOrderId: string | null = null
-      for (const [providerId, group] of byProvider) {
-        const groupTotal = group.items.reduce((s, i) => s + i.price_num * i.qty, 0)
-        const items = group.items.map((i) => ({
-          product_id: i.id,
-          quantity: i.qty,
-          price_unit: i.price_num,
-        }))
-        const { data: orderId, error: rpcError } = await supabase.rpc('place_order', {
-          p_constructor_id: userId,
-          p_provider_id: providerId,
-          p_total: groupTotal,
-          p_items: items,
-          p_delivery_method: deliveryMethod,
-          p_delivery_address: deliveryMethod === 'delivery' ? deliveryLoc?.address ?? undefined : undefined,
-          p_delivery_lat: deliveryMethod === 'delivery' ? deliveryLoc?.lat || undefined : undefined,
-          p_delivery_lng: deliveryMethod === 'delivery' ? deliveryLoc?.lng || undefined : undefined,
-          p_cargo_type: effectiveCargo ?? undefined,
-          p_project_id: deliveryMethod === 'delivery' ? (originProjectId ?? undefined) : undefined,
+      // Cada place_order es una transacción atómica independiente por
+      // proveedor — se pueden lanzar en paralelo. allSettled (no all) para
+      // saber cuáles ya se crearon si alguno falla a mitad de camino.
+      const results = await Promise.allSettled(
+        byProvider.map(([providerId, group]) => {
+          const groupTotal = group.items.reduce((s, i) => s + i.price_num * i.qty, 0)
+          const items = group.items.map((i) => ({
+            product_id: i.id,
+            quantity: i.qty,
+            price_unit: i.price_num,
+          }))
+          return supabase.rpc('place_order', {
+            p_constructor_id: userId,
+            p_provider_id: providerId,
+            p_total: groupTotal,
+            p_items: items,
+            p_delivery_method: deliveryMethod,
+            p_delivery_address: deliveryMethod === 'delivery' ? deliveryLoc?.address ?? undefined : undefined,
+            p_delivery_lat: deliveryMethod === 'delivery' ? deliveryLoc?.lat || undefined : undefined,
+            p_delivery_lng: deliveryMethod === 'delivery' ? deliveryLoc?.lng || undefined : undefined,
+            p_cargo_type: effectiveCargo ?? undefined,
+            p_project_id: deliveryMethod === 'delivery' ? (originProjectId ?? undefined) : undefined,
+          }).then(({ data, error: rpcError }) => {
+            if (rpcError) throw rpcError
+            return { providerId, orderId: data as unknown as string }
+          })
         })
-        if (rpcError) throw rpcError
-        lastOrderId = orderId as unknown as string
+      )
+
+      const succeeded: { providerId: string; orderId: string }[] = []
+      const failures: string[] = []
+      results.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          succeeded.push(result.value)
+        } else {
+          const reason = result.reason
+          failures.push(reason instanceof Error ? reason.message : String(reason))
+        }
+      })
+
+      if (failures.length > 0) {
+        throw new Error(
+          succeeded.length > 0
+            ? `${failures.join('; ')}. ${succeeded.length} pedido(s) sí se crearon correctamente.`
+            : failures.join('; ')
+        )
       }
+
+      const lastOrderId = succeeded.length > 0 ? succeeded[succeeded.length - 1].orderId : null
+
       // Web Push al provider (la notificación in-app la crea el trigger trg_notify_provider_on_new_order)
-      for (const [providerId] of byProvider) {
+      for (const { providerId } of succeeded) {
         supabase.functions.invoke('notifications/send-push', {
           body: {
             user_id: providerId,
@@ -375,18 +403,31 @@ function CartScreen({ cart, setCart, onBack }: {
   async function handleQuote() {
     if (cart.length === 0) return
     try {
-      for (const [providerId, group] of byProvider) {
-        const groupTotal = group.items.reduce((s, i) => s + i.price_num * i.qty, 0)
-        await generateQuotation({
-          provider_id: providerId,
-          items: group.items.map((i) => ({
-            product_id: i.id,
-            name: i.name,
-            quantity: i.qty,
-            price_unit: i.price_num,
-          })),
-          subtotal: groupTotal,
+      const results = await Promise.allSettled(
+        byProvider.map(([providerId, group]) => {
+          const groupTotal = group.items.reduce((s, i) => s + i.price_num * i.qty, 0)
+          return generateQuotation({
+            provider_id: providerId,
+            items: group.items.map((i) => ({
+              product_id: i.id,
+              name: i.name,
+              quantity: i.qty,
+              price_unit: i.price_num,
+            })),
+            subtotal: groupTotal,
+          })
         })
+      )
+      const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      if (failures.length > 0) {
+        const succeededCount = results.length - failures.length
+        const reason = failures[0].reason
+        const msg = reason instanceof Error ? reason.message : String(reason)
+        throw new Error(
+          succeededCount > 0
+            ? `${msg}. ${succeededCount} cotización(es) sí se enviaron correctamente.`
+            : msg
+        )
       }
       setQuoted(true)
       setTimeout(() => { setCart([]); onBack() }, 1800)
@@ -424,21 +465,22 @@ function CartScreen({ cart, setCart, onBack }: {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${Z.border}`, borderRadius: 8, overflow: 'hidden' }}>
-                        <button onClick={() => updateQty(item.id, item.qty - 1)} style={{ width: 44, height: 44, border: 'none', background: Z.surface, cursor: 'pointer', fontSize: 16, fontWeight: 700, outline: 'none' }}>−</button>
+                        <button onClick={() => updateQty(item.id, item.qty - 1)} aria-label={`Disminuir cantidad de ${item.name}`} style={{ width: 44, height: 44, border: 'none', background: Z.surface, cursor: 'pointer', fontSize: 16, fontWeight: 700, outline: 'none' }}>−</button>
                         <input
                           type="number"
                           min={1}
                           max={item.stock}
                           value={item.qty}
+                          aria-label={`Cantidad de ${item.name}`}
                           onChange={(e) => {
                             const n = parseInt(e.target.value, 10)
                             updateQty(item.id, Number.isNaN(n) ? 1 : n)
                           }}
                           style={{ width: 56, height: 44, textAlign: 'center', fontFamily: Z.font, fontSize: 13, fontWeight: 700, color: Z.text, borderTop: 'none', borderBottom: 'none', borderLeft: `1px solid ${Z.border}`, borderRight: `1px solid ${Z.border}`, background: Z.surface, outline: 'none', padding: 0 }}
                         />
-                        <button onClick={() => updateQty(item.id, item.qty + 1)} style={{ width: 44, height: 44, border: 'none', background: Z.surface, cursor: 'pointer', fontSize: 16, fontWeight: 700, outline: 'none' }}>+</button>
+                        <button onClick={() => updateQty(item.id, item.qty + 1)} aria-label={`Aumentar cantidad de ${item.name}`} style={{ width: 44, height: 44, border: 'none', background: Z.surface, cursor: 'pointer', fontSize: 16, fontWeight: 700, outline: 'none' }}>+</button>
                       </div>
-                      <button onClick={() => removeItem(item.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', outline: 'none', fontFamily: Z.font, fontSize: 10, color: Z.error, fontWeight: 600 }}>Quitar</button>
+                      <button onClick={() => removeItem(item.id)} aria-label={`Quitar ${item.name} del carrito`} style={{ border: 'none', background: 'none', cursor: 'pointer', outline: 'none', fontFamily: Z.font, fontSize: 10, color: Z.error, fontWeight: 600 }}>Quitar</button>
                     </div>
                   </div>
                 ))}
@@ -578,7 +620,7 @@ function CartScreen({ cart, setCart, onBack }: {
                 Cotización enviada. El proveedor te responderá pronto.
               </div>
             )}
-            <ZButton disabled={!payMethod || ordered || submitting || !!qrModalOrder} onClick={handleConfirm}>
+            <ZButton disabled={!payMethod || ordered || submitting || isQuoting || !!qrModalOrder} onClick={handleConfirm}>
               {submitting ? 'Procesando...' : 'Confirmar Pedido'}
             </ZButton>
             <button

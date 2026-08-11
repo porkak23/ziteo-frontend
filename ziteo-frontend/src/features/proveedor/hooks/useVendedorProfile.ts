@@ -30,6 +30,7 @@ export function useVendedorProfile(vendedorId: string, isOwn: boolean = false) {
     queryKey: ['vendedorProfile', vendedorId],
     enabled: !!vendedorId,
     retry: 1,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data: sessionData } = await supabase.auth.getSession()
       if (!sessionData.session) {

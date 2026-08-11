@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMaestroProfile, useUpdateMaestroProfile, useBootstrapMaestroRole } from '../hooks/useMaestroProfile'
-import { supabase } from '../../../lib/supabaseClient'
+import { performLogout } from '../../auth/services/authService'
 import { useHabilidades, useUpsertHabilidad, useDeleteHabilidad, SKILLS_DISPONIBLES } from '../hooks/useHabilidades'
 import { usePaymentQr } from '../../proveedor/hooks/usePaymentQr'
 import { useProfileReviews } from '../../../shared/hooks/useReviews'
@@ -184,7 +184,7 @@ export function MaestroPublicProfile({
           </button>
           {isOwn && (
             <button
-              onClick={() => supabase.auth.signOut().then(() => window.location.reload())}
+              onClick={() => performLogout().finally(() => window.location.reload())}
               className="flex-1 bg-primary text-on-primary rounded-xl px-4 py-3 font-label font-semibold text-sm active:opacity-80"
             >
               Cerrar sesión
@@ -375,9 +375,9 @@ export function MaestroPublicProfile({
           </div>
 
           <div className="flex flex-col gap-1.5 flex-1 min-w-0 pb-1">
-            <span className="font-headline font-bold text-2xl text-on-primary leading-tight">
+            <h1 className="font-headline font-bold text-2xl text-on-primary leading-tight">
               {resolvedProfile.name}
-            </span>
+            </h1>
             {resolvedProfile.specialty && (
               <span className="font-body text-sm text-on-primary/80">{resolvedProfile.specialty}</span>
             )}
@@ -942,7 +942,7 @@ export function MaestroPublicProfile({
                         <button
                           onClick={() => handleSave('payment_qr_url', null)}
                           className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center font-bold text-sm shadow-md active:opacity-85"
-                          title="Eliminar QR"
+                          aria-label="Eliminar QR"
                         >
                           ×
                         </button>
@@ -951,8 +951,7 @@ export function MaestroPublicProfile({
                   </div>
                 ) : (
                   isOwn ? (
-                    <div
-                      onClick={() => !qrUploading && qrInputRef.current?.click()}
+                    <label
                       className="border-2 border-dashed border-outline-variant hover:border-primary/50 transition-colors rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer mt-1"
                     >
                       <span className="material-symbols-outlined text-3xl text-on-surface-variant/40">qr_code_2</span>
@@ -964,10 +963,11 @@ export function MaestroPublicProfile({
                         ref={qrInputRef}
                         type="file"
                         accept="image/*"
+                        disabled={qrUploading}
                         className="hidden"
                         onChange={handleQrChange}
                       />
-                    </div>
+                    </label>
                   ) : (
                     <p className="font-body text-xs text-on-surface-variant/50 italic mt-0.5">
                       No tiene un código QR configurado.

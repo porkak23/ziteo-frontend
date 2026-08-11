@@ -10,12 +10,17 @@ export interface AdminUserRow {
   created_at: string
 }
 
+function escapePostgrestLike(term: string): string {
+  return term.replace(/[,%*\\]/g, '\\$&')
+}
+
 async function searchUsers(term: string): Promise<AdminUserRow[]> {
   if (!term.trim()) return []
+  const safeTerm = escapePostgrestLike(term.trim())
   const { data, error } = await supabase
     .from('profiles')
     .select('user_id, name, phone, city, active_role, created_at')
-    .or(`name.ilike.%${term}%,phone.ilike.%${term}%`)
+    .or(`name.ilike.%${safeTerm}%,phone.ilike.%${safeTerm}%`)
     .order('created_at', { ascending: false })
     .limit(30)
   if (error) throw error
