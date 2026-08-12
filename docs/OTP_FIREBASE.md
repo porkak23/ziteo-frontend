@@ -5,7 +5,7 @@
 
 ---
 
-## 🔴 2026-08-11 — Causa raíz del `503 / Error code: 39`: SMS Toll Fraud Protection
+## ✅ 2026-08-11 — RESUELTO: el `503 / Error code: 39` era SMS Toll Fraud Protection
 
 **El `503` no es un fallo transitorio de Google ni un problema de carrier.** Es un bloqueo
 deliberado del sistema anti-fraude de Identity Platform. Los números de prueba se procesan
@@ -34,33 +34,51 @@ Estado medido el 2026-08-11:
 }
 ```
 
+### ⚠️ NO existe UI en la consola — se apaga SOLO por API
+
+**No perder tiempo buscando el toggle en la consola.** No está en Identity Platform →
+Configuración → Seguridad (ahí solo hay *Dominios autorizados* y *Multiusuario*), ni en
+ningún otro lado. Lo confirma la [doc oficial](https://docs.cloud.google.com/identity-platform/docs/recaptcha-tfp).
+
+**La vía que funcionó** — APIs Explorer, usando la sesión del navegador (no requiere `gcloud`).
+Abrir el link, revisar el panel *Try this method* y darle **Execute**:
+
+```
+https://cloud.google.com/identity-platform/docs/reference/rest/v2/projects/updateConfig?apix_params=%7B%22name%22%3A%22projects%2Fziteo-a08f4%2Fconfig%22%2C%22updateMask%22%3A%22recaptchaConfig%22%2C%22resource%22%3A%7B%22recaptchaConfig%22%3A%7B%22phoneEnforcementState%22%3A%22OFF%22%2C%22useSmsTollFraudProtection%22%3Afalse%7D%7D%7D
+```
+
+- `updateMask`: `recaptchaConfig`
+- Body: `{"recaptchaConfig":{"phoneEnforcementState":"OFF","useSmsTollFraudProtection":false}}`
+- Valores válidos de `phoneEnforcementState`: `OFF` · `AUDIT` · `ENFORCE`
+- Respuesta `200` = aplicado.
+
+**Estado verificado tras el cambio (2026-08-11):**
+
+```json
+{
+  "recaptchaEnforcementState": [
+    { "provider": "PHONE_PROVIDER", "enforcementState": "OFF" }
+  ],
+  "useSmsBotScore": false,
+  "useSmsTollFraudProtection": false
+}
+```
+
 ### ⚠️ La trampa que invalida el consejo estándar
 
 El soporte de Firebase (y casi toda la documentación) recomienda **poner el sistema en modo
-Audit** para dejar de bloquear. **Eso no funciona aquí:** `PHONE_PROVIDER` ya está en `AUDIT`
-y el SMS sigue bloqueado.
+Audit** para dejar de bloquear. **Eso no funciona:** `PHONE_PROVIDER` ya estaba en `AUDIT` y
+el SMS seguía bloqueado. `useSmsTollFraudProtection` es un **toggle independiente** de
+`enforcementState` — hay que apagar el flag, no cambiar el modo.
 
-`useSmsTollFraudProtection` es un **toggle independiente** de `enforcementState`. Sigue
-bloqueando aunque la aplicación de reCAPTCHA esté en Audit. Lo que hay que apagar es el flag,
-no cambiar el modo:
+### La clave Enterprise dejó de ser un problema
 
-> Google Cloud Console → **Identity Platform → Settings → Security** → *SMS Toll Fraud Protection*
-> (proyecto `ziteo-a08f4`, número `916382762393`).
+Antes del fix, `recaptchaConfig` devolvía `recaptchaKey: projects/916382762393/keys/6Le7X4Et...flOX`
+mientras el cliente recibía por `recaptchaParams` la clave `6LcMZR0U...bmUv` del proyecto
+compartido de Google (`producerProjectNumber: 551503664846`, el fallback a reCAPTCHA v2).
 
-Verificar con el mismo curl: debe pasar a `"useSmsTollFraudProtection": false`. **Mientras siga
-en `true`, ningún otro cambio hará llegar el SMS.**
-
-### Dos claves de reCAPTCHA distintas
-
-`recaptchaParams` devuelve al cliente la clave `6LcMZR0U...bmUv` con
-`producerProjectNumber: 551503664846` — un proyecto **compartido de Google**, es decir el
-fallback a reCAPTCHA v2. La clave Enterprise del proyecto (`6Le7X4Et...flOX`) existe pero el
-cliente no la usa, señal de que está en estado "Incompleta".
-
-Endurecimiento (hacer **después** de apagar el toll fraud, y verificar entre pasos para saber
-cuál fue el que destrabó): Google Cloud → **Security → reCAPTCHA Enterprise** → clave
-`6Le7X4Et...flOX` → agregar `www.ziteo.company`, `ziteo.company`, `localhost` hasta que quede
-en *Protegido*.
+**Al apagar el toll fraud, `recaptchaKey` desapareció de la respuesta.** Ya no hace falta
+"completar" esa clave en reCAPTCHA Enterprise — ese paso quedó sin efecto.
 
 ### Árbol de decisión — los tres curl que distinguen los tres fallos
 
@@ -71,11 +89,28 @@ en *Protegido*.
 | `sendVerificationCode` con `recaptchaToken:"x"` | `200` + `sessionInfo` | El número está en *Phone numbers for testing* |
 | `sendVerificationCode` con `recaptchaToken:"x"` | `400 CAPTCHA_CHECK_FAILED` | Número real, comportamiento **correcto** |
 
-### ⚠️ `+59173401469` es y seguirá siendo número de QA
+### Descartado con evidencia — no volver a revisar
 
-Se mantiene deliberadamente en *Phone numbers for testing*. **Ese número NUNCA recibe un SMS
-real y su `200` no prueba absolutamente nada sobre la entrega.** Es la señal falsa que desvió
-el diagnóstico dos veces.
+- **SMS region policy**: **Bolivia (BO) está en *Permitir***. Verificado en la consola el
+  2026-08-11 (Authentication → Settings → Política de la región de SMS). No era la causa,
+  pese a que la doc de Google advierte que los proyectos nuevos arrancan sin regiones permitidas.
+- **Dominios autorizados**: correctos — `localhost`, `www.ziteo.company`, `ziteo.company`,
+  `ziteo-a08f4.firebaseapp.com`, `ziteo-a08f4.web.app`, `ziteo-frontend.vercel.app`
+  (este último es el alias muerto desde 2026-07-30; se puede borrar, es cosmético).
+- **Clave de reCAPTCHA Enterprise**: irrelevante tras apagar el toll fraud (ver arriba).
+
+### ⚠️ Los TRES números de prueba
+
+Firebase tiene configurados **tres**, no uno (visto en la respuesta de `getConfig`):
+
+| Número | Código fijo |
+|---|---|
+| `+59171234567` | `123456` |
+| `+59112345678` | `123456` |
+| `+59173401469` | `654321` |
+
+**Ninguno recibe un SMS real y su `200` no prueba absolutamente nada sobre la entrega.** Es la
+señal falsa que desvió el diagnóstico dos veces. Se mantienen deliberadamente como números de QA.
 
 Regla para toda prueba de entrega: usar un `+591` que **no** esté en esa lista, y confirmarlo
 antes con el curl de token basura (debe dar `400`, no `200`).
@@ -147,10 +182,10 @@ vigente y verificado — la cadena Firebase está entera salvo la emisión del S
 
 El SMS "no llegaba" porque los números ficticios (Authentication → Sign-in method → Phone → *Phone numbers for testing*) **nunca reciben un SMS real**: Firebase devuelve un `sessionInfo` válido y espera un código fijo definido en la consola. Desde la API todo parecía exitoso; simplemente no existía ningún SMS.
 
-> ⚠️ **Corregido 2026-08-11: el `503` SÍ se reproduce.** La afirmación de que "no se reproduce"
-> era falsa — se comprobó en prod con capturas del `503 / Error code: 39`. La causa raíz es
-> **SMS Toll Fraud Protection**, no la SMS region policy ni el número de prueba.
-> Ver § *Causa raíz del `503 / -39`* al inicio de este documento.
+> ⚠️ **Corregido 2026-08-11: el `503` SÍ se reproducía, y ya está RESUELTO.** La afirmación de
+> que "no se reproduce" era falsa. La causa raíz era **SMS Toll Fraud Protection** — ni la SMS
+> region policy (Bolivia ya estaba permitida) ni el número de prueba.
+> Ver § *RESUELTO: el `503 / Error code: 39`* al inicio de este documento.
 
 | Capa | Estado |
 |---|---|
