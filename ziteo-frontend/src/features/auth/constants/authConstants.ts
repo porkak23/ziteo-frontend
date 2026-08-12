@@ -51,5 +51,11 @@ export const FIREBASE_ERRORS: Record<string, string> = {
   'auth/user-disabled': 'Esta cuenta ha sido deshabilitada en Firebase',
   'auth/internal-error': 'Error interno de Firebase. Inténtalo de nuevo',
   'auth/argument-error': 'Error en la configuración de verificación de teléfono',
+  // Firebase bloquea el SMS a números reales con este código cuando la protección
+  // anti-fraude (SMS Toll Fraud Protection) rechaza el envío. Los números de prueba
+  // no pasan por ese control, por eso "funcionan" y dan una señal falsa.
+  // Se apaga en Google Cloud → Identity Platform → Settings → Security.
+  'auth/error-code:-39': 'No pudimos enviar el SMS a este número. Intenta más tarde o contacta soporte.',
+  'auth/error-code': 'No pudimos enviar el SMS a este número. Intenta más tarde o contacta soporte.',
 }
 

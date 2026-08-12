@@ -137,7 +137,10 @@ function translateFirebaseError(err: unknown): AuthServiceError {
   console.error('[Firebase Auth Raw Error]:', err)
   const errObj = err as { code?: string; message?: string }
   const rawStr = `${errObj?.code ?? ''} ${errObj?.message ?? ''} ${String(err)}`
-  const match = /auth\/[a-z-]+/.exec(rawStr)
+  // El sufijo opcional captura los códigos numéricos internos que Firebase emite
+  // como `auth/error-code:-39` (SMS Toll Fraud Protection). Sin él, el regex los
+  // truncaba a `auth/error-code`, que no existe en el mapa y caía al genérico.
+  const match = /auth\/[a-z-]+(?::-?\d+)?/.exec(rawStr)
   const firebaseCode = match?.[0]
   if (firebaseCode) {
     const message = FIREBASE_ERRORS[firebaseCode] ?? `Error de autenticación de Firebase (${firebaseCode})`
