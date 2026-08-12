@@ -21,7 +21,6 @@ function ensureRecaptchaContainer(): HTMLElement {
   }
   const element = document.createElement('div')
   element.id = RECAPTCHA_CONTAINER_ID
-  element.style.display = 'none'
   document.body.appendChild(element)
   return element
 }
@@ -65,6 +64,7 @@ export const firebaseClientProvider: ClientOtpProvider = {
     })
 
     try {
+      await recaptchaVerifierInstance.render()
       pendingConfirmation = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifierInstance)
       if (import.meta.env.DEV) {
         // Firebase resuelve igual de "exitoso" un número ficticio que uno real,
