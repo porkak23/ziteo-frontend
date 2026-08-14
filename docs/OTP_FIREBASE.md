@@ -5,7 +5,33 @@
 
 ---
 
-## ✅ 2026-08-11 — RESUELTO: el `503 / Error code: 39` era SMS Toll Fraud Protection
+## ⚠️ 2026-08-11 — El `503 / Error code: 39` es CUOTA, no toll fraud
+
+> **Corrección importante.** La primera versión de esta sección afirmaba que el `-39` era
+> SMS Toll Fraud Protection. **Es incorrecto.** El toll fraud estaba activo y había que
+> apagarlo (era un bloqueo real), pero tras apagarlo el `503` **siguió apareciendo**.
+>
+> El `-39` es en realidad **`QUOTA_EXCEEDED` / `TOO_MANY_ATTEMPTS`** — el propio equipo de
+> Firebase admite que el mensaje es engañosamente vago
+> ([flutterfire#3817](https://github.com/FirebaseExtended/flutterfire/issues/3817):
+> *"Error code 39 (QuotaExceeded) message is too vague, shows on blaze plan"*).
+>
+> Es una cuota **por número y por IP**, invisible en las cuotas del proyecto, que se acumula
+> con los intentos. Ventana reportada: **~24 h desde el último intento** — y cada prueba
+> nueva reinicia el reloj. No se puede resetear desde la consola.
+
+### Cómo distinguir cuota de bloqueo de configuración
+
+| Prueba | Respuesta | Significado |
+|---|---|---|
+| curl con `recaptchaToken:"x"` | `400 CAPTCHA_CHECK_FAILED` | Config OK — no llega a contar como intento |
+| curl con `recaptchaToken:"x"` | `503 / -39` | Bloqueo de configuración (toll fraud, region policy) |
+| Navegador con captcha válido | `503 / -39` | **Cuota agotada** en ese número/IP → esperar 24 h |
+
+La clave: con token basura la petición **nunca consume cuota**. Si el curl da `400` pero el
+navegador da `503`, el problema es cuota, no configuración.
+
+### Antecedente: SMS Toll Fraud Protection (apagado el 2026-08-11)
 
 **El `503` no es un fallo transitorio de Google ni un problema de carrier.** Es un bloqueo
 deliberado del sistema anti-fraude de Identity Platform. Los números de prueba se procesan
