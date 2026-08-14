@@ -15,6 +15,7 @@
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
+            android:screenOrientation="portrait"
             android:exported="true">
 
             <intent-filter>
@@ -38,4 +39,27 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Geolocalización: @capacitor/geolocation (radar del chofer, MapPicker) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Cámara y galería: @capacitor/camera (foto de perfil, fotos de producto).
+         READ_MEDIA_IMAGES reemplaza a READ_EXTERNAL_STORAGE desde API 33. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- Notificaciones push: obligatorio desde API 33 (Android 13). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Desbloqueo biométrico: useBiometricAuth.ts -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
+    <!-- La cámara y el GPS no son obligatorios para instalar: sin esto Play
+         excluiría del catálogo a los dispositivos que no los tengan. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 </manifest>

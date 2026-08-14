@@ -1,224 +1,146 @@
-# Publicar Ziteo en Google Play Store (TWA)
+# Publicar Ziteoo en Google Play Store
 
-Un TWA (Trusted Web Activity) empaqueta la PWA de Ziteo como una app Android nativa
-sin escribir código nativo. Google Play la distribuye como cualquier otra app.
+**Camino elegido: Capacitor** (app nativa que embebe la PWA), package
+**`com.ziteo.app`**. El camino alternativo (TWA/Bubblewrap con `bo.ziteo.app`)
+se eliminó del repo el 2026-08-11 porque generaba el AAB en la misma ruta y
+sobrescribía el proyecto Capacitor.
 
----
-
-## Prerrequisitos
-
-### 1. Bubblewrap CLI
-```bash
-npm install -g @bubblewrap/cli
-```
-
-### 2. Java JDK 11 o superior
-Descargar desde: https://adoptium.net/
-Verificar: `java -version`
-
-### 3. Android SDK (Build Tools)
-Opción A — Android Studio: https://developer.android.com/studio
-Opción B — Solo Command Line Tools: https://developer.android.com/studio#command-tools
-
-Bubblewrap puede descargar el SDK automáticamente en el primer run si no está instalado.
+> Este documento **reemplazó** a la guía TWA anterior (Bubblewrap, `bo.ziteo.app`).
+> Si alguna vez hace falta recuperarla: `git show fe4a4b9:docs/PLAY_STORE.md`.
+> Junto con ella se borraron `twa-manifest.json`, `scripts/build-twa.sh` y
+> `public/.well-known/assetlinks.json`.
 
 ---
 
-## Paso 1: Generar el keystore
+## Estado actual
 
-El keystore es el certificado que firma la app. Debe guardarse con seguridad —
-si se pierde, no se puede actualizar la app en Play Store.
+### Listo (no tocar)
+- `targetSdk 36` / `compileSdk 36` — supera el mínimo de Play (API 35)
+- `minSdk 24` (Android 7.0)
+- Sin `server.url` remoto en `capacitor.config.ts` → usa el bundle local, como exige Play
+- Permisos completos en el Manifest (GPS, cámara, galería, notificaciones, biométrico)
+- `signingConfigs.release` cableado leyendo de `android/key.properties`
+- Scripts npm: `android:sync`, `android:open`, `android:build`
 
-```bash
-cd ziteo-frontend/
-
-keytool -genkey -v \
-  -keystore android.keystore \
-  -alias android \
-  -keyalg RSA \
-  -keysize 2048 \
-  -validity 10000
-```
-
-Datos sugeridos al completar el asistente:
-- First and last name: Ziteo
-- Organizational unit: Tech
-- Organization: Ziteo SRL
-- City: Sucre
-- State: Chuquisaca
-- Country code: BO
-
-**IMPORTANTE:** Hacer backup del archivo `android.keystore` y la contrasena en un
-lugar seguro. Sin este archivo no se pueden publicar actualizaciones.
+### Bloqueantes — requieren acción tuya
+| # | Qué falta | Por qué bloquea |
+|---|---|---|
+| 1 | **Keystore** (`.jks` + `key.properties`) | Sin firma el AAB se rechaza |
+| 2 | **Íconos de marca** | Hoy son el robot verde genérico de Android Studio; Play lo rechaza |
+| 3 | **`google-services.json`** | Sin él las push por FCM quedan muertas **en silencio** |
+| 4 | **Assets de tienda** | Ícono 512×512, feature graphic 1024×500, screenshots |
 
 ---
 
-## Paso 2: Obtener el SHA256 del keystore
+## 1. Generar el keystore
 
-Este hash es necesario para que el TWA funcione sin barra de navegador
-(Digital Asset Links).
+⚠️ **Guardá este archivo y sus contraseñas en un lugar seguro.** Si lo perdés no
+podés volver a actualizar la app en Play — hay que publicar una app nueva.
 
 ```bash
-keytool -list -v \
-  -keystore android.keystore \
-  -alias android
+cd ziteo-frontend/android
+keytool -genkey -v -keystore ziteo-release.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias ziteo
 ```
 
-Buscar la linea que dice `SHA256:` en la seccion "Certificate fingerprints".
-El formato es: `AB:CD:EF:...` (32 pares hexadecimales separados por dos puntos).
+Luego creá `ziteo-frontend/android/key.properties`:
 
----
-
-## Paso 3: Actualizar assetlinks.json
-
-Editar `ziteo-frontend/public/.well-known/assetlinks.json`:
-
-```json
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "bo.ziteo.app",
-    "sha256_cert_fingerprints": [
-      "AB:CD:EF:..."
-    ]
-  }
-}]
+```properties
+storeFile=ziteo-release.jks
+storePassword=TU_PASSWORD
+keyAlias=ziteo
+keyPassword=TU_PASSWORD
 ```
 
-Reemplazar `AB:CD:EF:...` con el SHA256 obtenido en el paso anterior.
+Ambos archivos están en `.gitignore` y **no deben commitearse nunca**.
 
-Este archivo debe estar accesible en produccion en:
-`https://ziteo.bo/.well-known/assetlinks.json`
+Para verificar que la firma quedó cableada: sin `key.properties`, el build
+muestra `WARNING: android/key.properties no existe -> el AAB de release saldra
+SIN FIRMAR`. Con el archivo presente, ese warning desaparece.
 
-Verificar con:
-```
-https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://ziteo.bo&relation=delegate_permission/common.handle_all_urls
-```
+## 2. Íconos
 
----
-
-## Paso 4: Hacer deploy del frontend con el assetlinks actualizado
+Play rechaza el ícono por defecto. Con un PNG **1024×1024** de la marca:
 
 ```bash
-cd ziteo-frontend/
-npm run build
-# Deploy a produccion (Vercel / servidor)
+cd ziteo-frontend
+npm i -D @capacitor/assets
+npx @capacitor/assets generate --android
 ```
 
-Confirmar que `https://ziteo.bo/.well-known/assetlinks.json` devuelve el JSON correcto
-con Content-Type: application/json.
+Genera todos los `mipmap-*` y el splash. Los colores de marca son `#A43700`
+(CTAs) y `#E8733A` (acentos) — ojo que hoy `capacitor.config.ts` usa `#0D1020`
+para splash/status bar, revisá que sea lo que querés.
 
----
+## 3. `google-services.json` (push notifications)
 
-## Paso 5: Generar el AAB con Bubblewrap
+Firebase Console → proyecto `ziteo-a08f4` → Project Settings → **Add app** →
+Android → package name **`com.ziteo.app`** → descargar y guardar en
+`ziteo-frontend/android/app/google-services.json`.
+
+> **Trampa:** `android/app/build.gradle` envuelve el plugin de Google Services en
+> un `try/catch`. Si el archivo falta, **el build compila igual** y solo loguea un
+> warning — las push simplemente no funcionan. No hay error visible.
+
+**Además falta código:** `@capacitor/push-notifications` está instalado y
+configurado en `capacitor.config.ts`, pero ningún archivo lo inicializa. El hook
+actual (`src/shared/hooks/usePushNotifications.ts`) usa Web Push del navegador,
+que **no funciona de forma fiable dentro del WebView de Capacitor**. Para push
+nativas hay que escribir la integración con `PushNotifications.register()`.
+
+## Requisito previo: JDK
+
+El build de Android necesita un JDK 21 (Java 21 está configurado en el proyecto).
+**En la máquina donde se preparó esto no había ninguno instalado**, así que el
+`bundleRelease` nunca llegó a ejecutarse — la config de firma quedó validada solo
+por sintaxis, no por un build real.
+
+La vía más simple es instalar **Android Studio**, que trae su propio JDK (JBR) y
+además hace falta para el SDK de Android. Alternativa sin IDE: Temurin JDK 21 +
+`ANDROID_HOME` apuntando al SDK.
+
+Verificar antes de compilar:
+```bash
+java -version   # debe decir 21.x
+```
+
+## 4. Compilar el AAB
 
 ```bash
-cd ziteo-frontend/
-bash scripts/build-twa.sh
+cd ziteo-frontend
+npm run android:build
 ```
 
-El archivo AAB queda en:
-`android/app/build/outputs/bundle/release/app-release.aab`
+Salida: `android/app/build/outputs/bundle/release/app-release.aab`
+
+Para abrir en Android Studio y depurar: `npm run android:open`.
+
+## 5. Subir a Play Console
+
+1. Play Console → Create app → nombre "Ziteoo", español (Bolivia)
+2. Subir el AAB en **Internal testing** primero (no producción)
+3. Completar: política de privacidad (URL pública obligatoria), content rating,
+   data safety, público objetivo
+4. Agregar testers por email y compartir el link de opt-in
 
 ---
 
-## Paso 6: Crear ficha en Google Play Console
+## Versionado
 
-1. Ir a https://play.google.com/console
-2. Crear cuenta de desarrollador si no existe (costo unico: USD 25)
-3. Crear nueva app:
-   - Package ID: `bo.ziteo.app`
-   - Nombre: Ziteo
-   - Idioma principal: Espanol (Latinoamerica)
-   - Tipo: App (no juego)
-   - Gratis / de pago: Gratis
+`android/app/build.gradle` → `versionCode` y `versionName`.
 
----
+**Subí `versionCode` en cada subida** — Play rechaza reutilizar uno. `versionName`
+es la cadena visible ("1.0.0"); `versionCode` es un entero que solo crece.
 
-## Paso 7: Subir el AAB
+## Notas
 
-En Play Console > Production > Create new release:
-1. Subir el archivo `.aab` generado
-2. Agregar notas de version (ej: "Version inicial de Ziteo 1.0")
-3. Revisar y enviar
-
----
-
-## Paso 8: Completar ficha de la app
-
-### Descripcion corta (max 80 caracteres)
-```
-La plataforma que conecta constructores, proveedores y maestros en Bolivia.
-```
-
-### Descripcion larga (max 4000 caracteres)
-```
-Ziteo es la plataforma digital que transforma la industria de la construccion
-en Bolivia, conectando en un solo lugar a todos los actores clave del sector.
-
-Para Constructores:
-Solicita cotizaciones de materiales a multiples proveedores en segundos.
-Compara precios, gestiona tus proyectos y contrata maestros de obra verificados
-directamente desde tu celular.
-
-Para Proveedores de materiales:
-Publica tu catalogo de productos, recibe pedidos en tiempo real y gestiona
-tu inventario sin complicaciones. Llega a mas constructores en Sucre, Potosi
-y Santa Cruz.
-
-Para Maestros de obra:
-Crea tu perfil profesional, muestra tus especialidades y recibe solicitudes de
-trabajo de constructores en tu ciudad. Sin intermediarios, sin comisiones ocultas.
-
-Para Transportistas:
-Conectate con proveedores que necesitan entregar materiales y gestiona tus
-rutas de manera eficiente.
-
-Caracteristicas principales:
-- Cotizaciones en tiempo real entre constructores y proveedores
-- Perfil verificado para maestros de obra con especialidades y disponibilidad
-- Sistema de pagos integrado con QR
-- Notificaciones push para seguimiento de pedidos
-- Funciona sin internet (modo offline)
-- Disponible en Sucre, Potosi y Santa Cruz
-
-Ziteo: construyendo Bolivia, juntos.
-```
-
----
-
-## Paso 9: Screenshots requeridos
-
-Google Play requiere entre 2 y 8 screenshots de telefono (formato 16:9 o 9:16).
-Dimensiones recomendadas: 1080x1920 px.
-
-Pantallas sugeridas para capturar:
-1. Pantalla de bienvenida con el logo de Ziteo
-2. Dashboard del constructor con solicitudes de cotizacion
-3. Catalogo de productos del proveedor
-4. Perfil de maestro de obra con especialidades
-5. Pantalla de cotizacion comparando precios
-6. Notificaciones en tiempo real
-
-Herramienta: usar el emulador de Android Studio o un dispositivo fisico
-con Android 5.0+ (API 21+).
-
----
-
-## Paso 10: Politicas requeridas
-
-Antes de publicar, completar en Play Console:
-- Politica de privacidad: `https://ziteo.bo/privacidad`
-- Formulario de seguridad de datos (que datos recopila la app)
-- Clasificacion de contenido (ejecutar el cuestionario)
-
----
-
-## Notas adicionales
-
-- El proceso de revision de Google Play toma entre 1 y 7 dias habiles.
-- Para actualizaciones: incrementar `appVersionCode` en `twa-manifest.json`,
-  regenerar el AAB y subir a una nueva release en Play Console.
-- Si el SHA256 del keystore cambia (no debe ocurrir), actualizar assetlinks.json
-  y hacer deploy antes de publicar la nueva version.
+- El primer `npm run android:sync` es importante: los assets dentro de `android/`
+  eran del 13 de mayo (unos 3 meses de atraso) y faltaba enlazar
+  `@aparajita/capacitor-biometric-auth`.
+- `minifyEnabled false` en release: el AAB pesa más de lo necesario. Activarlo
+  requiere revisar reglas de ProGuard; no es bloqueante para publicar.
+- `allowBackup="true"` es el default de Android: permite backup automático de los
+  datos de la app. Revisar si es aceptable dado que se guardan sesiones.
+- **Firebase PNV** (verificación de teléfono sin SMS ni reCAPTCHA) es Android-only
+  y sería la salida definitiva al problema del OTP — ver `docs/OTP_FIREBASE.md`.
+  Requiere el SDK `com.google.firebase:firebase-pnv` y Android Credential Manager.

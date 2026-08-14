@@ -20,6 +20,23 @@
 > con los intentos. Ventana reportada: **~24 h desde el último intento** — y cada prueba
 > nueva reinicia el reloj. No se puede resetear desde la consola.
 
+### Firebase PNV — la salida definitiva, pero solo Android
+
+**Firebase Phone Number Verification** verifica el teléfono pidiéndoselo a la
+operadora, **sin SMS y sin reCAPTCHA**. Elimina de raíz los tres problemas de esta
+doc: el `-39`, la cuota y el widget del captcha.
+
+**Hoy no aplica a la PWA web**: la doc de Google dice *"Available for Android
+today, iOS and web coming soon"*. Requiere el SDK nativo
+`com.google.firebase:firebase-pnv` + Android Credential Manager.
+
+**Pero el proyecto ya tiene Capacitor y carpeta `android/`** (ver
+[`docs/PLAY_STORE.md`](PLAY_STORE.md)), así que cuando la app nativa esté en Play,
+PNV pasa a ser viable. Requisitos adicionales: plan Blaze, verificación de marca
+OAuth, política de privacidad pública y **operadora soportada** — habría que
+confirmar que Entel/Tigo/Viva estén en la lista, cosa que Google no publica para
+Bolivia.
+
 ### Cómo distinguir cuota de bloqueo de configuración
 
 | Prueba | Respuesta | Significado |
