@@ -22,6 +22,11 @@ sobrescribía el proyecto Capacitor.
 - `signingConfigs.release` cableado leyendo de `android/key.properties`
 - Scripts npm: `android:sync`, `android:open`, `android:build`
 
+### Verificado con un build real (2026-08-11)
+Se compiló un AAB de 19 MB en esta máquina. La firma se probó con un keystore
+desechable: `jarsigner -verify` devolvió **`jar verified`**. El keystore de prueba
+y su `key.properties` se borraron después.
+
 ### Bloqueantes — requieren acción tuya
 | # | Qué falta | Por qué bloquea |
 |---|---|---|
@@ -88,21 +93,67 @@ actual (`src/shared/hooks/usePushNotifications.ts`) usa Web Push del navegador,
 que **no funciona de forma fiable dentro del WebView de Capacitor**. Para push
 nativas hay que escribir la integración con `PushNotifications.register()`.
 
-## Requisito previo: JDK
+## Requisito previo: JDK 21 — **NO el que trae Android Studio**
 
-El build de Android necesita un JDK 21 (Java 21 está configurado en el proyecto).
-**En la máquina donde se preparó esto no había ninguno instalado**, así que el
-`bundleRelease` nunca llegó a ejecutarse — la config de firma quedó validada solo
-por sintaxis, no por un build real.
+⚠️ **Trampa verificada el 2026-08-11.** Android Studio incluye su propio JDK
+(JBR) pero es **Java 25**, y Gradle 8.14.3 no lo soporta:
 
-La vía más simple es instalar **Android Studio**, que trae su propio JDK (JBR) y
-además hace falta para el SDK de Android. Alternativa sin IDE: Temurin JDK 21 +
-`ANDROID_HOME` apuntando al SDK.
-
-Verificar antes de compilar:
-```bash
-java -version   # debe decir 21.x
 ```
+BUG! exception in phase 'semantic analysis' in source unit '_BuildScript_'
+Unsupported class file major version 69
+```
+
+(`major version 69` = Java 25.) Hay que usar **JDK 21**:
+
+```bash
+winget install --id EclipseAdoptium.Temurin.21.JDK -e --source winget
+```
+
+Y apuntar `JAVA_HOME` ahí antes de compilar — no al JBR de Studio:
+
+```bash
+export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-21.0.12.8-hotspot"
+export ANDROID_HOME="$HOME/AppData/Local/Android/Sdk"
+export PATH="$JAVA_HOME/bin:$PATH"
+java -version   # debe decir 21.x, NO 25.x
+```
+
+### Android SDK
+
+Android Studio **no trae `sdkmanager`**. Command line tools + SDK 36:
+
+```bash
+# 1) cmdline-tools -> ~/AppData/Local/Android/Sdk/cmdline-tools/latest/
+curl -L -o clt.zip https://dl.google.com/android/repository/commandlinetools-win-11076708_latest.zip
+# (descomprimir y renombrar la carpeta interna a "latest")
+
+# 2) licencias + paquetes
+yes | sdkmanager --licenses
+sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+```
+
+### `local.properties`
+
+Gradle necesita saber dónde está el SDK. Crear `android/local.properties`
+(ya está en `.gitignore`), con los backslashes **escapados**:
+
+```properties
+sdk.dir=C:\Users\<usuario>\AppData\Local\Android\Sdk
+```
+
+### Estado verificado
+
+Con todo lo anterior, el 2026-08-11 se compiló un **AAB de 19 MB** en esta
+máquina:
+
+| Escenario | Resultado |
+|---|---|
+| Sin `key.properties` | `BUILD SUCCESSFUL` + warning explícito; `jarsigner` dice `jar is unsigned` |
+| Con `key.properties` válido | `BUILD SUCCESSFUL`; `jarsigner -verify` dice **`jar verified`** |
+| `storeFile` con ruta inválida | Falla en `:app:validateSigningRelease` nombrando el archivo que falta |
+
+> `storeFile` se resuelve **relativo a `android/app/`**. Usar ruta absoluta de
+> Windows (`C:\...`) o el keystore junto al `build.gradle`.
 
 ## 4. Compilar el AAB
 

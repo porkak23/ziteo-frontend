@@ -6,7 +6,9 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // 'android/**' e 'ios/**' son proyectos nativos: contienen assets generados por
+  // Gradle (p.ej. app/build/**/native-bridge.js) que no son código de este repo.
+  globalIgnores(['dist', 'android', 'ios', 'coverage']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
